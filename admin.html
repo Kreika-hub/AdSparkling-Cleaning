@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel — Ad Sparkling Cleaning</title>
+  <link rel="stylesheet" href="assets/css/admin.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <span>✦</span>
+        <span>Ad Sparkling</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-tab="dashboard" onclick="showTab('dashboard')">
+          <span>📊</span> Dashboard
+        </a>
+        <a href="#" class="nav-item" data-tab="solicitudes" onclick="showTab('solicitudes')">
+          <span>📥</span> Solicitudes
+          <span class="nav-badge" id="badgeSolicitudes" style="display:none">0</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="clientes" onclick="showTab('clientes')">
+          <span>👥</span> Clientes
+        </a>
+        <a href="#" class="nav-item" data-tab="citas" onclick="showTab('citas')">
+          <span>📅</span> Citas
+        </a>
+        <a href="#" class="nav-item" data-tab="gastos" onclick="showTab('gastos')">
+          <span>💸</span> Gastos
+        </a>
+        <a href="#" class="nav-item" data-tab="cotizador" onclick="showTab('cotizador')">
+          <span>🧮</span> Cotizador
+        </a>
+        <a href="#" class="nav-item" data-tab="finanzas" onclick="showTab('finanzas')">
+          <span>📈</span> Finanzas
+        </a>
+        <a href="#" class="nav-item" data-tab="config" onclick="showTab('config')">
+          <span>⚙️</span> Configuración
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="connection-status" id="connStatus">
+          <span class="dot online"></span> Modo local
+        </div>
+        <a href="index.html" target="_blank">Ver página web →</a>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main" id="main">
+
+      <!-- DASHBOARD -->
+      <div id="tab-dashboard" class="tab-panel active">
+        <h1>Dashboard</h1>
+        <p class="tab-desc">Resumen de tu negocio en tiempo real.</p>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Ingresos este mes</div>
+            <div class="stat-value" id="dashRevenue">$0</div>
+            <div class="stat-sub" id="dashRevenueCount">0 citas completadas</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Gastos este mes</div>
+            <div class="stat-value" id="dashExpenses">$0</div>
+            <div class="stat-sub" id="dashExpensesCount">0 registros</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Ganancia neta</div>
+            <div class="stat-value" id="dashProfit">$0</div>
+            <div class="stat-sub" id="dashMargin">0% margen</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Clientes activos</div>
+            <div class="stat-value" id="dashClients">0</div>
+            <div class="stat-sub">Con servicio regular</div>
+          </div>
+        </div>
+
+        <div class="dash-row">
+          <div class="dash-section">
+            <div class="dash-header">
+              <h2>Próximas citas</h2>
+              <a href="#" onclick="showTab('citas'); return false;">Ver todas →</a>
+            </div>
+            <div id="upcomingAppointments" class="dash-list">
+              <p class="empty">No hay citas próximas</p>
+            </div>
+          </div>
+
+          <div class="dash-section">
+            <div class="dash-header">
+              <h2>Clientes inactivos (+30 días)</h2>
+            </div>
+            <div id="inactiveClients" class="dash-list">
+              <p class="empty">Todos están al día 🎉</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-section">
+          <div class="dash-header">
+            <h2>Solicitudes nuevas</h2>
+            <a href="#" onclick="showTab('solicitudes'); return false;">Ver todas →</a>
+          </div>
+          <div id="recentLeads" class="dash-list">
+            <p class="empty">No hay solicitudes nuevas</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SOLICITUDES -->
+      <div id="tab-solicitudes" class="tab-panel">
+        <h1>Solicitudes de cotización</h1>
+        <p class="tab-desc">Personas que pidieron cotización desde la web o que tú agregaste.</p>
+
+        <div class="toolbar">
+          <div class="search-box">
+            <input type="text" id="leadSearch" placeholder="Buscar por nombre, teléfono o dirección..." oninput="filterLeads()">
+          </div>
+          <button class="btn-add" onclick="openModal('leadModal')">+ Nueva solicitud</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Contacto</th>
+                <th>Dirección</th>
+                <th>Detalles</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="leadsTable">
+              <tr><td colspan="7" class="empty-cell">No hay solicitudes</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CLIENTES -->
+      <div id="tab-clientes" class="tab-panel">
+        <h1>Clientes</h1>
+        <p class="tab-desc">Tus clientes con servicio regular.</p>
+
+        <div class="toolbar">
+          <div class="search-box">
+            <input type="text" id="clientSearch" placeholder="Buscar cliente..." oninput="filterClients()">
+          </div>
+          <button class="btn-add" onclick="openModal('clientModal')">+ Nuevo cliente</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Teléfono</th>
+                <th>Dirección</th>
+                <th>Precio base</th>
+                <th>Frec.</th>
+                <th>Última visita</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="clientsTable">
+              <tr><td colspan="8" class="empty-cell">No hay clientes</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CITAS -->
+      <div id="tab-citas" class="tab-panel">
+        <h1>Citas</h1>
+        <p class="tab-desc">Registro de todas tus visitas.</p>
+
+        <div class="toolbar">
+          <button class="btn-add" onclick="openModal('appointmentModal')">+ Nueva cita</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Dirección</th>
+                <th>Precio</th>
+                <th>Tiempo</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="appointmentsTable">
+              <tr><td colspan="7" class="empty-cell">No hay citas</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- GASTOS -->
+      <div id="tab-gastos" class="tab-panel">
+        <h1>Gastos</h1>
+        <p class="tab-desc">Registra todo lo que gastas para ver tu ganancia real.</p>
+
+        <div class="toolbar">
+          <button class="btn-add" onclick="openModal('expenseModal')">+ Nuevo gasto</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Categoría</th>
+                <th>Descripción</th>
+                <th>Monto</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="expensesTable">
+              <tr><td colspan="5" class="empty-cell">No hay gastos registrados</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- COTIZADOR -->
+      <div id="tab-cotizador" class="tab-panel">
+        <h1>Cotizador</h1>
+        <p class="tab-desc">Arma la cotización real para tu cliente. Tú controlas el precio final.</p>
+
+        <div class="quote-layout">
+          <div class="quote-left">
+            <div class="quote-section">
+              <h3>Tabla de referencia</h3>
+              <div class="ref-table-wrap">
+                <table class="ref-table">
+                  <thead>
+                    <tr><th>Tamaño</th><th>10 días</th><th>Quin.</th><th>Mens.</th><th>Prof.</th></tr>
+                  </thead>
+                  <tbody id="refTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="quote-section">
+              <h3>Adicionales activos</h3>
+              <div class="ref-extras" id="refExtras"></div>
+            </div>
+          </div>
+
+          <div class="quote-right">
+            <div class="calc-card">
+              <h3>Nueva cotización</h3>
+
+              <div class="calc-field">
+                <label>Cliente</label>
+                <select id="qClient" onchange="autoFillClient()">
+                  <option value="">-- Cliente nuevo --</option>
+                </select>
+              </div>
+
+              <div class="calc-field">
+                <label>Nombre del cliente</label>
+                <input type="text" id="qName" placeholder="Nombre completo">
+              </div>
+
+              <div class="calc-field">
+                <label>Teléfono</label>
+                <input type="tel" id="qPhone" placeholder="(305) 000-0000">
+              </div>
+
+              <div class="calc-row">
+                <div class="calc-field">
+                  <label>Tamaño (sqft)</label>
+                  <select id="qSize" onchange="calcQuote()">
+                    <option value="">Seleccionar...</option>
+                    <option value="1200">Hasta 1,200</option>
+                    <option value="1700">1,201 — 1,700</option>
+                    <option value="2200">1,701 — 2,200</option>
+                    <option value="2800">2,201 — 2,800</option>
+                    <option value="3500">2,801 — 3,500</option>
+                    <option value="4500">3,501 — 4,500</option>
+                  </select>
+                </div>
+                <div class="calc-field">
+                  <label>Frecuencia</label>
+                  <select id="qFreq" onchange="calcQuote()">
+                    <option value="10">Cada 10 días</option>
+                    <option value="15" selected>Quincenal</option>
+                    <option value="30">Mensual</option>
+                    <option value="deep">Profunda</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="calc-field">
+                <label>Adicionales</label>
+                <div class="quote-addons" id="quoteAddons"></div>
+              </div>
+
+              <div class="calc-row">
+                <div class="calc-field">
+                  <label>Precio calculado</label>
+                  <input type="number" id="qCalcPrice" readonly class="readonly">
+                </div>
+                <div class="calc-field">
+                  <label>Precio final (tú decides)</label>
+                  <input type="number" id="qFinalPrice" placeholder="Ajusta si necesitas">
+                </div>
+              </div>
+
+              <div class="calc-field">
+                <label>Notas para el cliente</label>
+                <textarea id="qNotes" rows="2" placeholder="Ej: Incluye recargo por mascotas..."></textarea>
+              </div>
+
+              <div class="quote-total">
+                <span>Precio final:</span>
+                <span id="qDisplayTotal">$0</span>
+              </div>
+
+              <div class="quote-actions">
+                <button class="btn-wa" onclick="sendQuoteWhatsApp()">📱 Enviar por WhatsApp</button>
+                <button class="btn-secondary" onclick="saveQuoteAsLead()">💾 Guardar como solicitud</button>
+                <button class="btn-secondary" onclick="saveQuoteAsClient()">👤 Crear cliente</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FINANZAS -->
+      <div id="tab-finanzas" class="tab-panel">
+        <h1>Finanzas</h1>
+        <p class="tab-desc">Ingresos vs gastos. Visualiza la salud de tu negocio.</p>
+
+        <div class="finance-cards">
+          <div class="f-card">
+            <div class="f-label">Ingresos (últimos 6 meses)</div>
+            <div class="f-value" id="finRevenue">$0</div>
+          </div>
+          <div class="f-card">
+            <div class="f-label">Gastos (últimos 6 meses)</div>
+            <div class="f-value" id="finExpenses">$0</div>
+          </div>
+          <div class="f-card">
+            <div class="f-label">Ganancia neta</div>
+            <div class="f-value" id="finProfit">$0</div>
+          </div>
+        </div>
+
+        <div class="chart-section">
+          <h3>Ingresos vs Gastos por mes</h3>
+          <div class="chart-container">
+            <canvas id="financeChart" width="800" height="320"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-section">
+          <h3>Gastos por categoría (este mes)</h3>
+          <div class="chart-container">
+            <canvas id="categoryChart" width="800" height="280"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONFIGURACIÓN -->
+      <div id="tab-config" class="tab-panel">
+        <h1>Configuración</h1>
+        <p class="tab-desc">Personaliza lo que aparece en tu página web y en el cotizador.</p>
+
+        <div class="config-grid">
+          <div class="config-card">
+            <h3>Datos de la empresa</h3>
+            <div class="config-fields">
+              <label>Nombre</label>
+              <input type="text" id="cfgName" value="Ad Sparkling Cleaning LLC">
+              <label>Teléfono WhatsApp</label>
+              <input type="text" id="cfgPhone" value="13050000000">
+              <label>Dirección / Zona</label>
+              <input type="text" id="cfgAddress" value="Miami-Dade & Broward, FL">
+              <button class="btn-save" onclick="saveCompanyConfig()">Guardar</button>
+            </div>
+          </div>
+
+          <div class="config-card">
+            <h3>Servicios adicionales</h3>
+            <p class="config-desc">Lo que aparece en la web y en el cotizador.</p>
+            <div id="configExtras"></div>
+            <button class="btn-add" onclick="addExtraItem()">+ Agregar adicional</button>
+          </div>
+
+          <div class="config-card">
+            <h3>Lo que NO está incluido</h3>
+            <p class="config-desc">Aparece en la landing para evitar malentendidos.</p>
+            <div id="configNotIncluded"></div>
+            <button class="btn-add" onclick="addNotIncludedItem()">+ Agregar item</button>
+          </div>
+
+          <div class="config-card">
+            <h3>Categorías de gastos</h3>
+            <p class="config-desc">Usadas al registrar gastos en el panel.</p>
+            <div id="configExpenseCats"></div>
+            <button class="btn-add" onclick="addExpenseCategory()">+ Agregar categoría</button>
+          </div>
+
+          <div class="config-card full">
+            <h3>⚠️ Zona de peligro</h3>
+            <button class="btn-danger" onclick="resetAllData()">🗑 Resetear todos los datos</button>
+            <p class="config-desc">Esto borra TODO: clientes, citas, gastos y solicitudes. No se puede deshacer.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODALES -->
+
+  <!-- Modal Lead -->
+  <div class="modal" id="leadModal">
+    <div class="modal-backdrop" onclick="closeModal('leadModal')"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Nueva solicitud</h3>
+        <button class="modal-close" onclick="closeModal('leadModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid-2">
+          <input type="text" id="mLeadName" placeholder="Nombre completo *">
+          <input type="tel" id="mLeadPhone" placeholder="Teléfono *">
+          <input type="text" id="mLeadAddress" placeholder="Dirección *" style="grid-column: 1 / -1">
+          <input type="number" id="mLeadSize" placeholder="Tamaño sqft">
+          <select id="mLeadFreq">
+            <option value="">Frecuencia...</option>
+            <option value="10">Cada 10 días</option>
+            <option value="15">Quincenal</option>
+            <option value="30">Mensual</option>
+            <option value="deep">Profunda</option>
+            <option value="once">Solo una vez</option>
+          </select>
+          <textarea id="mLeadNotes" placeholder="Notas" style="grid-column: 1 / -1" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-save" onclick="saveLeadModal()">Guardar solicitud</button>
+        <button class="btn-cancel" onclick="closeModal('leadModal')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Cliente -->
+  <div class="modal" id="clientModal">
+    <div class="modal-backdrop" onclick="closeModal('clientModal')"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="clientModalTitle">Nuevo cliente</h3>
+        <button class="modal-close" onclick="closeModal('clientModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="mClientId">
+        <div class="form-grid-2">
+          <input type="text" id="mClientName" placeholder="Nombre completo *">
+          <input type="tel" id="mClientPhone" placeholder="Teléfono *">
+          <input type="text" id="mClientAddress" placeholder="Dirección *" style="grid-column: 1 / -1">
+          <input type="number" id="mClientSize" placeholder="Tamaño sqft">
+          <select id="mClientFreq">
+            <option value="">Frecuencia...</option>
+            <option value="10">Cada 10 días</option>
+            <option value="15">Quincenal</option>
+            <option value="30">Mensual</option>
+            <option value="deep">Profunda</option>
+          </select>
+          <input type="number" id="mClientPrice" placeholder="Precio base $">
+          <input type="date" id="mClientNext" placeholder="Próxima visita">
+          <select id="mClientStatus">
+            <option value="activo">Activo</option>
+            <option value="pausado">Pausado</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+          <textarea id="mClientNotes" placeholder="Notas" style="grid-column: 1 / -1" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-save" onclick="saveClientModal()">Guardar cliente</button>
+        <button class="btn-cancel" onclick="closeModal('clientModal')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Cita -->
+  <div class="modal" id="appointmentModal">
+    <div class="modal-backdrop" onclick="closeModal('appointmentModal')"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="apptModalTitle">Nueva cita</h3>
+        <button class="modal-close" onclick="closeModal('appointmentModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="mApptId">
+        <div class="form-grid-2">
+          <select id="mApptClient" onchange="fillApptPrice()" style="grid-column: 1 / -1">
+            <option value="">Seleccionar cliente...</option>
+          </select>
+          <input type="date" id="mApptDate">
+          <input type="text" id="mApptTime" placeholder="Hora (ej: 9:00 AM)">
+          <input type="number" id="mApptPrice" placeholder="Precio cobrado $ *">
+          <input type="number" id="mApptTimeSpent" placeholder="Tiempo (minutos)">
+          <select id="mApptStatus">
+            <option value="pendiente">Pendiente</option>
+            <option value="completada">Completada</option>
+            <option value="cancelada">Cancelada</option>
+            <option value="no_show">No asistió</option>
+          </select>
+          <textarea id="mApptNotes" placeholder="Notas" style="grid-column: 1 / -1" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-save" onclick="saveApptModal()">Guardar cita</button>
+        <button class="btn-cancel" onclick="closeModal('appointmentModal')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Gasto -->
+  <div class="modal" id="expenseModal">
+    <div class="modal-backdrop" onclick="closeModal('expenseModal')"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Nuevo gasto</h3>
+        <button class="modal-close" onclick="closeModal('expenseModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid-2">
+          <select id="mExpCat">
+            <option value="">Categoría...</option>
+          </select>
+          <input type="number" id="mExpAmount" placeholder="Monto $ *" step="0.01">
+          <input type="date" id="mExpDate">
+          <input type="text" id="mExpDesc" placeholder="Descripción" style="grid-column: 1 / -1">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-save" onclick="saveExpenseModal()">Guardar gasto</button>
+        <button class="btn-cancel" onclick="closeModal('expenseModal')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Cotizar Lead -->
+  <div class="modal" id="quoteLeadModal">
+    <div class="modal-backdrop" onclick="closeModal('quoteLeadModal')"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Cotizar solicitud</h3>
+        <button class="modal-close" onclick="closeModal('quoteLeadModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="mQuoteLeadId">
+        <p class="modal-info" id="mQuoteLeadInfo"></p>
+        <div class="form-grid-2">
+          <input type="number" id="mQuotePrice" placeholder="Precio que le darás $ *">
+          <select id="mQuoteFreq">
+            <option value="">Frecuencia...</option>
+            <option value="10">Cada 10 días</option>
+            <option value="15">Quincenal</option>
+            <option value="30">Mensual</option>
+            <option value="deep">Profunda</option>
+          </select>
+          <textarea id="mQuoteMessage" placeholder="Mensaje para el cliente..." style="grid-column: 1 / -1" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-wa" onclick="sendQuoteFromModal()">📱 Enviar cotización por WhatsApp</button>
+        <button class="btn-save" onclick="saveQuoteOnly()">💾 Solo guardar precio</button>
+        <button class="btn-cancel" onclick="closeModal('quoteLeadModal')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>

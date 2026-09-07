@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ad Sparkling Cleaning LLC — Limpieza Profesional Miami</title>
+  <meta name="description" content="Servicio profesional de limpieza residencial en Miami-Dade y Broward. Solicita tu cotización personalizada.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="navbar" id="navbar">
+    <div class="container nav-container">
+      <div class="logo">
+        <span class="logo-icon">✦</span>
+        <span class="logo-text">Ad Sparkling Cleaning</span>
+      </div>
+      <div class="nav-links" id="navLinks">
+        <a href="#inicio">Inicio</a>
+        <a href="#galeria">Trabajos</a>
+        <a href="#servicios">Servicios</a>
+        <a href="#solicitar">Solicitar cotización</a>
+        <a href="https://wa.me/13050000000" class="btn-nav" target="_blank">WhatsApp</a>
+      </div>
+      <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero" id="inicio">
+    <div class="container">
+      <div class="hero-grid">
+        <div class="hero-content">
+          <div class="hero-badge">✦ Servicio profesional en Miami-Dade & Broward</div>
+          <h1>Tu hogar brillante,<br>sin que tú hagas nada</h1>
+          <p class="hero-sub">Limpieza residencial profunda y de mantenimiento. Insumos de primera calidad incluidos. Cotización personalizada en menos de 2 horas.</p>
+          <div class="hero-cta">
+            <a href="#solicitar" class="btn-primary">Solicitar cotización</a>
+            <a href="https://wa.me/13050000000" class="btn-whatsapp" target="_blank">
+              <span>💬</span> Escríbenos por WhatsApp
+            </a>
+          </div>
+          <div class="hero-trust">
+            <div class="trust-item">✓ Insumos incluidos</div>
+            <div class="trust-item">✓ Personal confiable y verificado</div>
+            <div class="trust-item">✓ Cotización personalizada</div>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="hero-card">
+            <div class="hero-card-icon">🏠</div>
+            <div class="hero-card-text">
+              <strong>Casas, apartamentos y townhouses</strong>
+              <span>Desde limpieza de mantenimiento hasta mudanza</span>
+            </div>
+          </div>
+          <div class="hero-card">
+            <div class="hero-card-icon">✨</div>
+            <div class="hero-card-text">
+              <strong>Atención al detalle</strong>
+              <span>Cada rincón importa. No dejamos nada sin limpiar.</span>
+            </div>
+          </div>
+          <div class="hero-card">
+            <div class="hero-card-icon">🕐</div>
+            <div class="hero-card-text">
+              <strong>Respuesta en menos de 2 horas</strong>
+              <span>Anggie te contacta directamente con tu cotización.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- GALERIA -->
+  <section id="galeria" class="section">
+    <div class="container">
+      <h2 class="section-title">Nuestro trabajo habla por nosotros</h2>
+      <p class="section-sub">Resultados reales en hogares de Miami-Dade y Broward.</p>
+      <div class="gallery-grid" id="galleryGrid">
+        <!-- Las fotos se cargan dinámicamente desde localStorage config -->
+        <div class="gallery-placeholder">
+          <div class="ph-icon">📸</div>
+          <p>Próximamente: fotos de nuestros trabajos</p>
+          <small>Anggie está actualizando su galería</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICIOS INCLUIDOS -->
+  <section id="servicios" class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">¿Qué incluye tu limpieza?</h2>
+      <p class="section-sub">Todo lo esencial para que tu hogar luzca impecable. Sin sorpresas.</p>
+
+      <div class="services-grid" id="servicesGrid">
+        <div class="service-card">
+          <div class="service-icon">🏠</div>
+          <h3>Áreas comunes</h3>
+          <ul>
+            <li>Ventiladores de techo</li>
+            <li>Remover telarañas</li>
+            <li>Limpiar persianas</li>
+            <li>Desinfectar superficies accesibles</li>
+            <li>Espejos y accesorios de vidrio</li>
+            <li>Puertas de vidrio por dentro y por fuera</li>
+            <li>Aspirar y trapear pisos</li>
+            <li>Rodapiés y zócalos</li>
+            <li>Tender camas</li>
+          </ul>
+        </div>
+        <div class="service-card">
+          <div class="service-icon">🛁</div>
+          <h3>Baños</h3>
+          <ul>
+            <li>Desinfectar inodoros</li>
+            <li>Limpiar ducha y bañera</li>
+            <li>Lavamanos impecables</li>
+            <li>Quitar polvo de superficies</li>
+            <li>Espejos relucientes</li>
+            <li>Aspirar y trapear piso</li>
+            <li>Exterior de gabinetes</li>
+          </ul>
+        </div>
+        <div class="service-card">
+          <div class="service-icon">🍳</div>
+          <h3>Cocina</h3>
+          <ul>
+            <li>Desinfectar fregadero</li>
+            <li>Limpiar encimera</li>
+            <li>Interior y exterior del microondas</li>
+            <li>Pulir electrodomésticos</li>
+            <li>Exterior de gabinetes</li>
+            <li>Aspirar y trapear pisos</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- SERVICIOS ADICIONALES -->
+      <div class="extras-public" id="extrasPublic">
+        <h3>Servicios adicionales disponibles</h3>
+        <p class="extras-desc">Puedes solicitarlos al momento de pedir tu cotización. El precio se te confirmará personalizado.</p>
+        <div class="extras-bubbles" id="extrasBubbles">
+          <!-- Se carga dinámicamente desde config -->
+        </div>
+      </div>
+
+      <!-- NO INCLUIDO -->
+      <div class="not-included" id="notIncludedSection">
+        <h4>Lo que NO está incluido</h4>
+        <div class="not-tags" id="notIncludedTags">
+          <!-- Se carga dinámicamente desde config -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOLICITAR COTIZACION -->
+  <section id="solicitar" class="section">
+    <div class="container">
+      <h2 class="section-title">Solicita tu cotización personalizada</h2>
+      <p class="section-sub">Cuéntanos sobre tu hogar y recibe una cotización hecha a tu medida en menos de 2 horas.</p>
+
+      <div class="request-card">
+        <form id="requestForm" onsubmit="handleRequest(event)">
+          <div class="form-row">
+            <div class="form-field">
+              <label>Nombre completo *</label>
+              <input type="text" id="reqName" required placeholder="Tu nombre">
+            </div>
+            <div class="form-field">
+              <label>Teléfono *</label>
+              <input type="tel" id="reqPhone" required placeholder="(305) 000-0000">
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label>Dirección completa *</label>
+            <input type="text" id="reqAddress" required placeholder="123 Calle Principal, Miami, FL 33101">
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label>Tamaño aproximado (sqft)</label>
+              <input type="number" id="reqSize" placeholder="ej. 1800">
+            </div>
+            <div class="form-field">
+              <label>Frecuencia deseada</label>
+              <select id="reqFreq">
+                <option value="">Seleccionar...</option>
+                <option value="10">Cada 10 días</option>
+                <option value="15">Quincenal</option>
+                <option value="30">Mensual</option>
+                <option value="deep">Profunda / Mudanza</option>
+                <option value="once">Solo una vez</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label>Servicios adicionales de interés</label>
+            <div class="request-extras" id="requestExtras">
+              <!-- Checkboxes dinámicos desde config -->
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label>¿Algo más que debamos saber?</label>
+            <textarea id="reqNotes" rows="3" placeholder="¿Tienes mascotas? ¿Áreas especiales? ¿Preferencia de horario?"></textarea>
+          </div>
+
+          <button type="submit" class="btn-submit">Enviar solicitud de cotización</button>
+          <p class="form-note">* Anggie te contactará personalmente en menos de 2 horas con tu precio exacto.</p>
+        </form>
+
+        <div id="requestSuccess" class="form-success" style="display:none;">
+          <div class="success-icon">✓</div>
+          <h4>¡Solicitud enviada!</h4>
+          <p>Anggie recibió tu solicitud y te contactará pronto con tu cotización personalizada.</p>
+          <a href="https://wa.me/13050000000" class="btn-whatsapp" target="_blank" style="margin-top: 16px; display: inline-flex;">
+            <span>💬</span> O escríbele directo por WhatsApp
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <span class="logo-icon">✦</span>
+          <span>Ad Sparkling Cleaning LLC</span>
+        </div>
+        <p class="footer-copy">© 2026 Ad Sparkling Cleaning LLC. Todos los derechos reservados.<br>Miami-Dade & Broward, Florida.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
