@@ -38,7 +38,7 @@
           <h1>Tu hogar brillante,<br>sin que tú hagas nada</h1>
           <p class="hero-sub">Limpieza residencial profunda y de mantenimiento. Insumos de primera calidad incluidos. Cotización personalizada en menos de 2 horas.</p>
           <div class="hero-cta">
-            <a href="#solicitar" class="btn-primary">Solicitar cotización</a>
+            <a href="#solicitar" class="btn-primary">Solicitar cotización gratis</a>
             <a href="https://wa.me/13050000000" class="btn-whatsapp" target="_blank">
               <span>💬</span> Escríbenos por WhatsApp
             </a>
@@ -47,6 +47,7 @@
             <div class="trust-item">✓ Insumos incluidos</div>
             <div class="trust-item">✓ Personal confiable y verificado</div>
             <div class="trust-item">✓ Cotización personalizada</div>
+            <div class="trust-item">✓ Sin contratos forzosos</div>
           </div>
         </div>
         <div class="hero-visual">
@@ -71,10 +72,42 @@
               <span>Anggie te contacta directamente con tu cotización.</span>
             </div>
           </div>
+          <div class="hero-card">
+            <div class="hero-card-icon">🔒</div>
+            <div class="hero-card-text">
+              <strong>100% confidencial</strong>
+              <span>Tu información está segura con nosotros.</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </header>
+
+  <!-- PROCESO -->
+  <section class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">¿Cómo funciona?</h2>
+      <p class="section-sub">Tres pasos simples para tener tu hogar impecable.</p>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <h3>Llena el formulario</h3>
+          <p>Cuéntanos sobre tu hogar: tamaño, frecuencia deseada y servicios adicionales.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <h3>Recibe tu cotización</h3>
+          <p>Anggie te envía un precio personalizado por WhatsApp en menos de 2 horas.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <h3>Agenda y disfruta</h3>
+          <p>Confirma tu cita y recibe a nuestro equipo. Tu hogar quedará brillante.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- GALERIA -->
   <section id="galeria" class="section">
@@ -82,7 +115,6 @@
       <h2 class="section-title">Nuestro trabajo habla por nosotros</h2>
       <p class="section-sub">Resultados reales en hogares de Miami-Dade y Broward.</p>
       <div class="gallery-grid" id="galleryGrid">
-        <!-- Las fotos se cargan dinámicamente desde localStorage config -->
         <div class="gallery-placeholder">
           <div class="ph-icon">📸</div>
           <p>Próximamente: fotos de nuestros trabajos</p>
@@ -160,8 +192,42 @@
     </div>
   </section>
 
+  <!-- TESTIMONIOS -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Lo que dicen nuestros clientes</h2>
+      <p class="section-sub">Historias reales de hogares que brillan.</p>
+      <div class="testimonials-grid">
+        <div class="testimonial-card">
+          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+          <p class="testimonial-text">"Anggie es increíble. Mi casa nunca había estado tan limpia. Llega puntual, es súper detallista y siempre deja todo perfecto."</p>
+          <div class="testimonial-author">
+            <strong>Ana Martínez</strong>
+            <span>Wynwood, Miami</span>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+          <p class="testimonial-text">"Llevo 6 meses con el servicio quincenal y no puedo estar más feliz. El precio es justo y la calidad es de otro nivel."</p>
+          <div class="testimonial-author">
+            <strong>Laura Sánchez</strong>
+            <span>Aventura, FL</span>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+          <p class="testimonial-text">"La limpieza de mudanza fue espectacular. Dejaron el apartamento como nuevo. 100% recomendado."</p>
+          <div class="testimonial-author">
+            <strong>Carmen Vega</strong>
+            <span>Miami Beach, FL</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- SOLICITAR COTIZACION -->
-  <section id="solicitar" class="section">
+  <section id="solicitar" class="section section-alt">
     <div class="container">
       <h2 class="section-title">Solicita tu cotización personalizada</h2>
       <p class="section-sub">Cuéntanos sobre tu hogar y recibe una cotización hecha a tu medida en menos de 2 horas.</p>
@@ -175,7 +241,7 @@
             </div>
             <div class="form-field">
               <label>Teléfono *</label>
-              <input type="tel" id="reqPhone" required placeholder="(305) 000-0000">
+              <input type="tel" id="reqPhone" required placeholder="(305) 000-0000" pattern="[0-9\s\-\(\)\+]{10,}">
             </div>
           </div>
 
@@ -187,7 +253,7 @@
           <div class="form-row">
             <div class="form-field">
               <label>Tamaño aproximado (sqft)</label>
-              <input type="number" id="reqSize" placeholder="ej. 1800">
+              <input type="number" id="reqSize" placeholder="ej. 1800" min="500" max="10000">
             </div>
             <div class="form-field">
               <label>Frecuencia deseada</label>
@@ -214,17 +280,23 @@
             <textarea id="reqNotes" rows="3" placeholder="¿Tienes mascotas? ¿Áreas especiales? ¿Preferencia de horario?"></textarea>
           </div>
 
-          <button type="submit" class="btn-submit">Enviar solicitud de cotización</button>
-          <p class="form-note">* Anggie te contactará personalmente en menos de 2 horas con tu precio exacto.</p>
+          <button type="submit" class="btn-submit" id="submitBtn">
+            <span class="btn-text">Enviar solicitud de cotización</span>
+            <span class="btn-loader" style="display:none;">Enviando...</span>
+          </button>
+          <p class="form-note">* Anggie te contactará personalmente en menos de 2 horas con tu precio exacto. Sin compromiso.</p>
         </form>
 
         <div id="requestSuccess" class="form-success" style="display:none;">
           <div class="success-icon">✓</div>
-          <h4>¡Solicitud enviada!</h4>
+          <h4>¡Solicitud enviada con éxito!</h4>
           <p>Anggie recibió tu solicitud y te contactará pronto con tu cotización personalizada.</p>
-          <a href="https://wa.me/13050000000" class="btn-whatsapp" target="_blank" style="margin-top: 16px; display: inline-flex;">
-            <span>💬</span> O escríbele directo por WhatsApp
-          </a>
+          <div class="success-actions">
+            <a href="https://wa.me/13050000000" class="btn-whatsapp" target="_blank">
+              <span>💬</span> O escríbele directo por WhatsApp
+            </a>
+            <button class="btn-secondary" onclick="resetForm()">Enviar otra solicitud</button>
+          </div>
         </div>
       </div>
     </div>
@@ -237,6 +309,12 @@
         <div class="footer-brand">
           <span class="logo-icon">✦</span>
           <span>Ad Sparkling Cleaning LLC</span>
+        </div>
+        <div class="footer-links">
+          <a href="#inicio">Inicio</a>
+          <a href="#servicios">Servicios</a>
+          <a href="#solicitar">Cotización</a>
+          <a href="https://wa.me/13050000000" target="_blank">WhatsApp</a>
         </div>
         <p class="footer-copy">© 2026 Ad Sparkling Cleaning LLC. Todos los derechos reservados.<br>Miami-Dade & Broward, Florida.</p>
       </div>

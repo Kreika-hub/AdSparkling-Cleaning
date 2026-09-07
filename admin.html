@@ -28,7 +28,10 @@
           <span>👥</span> Clientes
         </a>
         <a href="#" class="nav-item" data-tab="citas" onclick="showTab('citas')">
-          <span>📅</span> Citas
+          <span>📋</span> Citas
+        </a>
+        <a href="#" class="nav-item" data-tab="calendario" onclick="showTab('calendario')">
+          <span>📅</span> Calendario
         </a>
         <a href="#" class="nav-item" data-tab="gastos" onclick="showTab('gastos')">
           <span>💸</span> Gastos
@@ -80,13 +83,35 @@
             <div class="stat-value" id="dashClients">0</div>
             <div class="stat-sub">Con servicio regular</div>
           </div>
+          <div class="stat-card stat-warning">
+            <div class="stat-label">Pagos pendientes</div>
+            <div class="stat-value" id="dashPending">$0</div>
+            <div class="stat-sub">Por cobrar</div>
+          </div>
+          <div class="stat-card stat-danger">
+            <div class="stat-label">Pagos vencidos</div>
+            <div class="stat-value" id="dashOverdue">$0</div>
+            <div class="stat-sub">Urgente</div>
+          </div>
+        </div>
+
+        <!-- ALERTS -->
+        <div class="dash-section" style="margin-bottom:20px;">
+          <div class="dash-header">
+            <h2>🚨 Alertas del sistema</h2>
+          </div>
+          <div id="dashAlerts" class="alerts-container">
+            <div class="alert-item alert-success">
+              <div class="alert-content"><strong>¡Todo en orden!</strong><span>No hay alertas pendientes.</span></div>
+            </div>
+          </div>
         </div>
 
         <div class="dash-row">
           <div class="dash-section">
             <div class="dash-header">
               <h2>Próximas citas</h2>
-              <a href="#" onclick="showTab('citas'); return false;">Ver todas →</a>
+              <a href="#" onclick="showTab('calendario'); return false;">Ver calendario →</a>
             </div>
             <div id="upcomingAppointments" class="dash-list">
               <p class="empty">No hay citas próximas</p>
@@ -149,11 +174,22 @@
       <!-- CLIENTES -->
       <div id="tab-clientes" class="tab-panel">
         <h1>Clientes</h1>
-        <p class="tab-desc">Tus clientes con servicio regular.</p>
+        <p class="tab-desc">Tus clientes con servicio regular. Score automático basado en frecuencia, pagos y cancelaciones.</p>
+
+        <div id="clientRanking" style="margin-bottom:24px;"></div>
 
         <div class="toolbar">
           <div class="search-box">
             <input type="text" id="clientSearch" placeholder="Buscar cliente..." oninput="filterClients()">
+          </div>
+          <div class="sort-box">
+            <select onchange="sortClients(this.value)">
+              <option value="name">Ordenar: Nombre</option>
+              <option value="score">Ordenar: Score</option>
+              <option value="revenue">Ordenar: Ingresos</option>
+              <option value="visits">Ordenar: Visitas</option>
+              <option value="lastVisit">Ordenar: Última visita</option>
+            </select>
           </div>
           <button class="btn-add" onclick="openModal('clientModal')">+ Nuevo cliente</button>
         </div>
@@ -162,18 +198,19 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Nombre</th>
+                <th>Cliente</th>
                 <th>Teléfono</th>
                 <th>Dirección</th>
                 <th>Precio base</th>
                 <th>Frec.</th>
                 <th>Última visita</th>
                 <th>Estado</th>
+                <th>Score</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody id="clientsTable">
-              <tr><td colspan="8" class="empty-cell">No hay clientes</td></tr>
+              <tr><td colspan="9" class="empty-cell">No hay clientes</td></tr>
             </tbody>
           </table>
         </div>
@@ -182,7 +219,7 @@
       <!-- CITAS -->
       <div id="tab-citas" class="tab-panel">
         <h1>Citas</h1>
-        <p class="tab-desc">Registro de todas tus visitas.</p>
+        <p class="tab-desc">Registro de todas tus visitas con estado de pago y contrato.</p>
 
         <div class="toolbar">
           <button class="btn-add" onclick="openModal('appointmentModal')">+ Nueva cita</button>
@@ -197,14 +234,55 @@
                 <th>Dirección</th>
                 <th>Precio</th>
                 <th>Tiempo</th>
-                <th>Estado</th>
+                <th>Estado cita</th>
+                <th>Pago</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody id="appointmentsTable">
-              <tr><td colspan="7" class="empty-cell">No hay citas</td></tr>
+              <tr><td colspan="8" class="empty-cell">No hay citas</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- CALENDARIO -->
+      <div id="tab-calendario" class="tab-panel">
+        <h1>Calendario</h1>
+        <p class="tab-desc">Visualiza todas tus citas, estados de pago y contratos en un solo lugar.</p>
+
+        <div class="cal-toolbar">
+          <div class="cal-nav">
+            <button class="btn-secondary" onclick="prevCalMonth()">◀ Anterior</button>
+            <button class="btn-secondary" onclick="todayCal()">Hoy</button>
+            <button class="btn-secondary" onclick="nextCalMonth()">Siguiente ▶</button>
+          </div>
+          <h2 id="calMonthYear" class="cal-title">Septiembre 2026</h2>
+          <div class="cal-view-toggle">
+            <button class="btn-secondary ${'active'}" onclick="setCalView('month')">Mes</button>
+            <button class="btn-secondary" onclick="setCalView('week')">Semana</button>
+          </div>
+        </div>
+
+        <div class="cal-legend">
+          <span class="cal-legend-item"><span class="cal-dot cal-green"></span> Completada</span>
+          <span class="cal-legend-item"><span class="cal-dot cal-orange"></span> Pendiente</span>
+          <span class="cal-legend-item"><span class="cal-dot cal-red"></span> Cancelada</span>
+          <span class="cal-legend-item"><span class="cal-dot cal-gray"></span> No asistió</span>
+          <span class="cal-legend-item"><span class="cal-dot pay-pagado"></span> Pagado</span>
+          <span class="cal-legend-item"><span class="cal-dot pay-pendiente_pago"></span> Pendiente</span>
+        </div>
+
+        <div id="calendarContainer" class="calendar-container">
+          <div class="cal-grid">
+            <div class="cal-day-header">Dom</div>
+            <div class="cal-day-header">Lun</div>
+            <div class="cal-day-header">Mar</div>
+            <div class="cal-day-header">Mié</div>
+            <div class="cal-day-header">Jue</div>
+            <div class="cal-day-header">Vie</div>
+            <div class="cal-day-header">Sáb</div>
+          </div>
         </div>
       </div>
 
@@ -344,7 +422,7 @@
       <!-- FINANZAS -->
       <div id="tab-finanzas" class="tab-panel">
         <h1>Finanzas</h1>
-        <p class="tab-desc">Ingresos vs gastos. Visualiza la salud de tu negocio.</p>
+        <p class="tab-desc">Ingresos vs gastos. Visualiza la salud de tu negocio al detalle.</p>
 
         <div class="finance-cards">
           <div class="f-card">
@@ -359,6 +437,26 @@
             <div class="f-label">Ganancia neta</div>
             <div class="f-value" id="finProfit">$0</div>
           </div>
+          <div class="f-card">
+            <div class="f-label">Promedio por cita</div>
+            <div class="f-value" id="finAvgPerAppt">$0</div>
+          </div>
+          <div class="f-card f-warning">
+            <div class="f-label">Pagos pendientes</div>
+            <div class="f-value" id="finPending">$0</div>
+          </div>
+          <div class="f-card f-danger">
+            <div class="f-label">Pagos vencidos</div>
+            <div class="f-value" id="finOverdue">$0</div>
+          </div>
+          <div class="f-card f-success">
+            <div class="f-label">Cobrado este mes</div>
+            <div class="f-value" id="finPaidThisMonth">$0</div>
+          </div>
+          <div class="f-card f-info">
+            <div class="f-label">Proyección próximo mes</div>
+            <div class="f-value" id="finProjection">$0</div>
+          </div>
         </div>
 
         <div class="chart-section">
@@ -368,10 +466,18 @@
           </div>
         </div>
 
-        <div class="chart-section">
-          <h3>Gastos por categoría (este mes)</h3>
-          <div class="chart-container">
-            <canvas id="categoryChart" width="800" height="280"></canvas>
+        <div class="chart-row">
+          <div class="chart-section" style="flex:1">
+            <h3>Gastos por categoría (este mes)</h3>
+            <div class="chart-container">
+              <canvas id="categoryChart" width="400" height="280"></canvas>
+            </div>
+          </div>
+          <div class="chart-section" style="flex:1">
+            <h3>Top clientes por ingresos</h3>
+            <div class="chart-container">
+              <canvas id="topClientsChart" width="400" height="280"></canvas>
+            </div>
           </div>
         </div>
       </div>
@@ -489,6 +595,12 @@
             <option value="pausado">Pausado</option>
             <option value="inactivo">Inactivo</option>
           </select>
+          <select id="mClientContract">
+            <option value="activo">Contrato activo</option>
+            <option value="por_vencer">Por vencer</option>
+            <option value="inactivo">Sin contrato</option>
+          </select>
+          <input type="date" id="mClientPaymentDue" placeholder="Fecha pago próximo">
           <textarea id="mClientNotes" placeholder="Notas" style="grid-column: 1 / -1" rows="2"></textarea>
         </div>
       </div>
@@ -522,6 +634,17 @@
             <option value="completada">Completada</option>
             <option value="cancelada">Cancelada</option>
             <option value="no_show">No asistió</option>
+          </select>
+          <select id="mApptPayment">
+            <option value="pendiente_pago">Pago pendiente</option>
+            <option value="pagado">Pagado</option>
+            <option value="vencido">Vencido</option>
+          </select>
+          <select id="mApptContract">
+            <option value="regular">Servicio regular</option>
+            <option value="deep">Limpieza profunda</option>
+            <option value="move">Mudanza</option>
+            <option value="one_time">Solo una vez</option>
           </select>
           <textarea id="mApptNotes" placeholder="Notas" style="grid-column: 1 / -1" rows="2"></textarea>
         </div>
@@ -585,6 +708,23 @@
         <button class="btn-wa" onclick="sendQuoteFromModal()">📱 Enviar cotización por WhatsApp</button>
         <button class="btn-save" onclick="saveQuoteOnly()">💾 Solo guardar precio</button>
         <button class="btn-cancel" onclick="closeModal('quoteLeadModal')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Day Detail -->
+  <div class="modal" id="dayDetailModal">
+    <div class="modal-backdrop" onclick="closeModal('dayDetailModal')"></div>
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>Detalle del día</h3>
+        <button class="modal-close" onclick="closeModal('dayDetailModal')">×</button>
+      </div>
+      <div class="modal-body" id="dayDetailContent">
+        <p class="empty">Sin citas este día</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeModal('dayDetailModal')">Cerrar</button>
       </div>
     </div>
   </div>
