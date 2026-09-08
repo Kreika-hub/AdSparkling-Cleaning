@@ -1,10 +1,14 @@
 /* ============================================
    ADMIN PANEL — Ad Sparkling Cleaning
-   Autenticación (Clave Anggie2026), PWA Push,
-   CRUD completo y Gestión Autónoma
+   Autenticación, PWA Push, DataStore autónomo
+   y Sincronización con Variables Vercel & Supabase
    ============================================ */
 
 const DEFAULT_PASSWORD = 'Anggie2026';
+
+let SUPABASE_URL = '';
+let SUPABASE_KEY = '';
+let supabase = null;
 
 const PRICING = {
   1200: { 10: 150, 15: 150, 30: 180, deep: 240 },
@@ -16,7 +20,7 @@ const PRICING = {
 };
 
 // ============================================
-// DATASTORE (PERSISTENCIA AUTÓNOMA LOCAL)
+// DATASTORE (PERSISTENCIA LOCAL & SUPABASE SYNC)
 // ============================================
 const DataStore = {
   KEYS: {
@@ -24,12 +28,31 @@ const DataStore = {
     CLIENTS: 'adsparkling_clients',
     APPTS: 'adsparkling_appointments',
     EXPENSES: 'adsparkling_expenses',
+    REVIEWS: 'adsparkling_reviews',
     AUTH_PASS: 'adsparkling_admin_password',
     AUTH_SESSION: 'adsparkling_logged_in'
   },
 
-  init() {
+  async init() {
     this.seedInitialData();
+    await this.loadVercelEnv();
+  },
+
+  async loadVercelEnv() {
+    try {
+      const res = await fetch('/api/config');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.supabaseUrl && data.supabaseKey && window.supabase) {
+          SUPABASE_URL = data.supabaseUrl;
+          SUPABASE_KEY = data.supabaseKey;
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          console.log('✅ Supabase conectado automáticamente desde Vercel');
+        }
+      }
+    } catch (e) {
+      // Entorno local o sin endpoint
+    }
   },
 
   getPassword() {
@@ -215,6 +238,35 @@ const DataStore = {
       ];
       localStorage.setItem(this.KEYS.LEADS, JSON.stringify(initialLeads));
     }
+
+    // Reseñas de ejemplo
+    if (!localStorage.getItem(this.KEYS.REVIEWS)) {
+      const initialReviews = [
+        {
+          id: 'rev-501',
+          client_id: 'c-101',
+          client_name: 'María Rodríguez',
+          client_phone: '3055550192',
+          rating: 5,
+          comment: '¡El servicio de Anggie superó todas nuestras expectativas! Nuestra casa quedó impecable, y el aroma a limpio duró días.',
+          photo_url: 'imagenes%20comparativa/ba%C3%B1o%20blanco%20limpio.jpeg',
+          status: 'publicada',
+          created_at: new Date(Date.now() - 172800000).toISOString()
+        },
+        {
+          id: 'rev-502',
+          client_id: 'c-102',
+          client_name: 'Carlos Gómez',
+          client_phone: '7865550143',
+          rating: 5,
+          comment: 'La limpieza profunda del horno y la sala fue increíble. Se nota el amor y la dedicación con la que trabajan.',
+          photo_url: 'imagenes%20comparativa/horno%20azul%20limpio%202.jpeg',
+          status: 'pendiente',
+          created_at: new Date(Date.now() - 3600000).toISOString()
+        }
+      ];
+      localStorage.setItem(this.KEYS.REVIEWS, JSON.stringify(initialReviews));
+    }
   },
 
   getList(key) {
@@ -238,6 +290,10 @@ const DataStore = {
     const leads = this.getLeads();
     leads.unshift(lead);
     this.setList(this.KEYS.LEADS, leads);
+
+    if (supabase) {
+      supabase.from('leads').insert([lead]).then(() => {}).catch(() => {});
+    }
     return lead;
   },
   updateLead(id, updates) {
@@ -246,11 +302,17 @@ const DataStore = {
     if (idx !== -1) {
       leads[idx] = { ...leads[idx], ...updates, updated_at: new Date().toISOString() };
       this.setList(this.KEYS.LEADS, leads);
+      if (supabase) {
+        supabase.from('leads').update(updates).eq('id', id).then(() => {}).catch(() => {});
+      }
     }
   },
   deleteLead(id) {
     const leads = this.getLeads().filter(l => l.id != id);
     this.setList(this.KEYS.LEADS, leads);
+    if (supabase) {
+      supabase.from('leads').delete().eq('id', id).then(() => {}).catch(() => {});
+    }
   },
 
   // Clientes
@@ -268,11 +330,17 @@ const DataStore = {
       clients.push(client);
     }
     this.setList(this.KEYS.CLIENTS, clients);
+    if (supabase) {
+      supabase.from('clients').upsert([client]).then(() => {}).catch(() => {});
+    }
     return client;
   },
   deleteClient(id) {
     const clients = this.getClients().filter(c => c.id != id);
     this.setList(this.KEYS.CLIENTS, clients);
+    if (supabase) {
+      supabase.from('clients').delete().eq('id', id).then(() => {}).catch(() => {});
+    }
   },
 
   // Citas
@@ -306,6 +374,12 @@ const DataStore = {
       else clients[cIdx].next_visit = appt.date;
       this.setList(this.KEYS.CLIENTS, clients);
     }
+
+    if (supabase) {
+      const cleanAppt = { ...appt };
+      delete cleanAppt.clients;
+      supabase.from('appointments').upsert([cleanAppt]).then(() => {}).catch(() => {});
+    }
     return appt;
   },
   updateAppointmentStatus(id, newStatus) {
@@ -322,11 +396,17 @@ const DataStore = {
           this.setList(this.KEYS.CLIENTS, clients);
         }
       }
+      if (supabase) {
+        supabase.from('appointments').update({ status: newStatus }).eq('id', id).then(() => {}).catch(() => {});
+      }
     }
   },
   deleteAppointment(id) {
     const appts = this.getList(this.KEYS.APPTS).filter(a => a.id != id);
     this.setList(this.KEYS.APPTS, appts);
+    if (supabase) {
+      supabase.from('appointments').delete().eq('id', id).then(() => {}).catch(() => {});
+    }
   },
 
   // Gastos
@@ -337,11 +417,50 @@ const DataStore = {
     const exps = this.getExpenses();
     exps.unshift(exp);
     this.setList(this.KEYS.EXPENSES, exps);
+    if (supabase) {
+      supabase.from('expenses').insert([exp]).then(() => {}).catch(() => {});
+    }
     return exp;
   },
   deleteExpense(id) {
     const exps = this.getExpenses().filter(e => e.id != id);
     this.setList(this.KEYS.EXPENSES, exps);
+    if (supabase) {
+      supabase.from('expenses').delete().eq('id', id).then(() => {}).catch(() => {});
+    }
+  },
+
+  // Reseñas
+  getReviews() { return this.getList(this.KEYS.REVIEWS); },
+  saveReview(review) {
+    review.id = review.id || 'rev-' + Date.now();
+    review.created_at = review.created_at || new Date().toISOString();
+    review.status = review.status || 'pendiente';
+    const reviews = this.getReviews();
+    reviews.unshift(review);
+    this.setList(this.KEYS.REVIEWS, reviews);
+    if (supabase) {
+      supabase.from('reviews').insert([review]).then(() => {}).catch(() => {});
+    }
+    return review;
+  },
+  updateReview(id, updates) {
+    const reviews = this.getReviews();
+    const idx = reviews.findIndex(r => r.id == id);
+    if (idx !== -1) {
+      reviews[idx] = { ...reviews[idx], ...updates };
+      this.setList(this.KEYS.REVIEWS, reviews);
+      if (supabase) {
+        supabase.from('reviews').update(updates).eq('id', id).then(() => {}).catch(() => {});
+      }
+    }
+  },
+  deleteReview(id) {
+    const reviews = this.getReviews().filter(r => r.id != id);
+    this.setList(this.KEYS.REVIEWS, reviews);
+    if (supabase) {
+      supabase.from('reviews').delete().eq('id', id).then(() => {}).catch(() => {});
+    }
   }
 };
 
@@ -456,7 +575,7 @@ function dismissPushCard() {
 function installPWA() {
   if (deferredPrompt) {
     deferredPrompt.prompt();
-    deferredPrompt.userChoice.then((choice) => {
+    deferredPrompt.userChoice.then(() => {
       deferredPrompt = null;
     });
   } else {
@@ -500,6 +619,7 @@ function showTab(tabId) {
   if (tabId === 'clients') loadClients();
   if (tabId === 'appointments') { loadClientsForSelect(); loadAppointments(); }
   if (tabId === 'expenses') loadExpenses();
+  if (tabId === 'reviews') loadAdminReviews();
   if (tabId === 'cotizar') qcCalculate();
 }
 
@@ -532,7 +652,7 @@ function loadDashboard() {
   const exps = DataStore.getExpenses();
   const clients = DataStore.getClients();
 
-  // Ingresos del mes (citas completadas del mes actual)
+  // Ingresos del mes
   const monthAppts = appts.filter(a => {
     if (a.status !== 'completada') return false;
     const d = new Date(a.date);
@@ -559,7 +679,7 @@ function loadDashboard() {
   document.getElementById('dashMargin').textContent = margin + '% margen';
   document.getElementById('dashClients').textContent = activeClients.length;
 
-  // Próximas citas pendientes
+  // Próximas citas
   const todayStr = now.toISOString().split('T')[0];
   const upcoming = appts
     .filter(a => a.status === 'pendiente' && a.date >= todayStr)
@@ -771,6 +891,7 @@ function renderClientsTable(clients) {
       <td>${formatDate(c.next_visit)}</td>
       <td><span class="badge badge-${c.status}">${c.status}</span></td>
       <td class="action-cell">
+        <button class="btn-table-action btn-schedule-table" onclick="sendPortalLink('${c.id}')" title="Enviar enlace de Portal al Cliente por WhatsApp" style="background:#f4ebfa; color:var(--primary); font-weight:700;">📲 Portal</button>
         <button class="btn-table-action btn-schedule-table" onclick="scheduleForClient('${c.id}')" title="Agendar Cita">📅 Cita</button>
         <button class="btn-table-action btn-edit-table" onclick="editClient('${c.id}')" title="Editar cliente">✏️</button>
         <a href="https://wa.me/${cleanPhone(c.phone)}" target="_blank" class="btn-table-action btn-wa-table" title="Enviar WhatsApp">📱</a>
@@ -778,6 +899,22 @@ function renderClientsTable(clients) {
       </td>
     </tr>
   `).join('');
+}
+
+function sendPortalLink(clientId) {
+  const client = allClients.find(c => c.id == clientId);
+  if (!client) return;
+  const phone = cleanPhone(client.phone);
+  const portalUrl = `${window.location.origin}${window.location.pathname.replace('admin.html', '')}portal.html?phone=${phone}`;
+  const msg = `¡Hola ${client.name}! ✨ Te comparto tu acceso exclusivo a tu Portal de Cliente de *Ad Sparkling Cleaning*. Desde aquí puedes consultar tus fechas de limpieza programadas, historial y dejarnos tu calificación:\n\n🔗 ${portalUrl}\n\n¡Gracias por confiar en nosotros! 🏠✨`;
+  
+  if (phone) {
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  } else {
+    navigator.clipboard.writeText(portalUrl).then(() => {
+      alert(`Enlace al portal copiado al portapapeles:\n\n${portalUrl}`);
+    });
+  }
 }
 
 function filterClients(query) {
@@ -1228,6 +1365,165 @@ function qcCreateClient() {
 }
 
 // ============================================
+// RESEÑAS & MODERACIÓN
+// ============================================
+function loadAdminReviews() {
+  const listEl = document.getElementById('adminReviewsList');
+  if (!listEl) return;
+  const reviews = DataStore.getReviews();
+  if (!reviews || reviews.length === 0) {
+    listEl.innerHTML = '<p class="empty" style="text-align:center; padding:30px 20px;">No hay reseñas registradas aún.</p>';
+    return;
+  }
+
+  listEl.innerHTML = reviews.map(r => `
+    <div class="dash-item" style="display:flex; flex-direction:column; gap:12px; padding:18px; border-left: 4px solid ${r.status === 'publicada' ? 'var(--success)' : (r.status === 'archivada' ? 'var(--text-muted)' : 'var(--accent)')}; margin-bottom:12px; background:#fff; border-radius:8px; box-shadow:var(--shadow-sm);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+        <div>
+          <strong style="font-size:16px; color:var(--primary);">${r.client_name || 'Cliente'}</strong>
+          <span style="font-size:12px; color:var(--text-muted); margin-left:8px;">(${r.client_phone || 'Sin teléfono'})</span>
+          <div style="margin-top:2px; font-size:14px; color:#e8a87c;">${'⭐'.repeat(r.rating || 5)} (${r.rating || 5}/5)</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="badge badge-${r.status}">${r.status}</span>
+          <span style="font-size:12px; color:var(--text-muted);">${formatDate(r.created_at)}</span>
+        </div>
+      </div>
+
+      <p style="font-size:14px; color:var(--text); line-height:1.5; background:var(--bg-alt); padding:12px 14px; border-radius:8px; margin:0;">
+        "${r.comment || 'Sin comentario'}"
+      </p>
+
+      ${(r.photo_url || (r.photos && r.photos.length > 0)) ? `
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img src="${r.photo_url || r.photos[0]}" alt="Foto reseña" style="width:75px; height:75px; object-fit:cover; border-radius:8px; border:1px solid var(--border);">
+          <span style="font-size:12px; color:var(--text-muted);">Foto adjuntada por el cliente</span>
+        </div>
+      ` : ''}
+
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:6px; flex-wrap:wrap;">
+        ${r.status !== 'publicada' ? `
+          <button class="btn-table-action" style="background:#e8f8f0; color:#2d8a5e; font-weight:700; padding:6px 14px;" onclick="publishReview('${r.id}')" title="Publicar en la web">
+            ✓ Publicar en la Web
+          </button>
+        ` : `
+          <button class="btn-table-action" style="background:#f0eef3; color:var(--text-sec); padding:6px 14px;" onclick="archiveReview('${r.id}')" title="Ocultar de la web">
+            📦 Ocultar / Archivar
+          </button>
+        `}
+        <button class="btn-table-action btn-del-table" onclick="deleteReview('${r.id}')" title="Eliminar reseña">
+          🗑 Eliminar
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function publishReview(id) {
+  DataStore.updateReview(id, { status: 'publicada' });
+  loadAdminReviews();
+}
+
+function archiveReview(id) {
+  DataStore.updateReview(id, { status: 'archivada' });
+  loadAdminReviews();
+}
+
+function deleteReview(id) {
+  if (confirm('¿Deseas eliminar esta reseña permanentemente?')) {
+    DataStore.deleteReview(id);
+    loadAdminReviews();
+  }
+}
+
+// ============================================
+// CENTRO DE NOTIFICACIONES & ALERTAS
+// ============================================
+function toggleNotificationsModal() {
+  const modal = document.getElementById('notificationsModal');
+  if (!modal) return;
+  const isHidden = modal.style.display === 'none' || !modal.style.display;
+  modal.style.display = isHidden ? 'flex' : 'none';
+
+  if (isHidden) {
+    loadNotificationsList();
+  }
+}
+
+function loadNotificationsList() {
+  const container = document.getElementById('adminNotificationsList');
+  if (!container) return;
+
+  const leads = DataStore.getLeads();
+  const appts = DataStore.getAppointments();
+  const reviews = DataStore.getReviews();
+  const clients = DataStore.getClients();
+
+  const alerts = [];
+
+  // Nuevos leads sin atender
+  const newLeads = leads.filter(l => l.status === 'nuevo');
+  if (newLeads.length > 0) {
+    alerts.push({
+      type: 'lead',
+      title: `📬 ${newLeads.length} Lead(s) nuevo(s) por cotizar`,
+      desc: `Último prospecto: ${newLeads[0].name} (${newLeads[0].phone})`,
+      action: "showTab('leads'); toggleNotificationsModal();"
+    });
+  }
+
+  // Reseñas pendientes de moderación
+  const pendingReviews = reviews.filter(r => r.status === 'pendiente');
+  if (pendingReviews.length > 0) {
+    alerts.push({
+      type: 'review',
+      title: `⭐ ${pendingReviews.length} Reseña(s) pendiente(s) de aprobación`,
+      desc: `De: ${pendingReviews[0].client_name} (${pendingReviews[0].rating} estrellas)`,
+      action: "showTab('reviews'); toggleNotificationsModal();"
+    });
+  }
+
+  // Citas para hoy
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayAppts = appts.filter(a => a.date === todayStr && a.status === 'pendiente');
+  if (todayAppts.length > 0) {
+    alerts.push({
+      type: 'appt',
+      title: `📅 ${todayAppts.length} Cita(s) programada(s) para hoy`,
+      desc: `${todayAppts.map(a => (a.clients?.name || 'Cliente') + ' (' + (a.time || '') + ')').join(', ')}`,
+      action: "showTab('appointments'); toggleNotificationsModal();"
+    });
+  }
+
+  // Clientes sin visita reciente (>20 días)
+  const inactive = clients.filter(c => {
+    if (!c.last_visit) return false;
+    const diffDays = (new Date() - new Date(c.last_visit)) / (1000 * 60 * 60 * 24);
+    return diffDays > 20 && c.status === 'activo';
+  });
+  if (inactive.length > 0) {
+    alerts.push({
+      type: 'client',
+      title: `🔄 ${inactive.length} Cliente(s) habitual(es) sin visita reciente`,
+      desc: `Sugerencia: enviar recordatorio a ${inactive[0].name}`,
+      action: "showTab('clients'); toggleNotificationsModal();"
+    });
+  }
+
+  if (alerts.length === 0) {
+    container.innerHTML = '<p class="empty" style="padding:20px; text-align:center;">🎉 Todo al día. No tienes alertas pendientes por ahora.</p>';
+    return;
+  }
+
+  container.innerHTML = alerts.map(a => `
+    <div class="dash-item" style="cursor:pointer; padding:14px; margin-bottom:8px; border-radius:8px; background:var(--bg-alt); border:1px solid var(--border);" onclick="${a.action}">
+      <strong style="color:var(--primary); font-size:15px; display:block;">${a.title}</strong>
+      <p style="font-size:13px; color:var(--text-sec); margin-top:4px; margin-bottom:0;">${a.desc}</p>
+    </div>
+  `).join('');
+}
+
+// ============================================
 // AJUSTES & MODAL
 // ============================================
 function openSettingsModal() {
@@ -1246,6 +1542,7 @@ function resetDemoData() {
     localStorage.removeItem(DataStore.KEYS.APPTS);
     localStorage.removeItem(DataStore.KEYS.EXPENSES);
     localStorage.removeItem(DataStore.KEYS.LEADS);
+    localStorage.removeItem(DataStore.KEYS.REVIEWS);
     DataStore.seedInitialData();
     closeSettingsModal();
     loadDashboard();
@@ -1280,8 +1577,8 @@ function truncate(str, max) {
 // ============================================
 // INICIALIZACIÓN
 // ============================================
-document.addEventListener('DOMContentLoaded', function() {
-  DataStore.init();
+document.addEventListener('DOMContentLoaded', async function() {
+  await DataStore.init();
 
   // Verificar estado de sesión
   checkAuth();

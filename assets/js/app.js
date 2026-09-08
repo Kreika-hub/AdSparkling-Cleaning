@@ -181,6 +181,36 @@ function initScrollAnimations() {
   });
 }
 
+// Renderizar testimonios aprobados dinámicamente
+function renderApprovedTestimonials() {
+  const container = document.getElementById('testimonialsGrid');
+  if (!container) return;
+
+  try {
+    const raw = localStorage.getItem('adsparkling_reviews');
+    if (!raw) return;
+    const reviews = JSON.parse(raw);
+    const approved = reviews.filter(r => r.status === 'publicada');
+    if (!approved || approved.length === 0) return;
+
+    const cardsHtml = approved.map(r => `
+      <div class="testimonial-card animate-ready animate-in" style="border-left: 4px solid var(--primary);">
+        <div class="testimonial-stars">${'⭐'.repeat(r.rating || 5)}</div>
+        <p class="testimonial-text">"${r.comment}"</p>
+        ${r.photo_url ? `<img src="${r.photo_url}" alt="Foto del trabajo" style="width:100%; height:140px; object-fit:cover; border-radius:8px; margin: 10px 0;">` : ''}
+        <div class="testimonial-author">
+          <strong>${r.client_name || 'Cliente Verificado'}</strong>
+          <span>Cliente de Ad Sparkling Cleaning</span>
+        </div>
+      </div>
+    `).join('');
+
+    container.innerHTML = cardsHtml + container.innerHTML;
+  } catch (e) {
+    console.warn('Error cargando testimonios públicos:', e);
+  }
+}
+
 // Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -191,5 +221,6 @@ if ('serviceWorker' in navigator) {
 document.addEventListener('DOMContentLoaded', () => {
   renderExtras();
   renderNotIncluded();
+  renderApprovedTestimonials();
   initScrollAnimations();
 });
