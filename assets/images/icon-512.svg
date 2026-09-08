@@ -2,21 +2,28 @@
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#31013F"/>
-      <stop offset="100%" stop-color="#22002b"/>
+      <stop offset="100%" stop-color="#240030"/>
     </linearGradient>
-    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#f0d6e7"/>
+    <linearGradient id="mainSparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffe28a"/>
+      <stop offset="50%" stop-color="#f6ca65"/>
+      <stop offset="100%" stop-color="#e8a87c"/>
     </linearGradient>
+    <filter id="softGlow512" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
   </defs>
+  
+  <!-- Fondo morado oscuro con esquinas redondeadas -->
   <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
-  <!-- Sparkles cluster from official logo -->
-  <g transform="translate(-1830, -28) scale(2.55)" fill="#f0d6e7">
-    <path d="m820.33,94.34c1.08-13.96,12.28-24.89,25.81-25.97-6.86-.68-12.79-3.35-17.65-8.24-4.86-4.89-7.5-10.84-8.06-17.46-2.26,14.77-10.88,23.41-25.72,25.78,6.73.6,12.67,3.29,17.53,8.19,4.86,4.9,7.49,10.84,8.09,17.69Z"/>
-    <path d="m848.29,62.13c.86-4.51,3.71-7.37,8.31-8.31-2.11-.4-3.99-1.25-5.51-2.78-1.52-1.53-2.41-3.37-2.79-5.53-.97,4.6-3.72,7.38-8.51,8.31,4.76.95,7.55,3.71,8.5,8.32Z"/>
-    <path d="m837.89,42.5c-3.4-.72-5.4-2.66-6.15-6.12-.76,3.46-2.77,5.4-6.12,6.12,3.37.72,5.35,2.67,6.11,6.11.76-3.41,2.73-5.4,6.16-6.1Z"/>
-  </g>
-  <!-- Monogram AD -->
-  <text x="256" y="335" font-family="'Inter', 'Montserrat', -apple-system, sans-serif" font-size="220" font-weight="900" text-anchor="middle" fill="url(#goldGrad)" letter-spacing="-8">AD</text>
-  <text x="256" y="405" font-family="'Montserrat', sans-serif" font-size="34" font-weight="600" text-anchor="middle" fill="#e8a87c" letter-spacing="10">SPARKLING</text>
+  
+  <!-- Brillo principal dorado de 4 puntas -->
+  <path d="M256 90 C256 182 304 230 396 256 C304 282 256 330 256 422 C256 330 208 282 116 256 C208 230 256 182 256 90 Z" fill="url(#mainSparkleGrad)" filter="url(#softGlow512)"/>
+  
+  <!-- Brillo blanco superior derecho -->
+  <path d="M374 122 C374 150 388 164 416 176 C388 188 374 202 374 230 C374 202 360 188 332 176 C360 164 374 150 374 122 Z" fill="#ffffff" opacity="0.95"/>
+  
+  <!-- Punto de brillo inferior izquierdo -->
+  <circle cx="144" cy="368" r="17" fill="#f6ca65" opacity="0.85"/>
 </svg>
