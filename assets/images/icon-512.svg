@@ -2,18 +2,21 @@
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#31013F"/>
-      <stop offset="100%" stop-color="#4e0863"/>
+      <stop offset="100%" stop-color="#22002b"/>
     </linearGradient>
-    <linearGradient id="sparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f6d365"/>
-      <stop offset="100%" stop-color="#e8a87c"/>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f0d6e7"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="110" fill="url(#bgGrad)"/>
-  <!-- Sparkle star main -->
-  <path d="M256 96 C256 181 298 224 384 256 C298 288 256 331 256 416 C256 331 214 288 128 256 C214 224 256 181 256 96 Z" fill="url(#sparkleGrad)"/>
-  <!-- Small sparkle -->
-  <path d="M368 122 C368 148 382 162 410 176 C382 190 368 204 368 230 C368 204 354 190 326 176 C354 162 368 148 368 122 Z" fill="#ffffff" opacity="0.9"/>
-  <!-- Circle accent -->
-  <circle cx="150" cy="360" r="16" fill="#e8a87c" opacity="0.7"/>
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  <!-- Sparkles cluster from official logo -->
+  <g transform="translate(-1830, -28) scale(2.55)" fill="#f0d6e7">
+    <path d="m820.33,94.34c1.08-13.96,12.28-24.89,25.81-25.97-6.86-.68-12.79-3.35-17.65-8.24-4.86-4.89-7.5-10.84-8.06-17.46-2.26,14.77-10.88,23.41-25.72,25.78,6.73.6,12.67,3.29,17.53,8.19,4.86,4.9,7.49,10.84,8.09,17.69Z"/>
+    <path d="m848.29,62.13c.86-4.51,3.71-7.37,8.31-8.31-2.11-.4-3.99-1.25-5.51-2.78-1.52-1.53-2.41-3.37-2.79-5.53-.97,4.6-3.72,7.38-8.51,8.31,4.76.95,7.55,3.71,8.5,8.32Z"/>
+    <path d="m837.89,42.5c-3.4-.72-5.4-2.66-6.15-6.12-.76,3.46-2.77,5.4-6.12,6.12,3.37.72,5.35,2.67,6.11,6.11.76-3.41,2.73-5.4,6.16-6.1Z"/>
+  </g>
+  <!-- Monogram AD -->
+  <text x="256" y="335" font-family="'Inter', 'Montserrat', -apple-system, sans-serif" font-size="220" font-weight="900" text-anchor="middle" fill="url(#goldGrad)" letter-spacing="-8">AD</text>
+  <text x="256" y="405" font-family="'Montserrat', sans-serif" font-size="34" font-weight="600" text-anchor="middle" fill="#e8a87c" letter-spacing="10">SPARKLING</text>
 </svg>
