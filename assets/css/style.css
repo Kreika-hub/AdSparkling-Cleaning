@@ -402,6 +402,19 @@ body {
   font-size: 14px; font-weight: 500; transition: color 0.2s;
 }
 .footer-links a:hover { color: var(--accent); }
+.admin-access-link {
+  background: rgba(232, 168, 124, 0.15);
+  color: var(--accent) !important;
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(232, 168, 124, 0.3);
+  font-weight: 600 !important;
+  transition: all 0.2s !important;
+}
+.admin-access-link:hover {
+  background: var(--accent) !important;
+  color: #1a1a2e !important;
+}
 .footer-copy { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6; }
 
 /* RESPONSIVE */

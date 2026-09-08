@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="sparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f6d365"/>
+      <stop offset="100%" stop-color="#e8a87c"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" fill="url(#bgGrad)"/>
+  <!-- Sparkle star main -->
+  <path d="M256 96 C256 181 298 224 384 256 C298 288 256 331 256 416 C256 331 214 288 128 256 C214 224 256 181 256 96 Z" fill="url(#sparkleGrad)"/>
+  <!-- Small sparkle -->
+  <path d="M368 122 C368 148 382 162 410 176 C382 190 368 204 368 230 C368 204 354 190 326 176 C354 162 368 148 368 122 Z" fill="#ffffff" opacity="0.9"/>
+  <!-- Circle accent -->
+  <circle cx="150" cy="360" r="16" fill="#e8a87c" opacity="0.7"/>
+</svg>

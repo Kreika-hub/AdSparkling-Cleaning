@@ -1,14 +1,31 @@
 /* ============================================
-   LANDING APP v3 — Ad Sparkling Cleaning
-   Mejor UX, validaciones, animaciones
+   LANDING APP — Ad Sparkling Cleaning
+   Sincronización con Admin, Formulario de Cotización,
+   Animaciones y PWA
    ============================================ */
 
+// Sincronización de Leads con Admin DataStore
+function saveLeadFromLanding(lead) {
+  try {
+    // Clave estándar compartida con el panel administrativo
+    const key = 'adsparkling_leads';
+    const raw = localStorage.getItem(key);
+    const leads = raw ? JSON.parse(raw) : [];
+    leads.unshift(lead);
+    localStorage.setItem(key, JSON.stringify(leads));
+
+    // Compatibilidad secundaria
+    localStorage.setItem('asc_leads', JSON.stringify(leads));
+    localStorage.setItem('adsparkling_notify_lead', Date.now().toString());
+  } catch (e) {
+    console.error('Error guardando lead en localStorage:', e);
+  }
+}
+
 // ============================================
-// CONFIGURACIÓN COMPARTIDA (sync con admin)
+// CONFIGURACIÓN DINÁMICA
 // ============================================
 function getConfig() {
-  const cfg = localStorage.getItem('asc_config');
-  if (cfg) return JSON.parse(cfg);
   return {
     companyName: 'Ad Sparkling Cleaning LLC',
     phone: '13050000000',
@@ -26,23 +43,10 @@ function getConfig() {
       { id: 'dishes', name: 'Lavar platos', active: true },
       { id: 'patio', name: 'Patio exterior', active: true },
       { id: 'pets', name: 'Excremento de mascotas', active: true }
-    ],
-    gallery: []
+    ]
   };
 }
 
-function getLeads() {
-  const data = localStorage.getItem('asc_leads');
-  return data ? JSON.parse(data) : [];
-}
-
-function saveLeads(leads) {
-  localStorage.setItem('asc_leads', JSON.stringify(leads));
-}
-
-// ============================================
-// UI DINÁMICA
-// ============================================
 function renderExtras() {
   const cfg = getConfig();
   const container = document.getElementById('extrasBubbles');
@@ -77,109 +81,92 @@ function renderNotIncluded() {
   ).join('') : '<span class="not-tag">Consultar con Anggie</span>';
 }
 
-function renderGallery() {
-  const cfg = getConfig();
-  const grid = document.getElementById('galleryGrid');
-  if (!grid) return;
-
-  if (!cfg.gallery || cfg.gallery.length === 0) {
-    grid.innerHTML = `
-      <div class="gallery-placeholder">
-        <div class="ph-icon">📸</div>
-        <p>Próximamente: fotos de nuestros trabajos</p>
-        <small>Anggie está actualizando su galería</small>
-      </div>`;
-    return;
-  }
-
-  grid.innerHTML = cfg.gallery.map(url => `
-    <div class="gallery-item"><img src="${url}" alt="Trabajo de limpieza" loading="lazy"></div>
-  `).join('');
-}
-
 // ============================================
-// FORMULARIO DE SOLICITUD
+// FORMULARIO DE SOLICITUD / CONTACTO
 // ============================================
 function handleRequest(e) {
   e.preventDefault();
 
   const btn = document.getElementById('submitBtn');
-  const btnText = btn.querySelector('.btn-text');
-  const btnLoader = btn.querySelector('.btn-loader');
+  const btnText = btn?.querySelector('.btn-text');
+  const btnLoader = btn?.querySelector('.btn-loader');
 
   // Validaciones
-  const name = document.getElementById('reqName').value.trim();
-  const phone = document.getElementById('reqPhone').value.trim();
-  const address = document.getElementById('reqAddress').value.trim();
+  const name = (document.getElementById('reqName') || document.getElementById('contactName'))?.value.trim() || '';
+  const phone = (document.getElementById('reqPhone') || document.getElementById('contactPhone'))?.value.trim() || '';
+  const address = (document.getElementById('reqAddress') || document.getElementById('contactAddress'))?.value.trim() || '';
 
   if (name.length < 2) { alert('Por favor ingresa tu nombre completo'); return; }
-  if (phone.length < 10) { alert('Por favor ingresa un teléfono válido'); return; }
-  if (address.length < 10) { alert('Por favor ingresa una dirección completa'); return; }
+  if (phone.length < 7) { alert('Por favor ingresa un teléfono válido'); return; }
+  if (address.length < 5) { alert('Por favor ingresa una dirección completa'); return; }
 
   // Loading state
-  btn.disabled = true;
-  btnText.style.display = 'none';
-  btnLoader.style.display = 'inline';
+  if (btn) {
+    btn.disabled = true;
+    if (btnText) btnText.style.display = 'none';
+    if (btnLoader) btnLoader.style.display = 'inline-block';
+  }
 
-  const size = document.getElementById('reqSize').value;
-  const freq = document.getElementById('reqFreq').value;
-  const notes = document.getElementById('reqNotes').value.trim();
+  const sizeEl = document.getElementById('reqSize') || document.getElementById('contactSize');
+  const freqEl = document.getElementById('reqFreq') || document.getElementById('contactFreq');
+  const notesEl = document.getElementById('reqNotes') || document.getElementById('contactNotes');
 
-  // Recoger adicionales seleccionados
+  const size = sizeEl ? sizeEl.value : null;
+  const freq = freqEl ? freqEl.value : null;
+  const notes = notesEl ? notesEl.value.trim() : '';
+
   const extras = [];
   document.querySelectorAll('#requestExtras input:checked').forEach(el => {
-    extras.push({ id: el.value, name: el.dataset.name });
+    extras.push(el.dataset.name || el.value);
   });
 
   const lead = {
-    id: 'lead_' + Date.now(),
+    id: 'l-' + Date.now(),
     name,
     phone,
     address,
     size_sqft: size ? parseInt(size) : null,
     frequency: freq || null,
-    extras_requested: extras,
-    notes,
+    notes: (extras.length ? `Extras: ${extras.join(', ')}. ` : '') + (notes || ''),
     status: 'nuevo',
-    assigned_price: null,
-    angie_notes: '',
-    whatsapp_sent: false,
     created_at: new Date().toISOString()
   };
 
-  const leads = getLeads();
-  leads.unshift(lead);
-  saveLeads(leads);
+  // Guardar lead
+  saveLeadFromLanding(lead);
 
-  // Simular delay de envío para UX
   setTimeout(() => {
-    document.getElementById('requestForm').style.display = 'none';
-    document.getElementById('requestSuccess').style.display = 'block';
-    document.getElementById('requestSuccess').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const form = document.getElementById('requestForm') || document.getElementById('contactForm');
+    const success = document.getElementById('requestSuccess') || document.getElementById('formSuccess');
 
-    // Notificar al admin (si está abierto en otra pestaña)
-    try {
-      localStorage.setItem('asc_notify_new_lead', Date.now().toString());
-    } catch(e) {}
+    if (form) form.style.display = 'none';
+    if (success) {
+      success.style.display = 'block';
+      success.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 
-    // Reset button
-    btn.disabled = false;
-    btnText.style.display = 'inline';
-    btnLoader.style.display = 'none';
-  }, 800);
+    if (btn) {
+      btn.disabled = false;
+      if (btnText) btnText.style.display = 'inline';
+      if (btnLoader) btnLoader.style.display = 'none';
+    }
+  }, 600);
 }
 
-function resetForm() {
-  document.getElementById('requestForm').reset();
-  document.getElementById('requestForm').style.display = 'block';
-  document.getElementById('requestSuccess').style.display = 'none';
-  document.getElementById('reqName').focus();
+// Cotizador de la landing si existe
+function handleContact(e) {
+  handleRequest(e);
 }
 
-// ============================================
-// ANIMACIONES SCROLL
-// ============================================
+// Menu toggle móvil
+function toggleMenu() {
+  const nav = document.querySelector('.nav-links');
+  if (nav) nav.classList.toggle('open');
+}
+
+// Scroll animations
 function initScrollAnimations() {
+  if (!('IntersectionObserver' in window)) return;
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -194,52 +181,15 @@ function initScrollAnimations() {
   });
 }
 
-// ============================================
-// UTILIDADES
-// ============================================
-function toggleMenu() {
-  const nav = document.getElementById('navLinks');
-  nav.classList.toggle('open');
+// Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
 }
 
-// Navbar scroll
-window.addEventListener('scroll', () => {
-  const nav = document.getElementById('navbar');
-  if (window.scrollY > 50) {
-    nav.style.boxShadow = '0 2px 12px rgba(0,0,0,0.08)';
-  } else {
-    nav.style.boxShadow = 'none';
-  }
-});
-
-// Smooth scroll para anclas
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-  anchor.addEventListener('click', function(e) {
-    const target = document.querySelector(this.getAttribute('href'));
-    if (target) {
-      e.preventDefault();
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      document.getElementById('navLinks')?.classList.remove('open');
-    }
-  });
-});
-
-// ============================================
-// INIT
-// ============================================
 document.addEventListener('DOMContentLoaded', () => {
   renderExtras();
   renderNotIncluded();
-  renderGallery();
   initScrollAnimations();
-
-  // Phone mask simple
-  const phoneInput = document.getElementById('reqPhone');
-  if (phoneInput) {
-    phoneInput.addEventListener('input', (e) => {
-      let val = e.target.value.replace(/\D/g, '');
-      if (val.length > 10) val = val.slice(0, 10);
-      e.target.value = val;
-    });
-  }
 });

@@ -1,19 +1,15 @@
 /* ============================================
-   ADMIN PANEL v3 — Ad Sparkling Cleaning
-   Calendario, Scoring, Alertas, Finanzas Pro
+   ADMIN PANEL — Ad Sparkling Cleaning
+   Gestión completa, LocalStorage + Supabase sync,
+   Dashboard, CRUD, WhatsApp y PWA
    ============================================ */
 
 // ============================================
-// DATASTORE
+// CONFIGURACIÓN & ESTADO
 // ============================================
-const DB = {
-  get(key, def) {
-    try { const v = localStorage.getItem('asc_' + key); return v ? JSON.parse(v) : def; }
-    catch(e) { return def; }
-  },
-  set(key, val) { localStorage.setItem('asc_' + key, JSON.stringify(val)); },
-  now() { return new Date().toISOString(); }
-};
+let SUPABASE_URL = 'https://TU-PROJECT.supabase.co';
+let SUPABASE_KEY = 'TU-ANON-KEY';
+let supabase = null;
 
 const PRICING = {
   1200: { 10: 150, 15: 150, 30: 180, deep: 240 },
@@ -24,1395 +20,1381 @@ const PRICING = {
   4500: { 10: 250, 15: 280, 30: 340, deep: 450 }
 };
 
-const SIZE_LABELS = {
-  1200: 'Hasta 1,200', 1700: '1,201-1,700', 2200: '1,701-2,200',
-  2800: '2,201-2,800', 3500: '2,801-3,500', 4500: '3,501-4,500'
+// ============================================
+// DATASTORE: LOCALSTORAGE + SUPABASE HYBRID
+// ============================================
+const DataStore = {
+  KEYS: {
+    LEADS: 'adsparkling_leads',
+    CLIENTS: 'adsparkling_clients',
+    APPTS: 'adsparkling_appointments',
+    EXPENSES: 'adsparkling_expenses',
+    SETTINGS: 'adsparkling_settings'
+  },
+
+  init() {
+    this.loadSettings();
+    this.initSupabase();
+    this.seedInitialData();
+  },
+
+  loadSettings() {
+    const raw = localStorage.getItem(this.KEYS.SETTINGS);
+    if (raw) {
+      try {
+        const s = JSON.parse(raw);
+        if (s.supabaseUrl) SUPABASE_URL = s.supabaseUrl;
+        if (s.supabaseKey) SUPABASE_KEY = s.supabaseKey;
+      } catch (e) {
+        console.error('Error cargando settings:', e);
+      }
+    }
+  },
+
+  initSupabase() {
+    if (SUPABASE_URL && !SUPABASE_URL.includes('TU-PROJECT') && window.supabase) {
+      try {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        this.updateConnectionStatus(true);
+      } catch (err) {
+        console.warn('Error conectando a Supabase:', err);
+        this.updateConnectionStatus(false);
+      }
+    } else {
+      supabase = null;
+      this.updateConnectionStatus(false);
+    }
+  },
+
+  updateConnectionStatus(connected) {
+    const badge = document.getElementById('connStatusBadge');
+    if (badge) {
+      if (connected) {
+        badge.className = 'conn-badge online';
+        badge.innerHTML = '<span class="dot"></span> Supabase Conectado';
+      } else {
+        badge.className = 'conn-badge local';
+        badge.innerHTML = '<span class="dot"></span> Modo Local (Offline)';
+      }
+    }
+  },
+
+  seedInitialData() {
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = String(now.getMonth() + 1).padStart(2, '0');
+
+    // Clientes de ejemplo
+    if (!localStorage.getItem(this.KEYS.CLIENTS)) {
+      const initialClients = [
+        {
+          id: 'c-101',
+          name: 'María Rodríguez',
+          phone: '3055550192',
+          address: '742 Brickell Ave, Miami, FL 33131',
+          size_sqft: 2200,
+          frequency: '15',
+          base_price: 195,
+          last_visit: `${curYear}-${curMonth}-02`,
+          next_visit: `${curYear}-${curMonth}-16`,
+          status: 'activo',
+          notes: 'Tiene un perro pequeño amigable. Clave portón #4052.'
+        },
+        {
+          id: 'c-102',
+          name: 'Carlos Gómez',
+          phone: '7865550143',
+          address: '1200 Ocean Dr, Miami Beach, FL 33139',
+          size_sqft: 1700,
+          frequency: '10',
+          base_price: 165,
+          last_visit: `${curYear}-${curMonth}-05`,
+          next_visit: `${curYear}-${curMonth}-15`,
+          status: 'activo',
+          notes: 'Enfocar en baños y balcón.'
+        },
+        {
+          id: 'c-103',
+          name: 'Elena Suárez',
+          phone: '9545550881',
+          address: '2500 Las Olas Blvd, Fort Lauderdale, FL 33301',
+          size_sqft: 2800,
+          frequency: '30',
+          base_price: 260,
+          last_visit: `${curYear}-${curMonth}-01`,
+          next_visit: `${curYear}-${curMonth}-28`,
+          status: 'activo',
+          notes: 'Productos eco-amigables preferidos.'
+        },
+        {
+          id: 'c-104',
+          name: 'David Pérez',
+          phone: '3055559821',
+          address: '8800 Doral Blvd, Doral, FL 33178',
+          size_sqft: 1200,
+          frequency: '15',
+          base_price: 150,
+          last_visit: '2026-07-15',
+          next_visit: null,
+          status: 'activo',
+          notes: 'Viajó de vacaciones.'
+        }
+      ];
+      localStorage.setItem(this.KEYS.CLIENTS, JSON.stringify(initialClients));
+    }
+
+    // Citas de ejemplo
+    if (!localStorage.getItem(this.KEYS.APPTS)) {
+      const initialAppts = [
+        {
+          id: 'a-201',
+          client_id: 'c-101',
+          date: `${curYear}-${curMonth}-02`,
+          time: '09:00 AM',
+          price: 195,
+          addons: [],
+          notes: 'Limpieza quincenal regular',
+          status: 'completada'
+        },
+        {
+          id: 'a-202',
+          client_id: 'c-102',
+          date: `${curYear}-${curMonth}-05`,
+          time: '01:30 PM',
+          price: 215,
+          addons: ['Nevera por dentro'],
+          notes: 'Incluyó limpieza interior de nevera',
+          status: 'completada'
+        },
+        {
+          id: 'a-203',
+          client_id: 'c-101',
+          date: `${curYear}-${curMonth}-16`,
+          time: '09:00 AM',
+          price: 195,
+          addons: [],
+          notes: 'Próxima visita agendada',
+          status: 'pendiente'
+        },
+        {
+          id: 'a-204',
+          client_id: 'c-102',
+          date: `${curYear}-${curMonth}-15`,
+          time: '02:00 PM',
+          price: 165,
+          addons: [],
+          notes: 'Confirmada por WhatsApp',
+          status: 'pendiente'
+        }
+      ];
+      localStorage.setItem(this.KEYS.APPTS, JSON.stringify(initialAppts));
+    }
+
+    // Gastos de ejemplo
+    if (!localStorage.getItem(this.KEYS.EXPENSES)) {
+      const initialExpenses = [
+        {
+          id: 'e-301',
+          category: 'insumos',
+          amount: 65.50,
+          date: `${curYear}-${curMonth}-03`,
+          description: 'Detergentes, microfibras y desinfectantes (Home Depot)'
+        },
+        {
+          id: 'e-302',
+          category: 'gasolina',
+          amount: 45.00,
+          date: `${curYear}-${curMonth}-04`,
+          description: 'Gasolina semana 1 (Ruta Miami Beach - Brickell)'
+        },
+        {
+          id: 'e-303',
+          category: 'salario_asistente',
+          amount: 120.00,
+          date: `${curYear}-${curMonth}-05`,
+          description: 'Pago asistente apoyo casa grande'
+        }
+      ];
+      localStorage.setItem(this.KEYS.EXPENSES, JSON.stringify(initialExpenses));
+    }
+
+    // Leads de ejemplo
+    if (!localStorage.getItem(this.KEYS.LEADS)) {
+      const initialLeads = [
+        {
+          id: 'l-401',
+          name: 'Andrés Morales',
+          phone: '3055553322',
+          address: '150 SE 2nd Ave, Miami, FL 33131',
+          size_sqft: 1700,
+          frequency: '15',
+          notes: 'Interesado en empezar la próxima semana. Apartamento piso 12.',
+          status: 'nuevo',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 'l-402',
+          name: 'Sofía Navarro',
+          phone: '9545557766',
+          address: '401 E Las Olas, Fort Lauderdale, FL 33301',
+          size_sqft: 2800,
+          frequency: 'deep',
+          notes: 'Mudanza a fin de mes. Quiere horno y gabinetes.',
+          status: 'contactado',
+          created_at: new Date(Date.now() - 86400000).toISOString()
+        }
+      ];
+      localStorage.setItem(this.KEYS.LEADS, JSON.stringify(initialLeads));
+    }
+  },
+
+  // Helper local storage genérico
+  getList(key) {
+    try {
+      return JSON.parse(localStorage.getItem(key)) || [];
+    } catch {
+      return [];
+    }
+  },
+
+  setList(key, items) {
+    localStorage.setItem(key, JSON.stringify(items));
+  },
+
+  // LEADS
+  async getLeads() {
+    if (supabase) {
+      const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+      if (!error && data) return data;
+    }
+    return this.getList(this.KEYS.LEADS);
+  },
+
+  async saveLead(lead) {
+    lead.id = lead.id || 'l-' + Date.now();
+    lead.created_at = lead.created_at || new Date().toISOString();
+    lead.status = lead.status || 'nuevo';
+
+    const leads = this.getList(this.KEYS.LEADS);
+    leads.unshift(lead);
+    this.setList(this.KEYS.LEADS, leads);
+
+    if (supabase) {
+      try {
+        await supabase.from('leads').insert([lead]);
+      } catch (e) {
+        console.warn('Error sincronizando lead con Supabase:', e);
+      }
+    }
+    return lead;
+  },
+
+  async updateLead(id, updates) {
+    const leads = this.getList(this.KEYS.LEADS);
+    const idx = leads.findIndex(l => l.id == id);
+    if (idx !== -1) {
+      leads[idx] = { ...leads[idx], ...updates, updated_at: new Date().toISOString() };
+      this.setList(this.KEYS.LEADS, leads);
+    }
+
+    if (supabase) {
+      try {
+        await supabase.from('leads').update(updates).eq('id', id);
+      } catch (e) {
+        console.warn('Error actualizando lead en Supabase:', e);
+      }
+    }
+  },
+
+  async deleteLead(id) {
+    const leads = this.getList(this.KEYS.LEADS).filter(l => l.id != id);
+    this.setList(this.KEYS.LEADS, leads);
+
+    if (supabase) {
+      try {
+        await supabase.from('leads').delete().eq('id', id);
+      } catch (e) {
+        console.warn('Error eliminando lead en Supabase:', e);
+      }
+    }
+  },
+
+  // CLIENTS
+  async getClients() {
+    if (supabase) {
+      const { data, error } = await supabase.from('clients').select('*').order('name');
+      if (!error && data) return data;
+    }
+    return this.getList(this.KEYS.CLIENTS);
+  },
+
+  async saveClient(client) {
+    const clients = this.getList(this.KEYS.CLIENTS);
+    if (client.id) {
+      const idx = clients.findIndex(c => c.id == client.id);
+      if (idx !== -1) {
+        clients[idx] = { ...clients[idx], ...client };
+      } else {
+        clients.push(client);
+      }
+    } else {
+      client.id = 'c-' + Date.now();
+      client.created_at = new Date().toISOString();
+      client.status = client.status || 'activo';
+      clients.push(client);
+    }
+    this.setList(this.KEYS.CLIENTS, clients);
+
+    if (supabase) {
+      try {
+        await supabase.from('clients').upsert([client]);
+      } catch (e) {
+        console.warn('Error guardando cliente en Supabase:', e);
+      }
+    }
+    return client;
+  },
+
+  async deleteClient(id) {
+    const clients = this.getList(this.KEYS.CLIENTS).filter(c => c.id != id);
+    this.setList(this.KEYS.CLIENTS, clients);
+
+    if (supabase) {
+      try {
+        await supabase.from('clients').delete().eq('id', id);
+      } catch (e) {
+        console.warn('Error eliminando cliente en Supabase:', e);
+      }
+    }
+  },
+
+  // APPOINTMENTS
+  async getAppointments() {
+    if (supabase) {
+      const { data, error } = await supabase.from('appointments').select('*, clients(name, address, phone)').order('date', { ascending: false });
+      if (!error && data) return data;
+    }
+    const appts = this.getList(this.KEYS.APPTS);
+    const clients = this.getList(this.KEYS.CLIENTS);
+    return appts.map(a => {
+      const client = clients.find(c => c.id == a.client_id) || {};
+      return { ...a, clients: { name: client.name || 'Sin asignar', address: client.address || '', phone: client.phone || '' } };
+    });
+  },
+
+  async saveAppointment(appt) {
+    const appts = this.getList(this.KEYS.APPTS);
+    if (appt.id) {
+      const idx = appts.findIndex(a => a.id == appt.id);
+      if (idx !== -1) appts[idx] = { ...appts[idx], ...appt };
+      else appts.unshift(appt);
+    } else {
+      appt.id = 'a-' + Date.now();
+      appt.created_at = new Date().toISOString();
+      appt.status = appt.status || 'pendiente';
+      appts.unshift(appt);
+    }
+    this.setList(this.KEYS.APPTS, appts);
+
+    // Actualizar fecha última/próxima visita en el cliente
+    const clients = this.getList(this.KEYS.CLIENTS);
+    const cIdx = clients.findIndex(c => c.id == appt.client_id);
+    if (cIdx !== -1) {
+      if (appt.status === 'completada') {
+        clients[cIdx].last_visit = appt.date;
+      } else {
+        clients[cIdx].next_visit = appt.date;
+      }
+      this.setList(this.KEYS.CLIENTS, clients);
+    }
+
+    if (supabase) {
+      try {
+        const cleanAppt = { ...appt };
+        delete cleanAppt.clients;
+        await supabase.from('appointments').upsert([cleanAppt]);
+      } catch (e) {
+        console.warn('Error guardando cita en Supabase:', e);
+      }
+    }
+    return appt;
+  },
+
+  async updateAppointmentStatus(id, newStatus) {
+    const appts = this.getList(this.KEYS.APPTS);
+    const idx = appts.findIndex(a => a.id == id);
+    if (idx !== -1) {
+      appts[idx].status = newStatus;
+      this.setList(this.KEYS.APPTS, appts);
+
+      if (newStatus === 'completada') {
+        const clients = this.getList(this.KEYS.CLIENTS);
+        const cIdx = clients.findIndex(c => c.id == appts[idx].client_id);
+        if (cIdx !== -1) {
+          clients[cIdx].last_visit = appts[idx].date;
+          this.setList(this.KEYS.CLIENTS, clients);
+        }
+      }
+    }
+
+    if (supabase) {
+      try {
+        await supabase.from('appointments').update({ status: newStatus }).eq('id', id);
+      } catch (e) {
+        console.warn('Error actualizando estado de cita:', e);
+      }
+    }
+  },
+
+  async deleteAppointment(id) {
+    const appts = this.getList(this.KEYS.APPTS).filter(a => a.id != id);
+    this.setList(this.KEYS.APPTS, appts);
+
+    if (supabase) {
+      try {
+        await supabase.from('appointments').delete().eq('id', id);
+      } catch (e) {
+        console.warn('Error eliminando cita en Supabase:', e);
+      }
+    }
+  },
+
+  // EXPENSES
+  async getExpenses() {
+    if (supabase) {
+      const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
+      if (!error && data) return data;
+    }
+    return this.getList(this.KEYS.EXPENSES);
+  },
+
+  async saveExpense(exp) {
+    exp.id = exp.id || 'e-' + Date.now();
+    exp.created_at = new Date().toISOString();
+    const exps = this.getList(this.KEYS.EXPENSES);
+    exps.unshift(exp);
+    this.setList(this.KEYS.EXPENSES, exps);
+
+    if (supabase) {
+      try {
+        await supabase.from('expenses').insert([exp]);
+      } catch (e) {
+        console.warn('Error guardando gasto en Supabase:', e);
+      }
+    }
+    return exp;
+  },
+
+  async deleteExpense(id) {
+    const exps = this.getList(this.KEYS.EXPENSES).filter(e => e.id != id);
+    this.setList(this.KEYS.EXPENSES, exps);
+
+    if (supabase) {
+      try {
+        await supabase.from('expenses').delete().eq('id', id);
+      } catch (e) {
+        console.warn('Error eliminando gasto en Supabase:', e);
+      }
+    }
+  }
 };
 
-const FREQ_LABELS = { 10: '10 días', 15: 'Quincenal', 30: 'Mensual', deep: 'Profunda', once: 'Solo una vez' };
-const STATUS_LABELS = {
-  nuevo: 'Nuevo', contactado: 'Contactado', agendado: 'Agendado', descartado: 'Descartado',
-  pendiente: 'Pendiente', completada: 'Completada', cancelada: 'Cancelada', no_show: 'No asistió',
-  activo: 'Activo', pausado: 'Pausado', inactivo: 'Inactivo',
-  pagado: 'Pagado', pendiente_pago: 'Pago pendiente', vencido: 'Vencido'
-};
-
 // ============================================
-// INIT & DEMO DATA v3
-// ============================================
-function initData() {
-  if (DB.get('initialized_v3', false)) return;
-
-  const today = new Date();
-  const fmt = d => d.toISOString().split('T')[0];
-  const d60 = new Date(today); d60.setDate(d60.getDate() - 60);
-  const d45 = new Date(today); d45.setDate(d45.getDate() - 45);
-  const d30 = new Date(today); d30.setDate(d30.getDate() - 30);
-  const d15 = new Date(today); d15.setDate(d15.getDate() - 15);
-  const d7 = new Date(today); d7.setDate(d7.getDate() - 7);
-  const d3 = new Date(today); d3.setDate(d3.getDate() - 3);
-  const d1 = new Date(today); d1.setDate(d1.getDate() - 1);
-  const next1 = new Date(today); next1.setDate(next1.getDate() + 1);
-  const next3 = new Date(today); next3.setDate(next3.getDate() + 3);
-  const next7 = new Date(today); next7.setDate(next7.getDate() + 7);
-  const next14 = new Date(today); next14.setDate(next14.getDate() + 14);
-
-  DB.set('config', {
-    companyName: 'Ad Sparkling Cleaning LLC',
-    phone: '13050000000',
-    address: 'Miami-Dade & Broward, FL',
-    extras: [
-      { id: 'oven', name: 'Horno por dentro', price: 40, active: true },
-      { id: 'fridge', name: 'Nevera por dentro', price: 50, active: true },
-      { id: 'blinds', name: 'Persianas', price: 10, active: true, perUnit: true },
-      { id: 'cabinets', name: 'Gabinetes + ventanas interior', price: 50, active: true },
-      { id: 'distance', name: 'Recargo por distancia', price: 50, active: true },
-      { id: 'overdue', name: 'Recargo +30 días sin limpiar', price: 30, active: true }
-    ],
-    notIncluded: [
-      { id: 'laundry', name: 'Laundry', active: true },
-      { id: 'dishes', name: 'Lavar platos', active: true },
-      { id: 'patio', name: 'Patio exterior', active: true },
-      { id: 'pets', name: 'Excremento de mascotas', active: true }
-    ],
-    expenseCategories: ['Insumos', 'Gasolina', 'Auto', 'Salario asistente', 'Equipo', 'Otro'],
-    gallery: []
-  });
-
-  DB.set('leads', [
-    { id: 'l1', name: 'María González', phone: '(305) 111-2222', address: '123 Brickell Ave, Miami', size_sqft: 1800, frequency: '15', extras_requested: [{id:'oven',name:'Horno'}], notes: 'Tiene 2 perros', status: 'nuevo', assigned_price: null, angie_notes: '', whatsapp_sent: false, created_at: d7.toISOString() },
-    { id: 'l2', name: 'Carlos Ruiz', phone: '(305) 333-4444', address: '456 Coral Way, Miami', size_sqft: 2200, frequency: '30', extras_requested: [], notes: '', status: 'contactado', assigned_price: 225, angie_notes: 'Pendiente confirmar fecha', whatsapp_sent: true, created_at: d15.toISOString() },
-    { id: 'l3', name: 'Sofía Herrera', phone: '(305) 555-1234', address: '789 Kendall Dr, Miami', size_sqft: 1500, frequency: '15', extras_requested: [{id:'blinds',name:'Persianas'}], notes: 'Primera vez', status: 'nuevo', assigned_price: null, angie_notes: '', whatsapp_sent: false, created_at: d3.toISOString() }
-  ]);
-
-  DB.set('clients', [
-    { id: 'c1', name: 'Ana Martínez', phone: '(305) 555-6666', address: '789 Wynwood St, Miami', size_sqft: 1700, frequency: '15', base_price: 170, notes: 'Muy ordenada', status: 'activo', last_visit: fmt(d15), next_visit: fmt(next3), rating: 5, cancelCount: 0, totalRevenue: 1020, totalAppointments: 6, contractStatus: 'activo', paymentDueDate: fmt(next7) },
-    { id: 'c2', name: 'Pedro López', phone: '(305) 777-8888', address: '321 Doral Blvd, Doral', size_sqft: 2200, frequency: '30', base_price: 225, notes: 'Gato, no tocar cuarto de huéspedes', status: 'activo', last_visit: fmt(d30), next_visit: null, rating: 3, cancelCount: 2, totalRevenue: 900, totalAppointments: 4, contractStatus: 'por_vencer', paymentDueDate: fmt(d3) },
-    { id: 'c3', name: 'Laura Sánchez', phone: '(305) 999-0000', address: '654 Aventura Cir, Aventura', size_sqft: 3500, frequency: '30', base_price: 290, notes: 'Casa grande, 5 baños', status: 'activo', last_visit: fmt(d7), next_visit: fmt(next7), rating: 5, cancelCount: 0, totalRevenue: 1740, totalAppointments: 6, contractStatus: 'activo', paymentDueDate: fmt(next14) },
-    { id: 'c4', name: 'Roberto Díaz', phone: '(305) 444-7777', address: '111 Hialeah Gardens, Hialeah', size_sqft: 1200, frequency: '10', base_price: 150, notes: 'Cancela mucho', status: 'pausado', last_visit: fmt(d45), next_visit: null, rating: 1, cancelCount: 4, totalRevenue: 450, totalAppointments: 3, contractStatus: 'inactivo', paymentDueDate: fmt(d30) },
-    { id: 'c5', name: 'Carmen Vega', phone: '(305) 222-9999', address: '222 Miami Beach, Miami Beach', size_sqft: 2800, frequency: '15', base_price: 220, notes: 'Cliente VIP', status: 'activo', last_visit: fmt(d3), next_visit: fmt(next1), rating: 5, cancelCount: 0, totalRevenue: 2640, totalAppointments: 12, contractStatus: 'activo', paymentDueDate: fmt(next3) }
-  ]);
-
-  DB.set('appointments', [
-    { id: 'a1', client_id: 'c1', date: fmt(d15), time: '9:00 AM', price: 170, addons: [], notes: '', status: 'completada', cleaning_time: 180, paymentStatus: 'pagado', contractType: 'regular' },
-    { id: 'a2', client_id: 'c2', date: fmt(d30), time: '10:00 AM', price: 225, addons: ['oven'], notes: 'Horno muy sucio', status: 'completada', cleaning_time: 240, paymentStatus: 'pendiente_pago', contractType: 'regular' },
-    { id: 'a3', client_id: 'c3', date: fmt(d7), time: '8:30 AM', price: 340, addons: ['blinds'], notes: '10 persianas', status: 'completada', cleaning_time: 300, paymentStatus: 'pagado', contractType: 'regular' },
-    { id: 'a4', client_id: 'c1', date: fmt(next3), time: '9:00 AM', price: 170, addons: [], notes: '', status: 'pendiente', cleaning_time: null, paymentStatus: 'pendiente_pago', contractType: 'regular' },
-    { id: 'a5', client_id: 'c3', date: fmt(next7), time: '8:30 AM', price: 290, addons: [], notes: '', status: 'pendiente', cleaning_time: null, paymentStatus: 'pendiente_pago', contractType: 'regular' },
-    { id: 'a6', client_id: 'c5', date: fmt(next1), time: '11:00 AM', price: 220, addons: [], notes: '', status: 'pendiente', cleaning_time: null, paymentStatus: 'pendiente_pago', contractType: 'regular' },
-    { id: 'a7', client_id: 'c4', date: fmt(d45), time: '2:00 PM', price: 150, addons: [], notes: 'Canceló última vez', status: 'cancelada', cleaning_time: null, paymentStatus: 'vencido', contractType: 'regular' },
-    { id: 'a8', client_id: 'c2', date: fmt(d60), time: '10:00 AM', price: 225, addons: [], notes: '', status: 'completada', cleaning_time: 210, paymentStatus: 'pagado', contractType: 'regular' },
-    { id: 'a9', client_id: 'c5', date: fmt(d3), time: '11:00 AM', price: 220, addons: ['fridge'], notes: '', status: 'completada', cleaning_time: 200, paymentStatus: 'pagado', contractType: 'regular' },
-    { id: 'a10', client_id: 'c4', date: fmt(d30), time: '2:00 PM', price: 150, addons: [], notes: 'No asistió', status: 'no_show', cleaning_time: null, paymentStatus: 'vencido', contractType: 'regular' }
-  ]);
-
-  DB.set('expenses', [
-    { id: 'e1', category: 'Insumos', amount: 45.50, description: 'Detergente, desinfectante, trapos', date: fmt(d7) },
-    { id: 'e2', category: 'Gasolina', amount: 35.00, description: 'Viajes esta semana', date: fmt(d3) },
-    { id: 'e3', category: 'Salario asistente', amount: 180.00, description: 'Pago semanal asistente', date: fmt(d3) },
-    { id: 'e4', category: 'Equipo', amount: 25.99, description: 'Nueva aspiradora handheld', date: fmt(d15) },
-    { id: 'e5', category: 'Insumos', amount: 62.30, description: 'Productos de limpieza bulk', date: fmt(d1) },
-    { id: 'e6', category: 'Gasolina', amount: 40.00, description: 'Viajes 2 semanas', date: fmt(d7) }
-  ]);
-
-  DB.set('initialized_v3', true);
-}
-
-// ============================================
-// NAVIGATION
+// NAVEGACIÓN & PESTAÑAS
 // ============================================
 function showTab(tabId) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('tab-' + tabId).classList.add('active');
-  document.querySelector(`.nav-item[data-tab="${tabId}"]`)?.classList.add('active');
+  document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(n => n.classList.remove('active'));
 
-  if (tabId === 'dashboard') renderDashboard();
-  if (tabId === 'solicitudes') renderLeads();
-  if (tabId === 'clientes') renderClients();
-  if (tabId === 'citas') renderAppointments();
-  if (tabId === 'calendario') renderCalendar();
-  if (tabId === 'gastos') renderExpenses();
-  if (tabId === 'cotizador') renderCotizador();
-  if (tabId === 'finanzas') renderFinanzas();
-  if (tabId === 'config') renderConfig();
+  const panel = document.getElementById('tab-' + tabId);
+  if (panel) panel.classList.add('active');
+
+  document.querySelectorAll(`[data-tab="${tabId}"]`).forEach(el => el.classList.add('active'));
+
+  // Cerrar sidebar en móvil si está abierto
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) sidebar.classList.remove('open');
+  const overlay = document.querySelector('.mobile-overlay');
+  if (overlay) overlay.classList.remove('active');
+
+  // Cargar datos
+  if (tabId === 'dashboard') loadDashboard();
+  if (tabId === 'leads') loadLeads();
+  if (tabId === 'clients') loadClients();
+  if (tabId === 'appointments') { loadClientsForSelect(); loadAppointments(); }
+  if (tabId === 'expenses') loadExpenses();
+  if (tabId === 'cotizar') qcCalculate();
 }
 
-function openModal(id) {
-  document.getElementById(id).classList.add('active');
-  if (id === 'expenseModal') populateExpenseCategories();
-  if (id === 'appointmentModal') populateClientSelect();
-}
-function closeModal(id) {
-  document.getElementById(id).classList.remove('active');
-  document.querySelectorAll(`#${id} input, #${id} select, #${id} textarea`).forEach(el => {
-    if (el.type === 'checkbox') el.checked = false;
-    else if (el.tagName === 'SELECT') el.selectedIndex = 0;
-    else el.value = '';
-  });
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.querySelector('.mobile-overlay');
+  if (sidebar) sidebar.classList.toggle('open');
+  if (overlay) overlay.classList.toggle('active');
 }
 
-// ============================================
-// SCORING & ALERT ENGINE
-// ============================================
-function computeClientScore(client) {
-  const appts = DB.get('appointments', []).filter(a => a.client_id === client.id);
-  const completed = appts.filter(a => a.status === 'completada').length;
-  const cancelled = appts.filter(a => a.status === 'cancelada').length;
-  const noShows = appts.filter(a => a.status === 'no_show').length;
-  const total = appts.length;
-  const revenue = appts.filter(a => a.status === 'completada').reduce((s, a) => s + (a.price || 0), 0);
-
-  const daysSinceLast = client.last_visit ? Math.floor((new Date() - new Date(client.last_visit)) / (1000*60*60*24)) : 999;
-  const cancelRate = total > 0 ? ((cancelled + noShows) / total) * 100 : 0;
-
-  // Score 0-100
-  let score = 50;
-  score += Math.min(completed * 5, 30); // +5 por cita completada, max 30
-  score += Math.min(revenue / 50, 20); // +1 por cada $50, max 20
-  score -= cancelRate * 0.8; // -0.8 por % de cancelación
-  score -= Math.min(daysSinceLast * 0.3, 20); // -0.3 por día sin visita, max 20
-  score = Math.max(0, Math.min(100, Math.round(score)));
-
-  // Classification
-  let tier = 'regular';
-  let tierLabel = 'Regular';
-  let tierIcon = '⚪';
-  if (score >= 80 && cancelRate < 10 && daysSinceLast < 20) {
-    tier = 'vip'; tierLabel = 'VIP ⭐'; tierIcon = '⭐';
-  } else if (score >= 60 && cancelRate < 20) {
-    tier = 'bueno'; tierLabel = 'Buen cliente'; tierIcon = '✅';
-  } else if (cancelRate >= 40 || daysSinceLast > 45) {
-    tier = 'riesgo'; tierLabel = 'En riesgo'; tierIcon = '⚠️';
-  } else if (cancelRate >= 60 || score < 20) {
-    tier = 'problematico'; tierLabel = 'Problemático'; tierIcon = '❌';
+function toggleForm(formId) {
+  const el = document.getElementById(formId);
+  if (!el) return;
+  const isHidden = el.style.display === 'none' || getComputedStyle(el).display === 'none';
+  el.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
-
-  return { score, tier, tierLabel, tierIcon, completed, cancelled, noShows, total, revenue, daysSinceLast, cancelRate };
-}
-
-function getAlerts() {
-  const alerts = [];
-  const clients = DB.get('clients', []);
-  const appts = DB.get('appointments', []);
-  const today = new Date().toISOString().split('T')[0];
-
-  clients.forEach(c => {
-    const score = computeClientScore(c);
-
-    // Alerta: Inactivo +30 días
-    if (score.daysSinceLast > 30 && c.status === 'activo') {
-      alerts.push({
-        type: 'warning', priority: 2,
-        title: `${c.name} inactivo +${score.daysSinceLast} días`,
-        message: `Última visita: ${formatDate(c.last_visit)}. Contactar para reactivar.`,
-        action: () => waClient(c.id),
-        actionLabel: 'Contactar',
-        clientId: c.id
-      });
-    }
-
-    // Alerta: Muchas cancelaciones
-    if (c.cancelCount >= 3) {
-      alerts.push({
-        type: 'danger', priority: 1,
-        title: `${c.name} — ${c.cancelCount} cancelaciones`,
-        message: `Tasa de cancelación: ${score.cancelRate.toFixed(0)}%. Considerar pausar contrato.`,
-        action: () => editClient(c.id),
-        actionLabel: 'Revisar',
-        clientId: c.id
-      });
-    }
-
-    // Alerta: Pago vencido
-    if (c.paymentDueDate && c.paymentDueDate < today && score.revenue > 0) {
-      const daysOverdue = Math.floor((new Date(today) - new Date(c.paymentDueDate)) / (1000*60*60*24));
-      alerts.push({
-        type: 'danger', priority: 1,
-        title: `Pago vencido: ${c.name}`,
-        message: `Venció hace ${daysOverdue} días ($${c.base_price || 0}).`,
-        action: () => waClient(c.id),
-        actionLabel: 'Cobrar',
-        clientId: c.id
-      });
-    }
-
-    // Alerta: Contrato por vencer
-    if (c.contractStatus === 'por_vencer') {
-      alerts.push({
-        type: 'info', priority: 3,
-        title: `Contrato por vencer: ${c.name}`,
-        message: 'Renovación próxima. Preparar propuesta.',
-        action: () => editClient(c.id),
-        actionLabel: 'Renovar',
-        clientId: c.id
-      });
-    }
-  });
-
-  // Alerta: Citas de mañana
-  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-  const tmrwStr = tomorrow.toISOString().split('T')[0];
-  const tmrwAppts = appts.filter(a => a.date === tmrwStr && a.status === 'pendiente');
-  if (tmrwAppts.length > 0) {
-    alerts.push({
-      type: 'info', priority: 3,
-      title: `${tmrwAppts.length} cita(s) mañana`,
-      message: 'Preparar rutina y confirmar con clientes.',
-      action: () => showTab('calendario'),
-      actionLabel: 'Ver calendario'
-    });
-  }
-
-  // Alerta: Citas de hoy
-  const todayAppts = appts.filter(a => a.date === today && a.status === 'pendiente');
-  if (todayAppts.length > 0) {
-    alerts.push({
-      type: 'success', priority: 3,
-      title: `${todayAppts.length} cita(s) hoy`,
-      message: '¡Buen día de trabajo!',
-      action: () => showTab('calendario'),
-      actionLabel: 'Ver calendario'
-    });
-  }
-
-  return alerts.sort((a, b) => a.priority - b.priority);
 }
 
 // ============================================
 // DASHBOARD
 // ============================================
-function renderDashboard() {
+async function loadDashboard() {
   const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const fmtFirst = firstDay.toISOString().split('T')[0];
+  const curYear = now.getFullYear();
+  const curMonth = now.getMonth();
 
-  const appts = DB.get('appointments', []);
-  const expenses = DB.get('expenses', []);
-  const clients = DB.get('clients', []);
-  const leads = DB.get('leads', []);
+  const appts = await DataStore.getAppointments();
+  const exps = await DataStore.getExpenses();
+  const clients = await DataStore.getClients();
 
-  const monthAppts = appts.filter(a => a.date >= fmtFirst && a.status === 'completada');
-  const revenue = monthAppts.reduce((s, a) => s + (a.price || 0), 0);
+  // Ingresos del mes (citas completadas del mes actual)
+  const monthAppts = appts.filter(a => {
+    if (a.status !== 'completada') return false;
+    const d = new Date(a.date);
+    return d.getFullYear() === curYear && d.getMonth() === curMonth;
+  });
+  const revenue = monthAppts.reduce((sum, a) => sum + (parseFloat(a.price) || 0), 0);
 
-  const monthExp = expenses.filter(e => e.date >= fmtFirst);
-  const expTotal = monthExp.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  // Gastos del mes
+  const monthExps = exps.filter(e => {
+    const d = new Date(e.date);
+    return d.getFullYear() === curYear && d.getMonth() === curMonth;
+  });
+  const expenses = monthExps.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
 
-  const profit = revenue - expTotal;
+  // Clientes activos
+  const activeClients = clients.filter(c => c.status === 'activo');
+  const profit = revenue - expenses;
   const margin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
-  const activeClients = clients.filter(c => c.status === 'activo').length;
 
-  // Pagos pendientes
-  const pendingPayments = appts.filter(a => a.paymentStatus === 'pendiente_pago' && a.status === 'completada').reduce((s, a) => s + a.price, 0);
-  const overduePayments = appts.filter(a => a.paymentStatus === 'vencido').reduce((s, a) => s + a.price, 0);
-
+  // Actualizar DOM Stats
   document.getElementById('dashRevenue').textContent = '$' + revenue.toLocaleString();
-  document.getElementById('dashRevenueCount').textContent = monthAppts.length + ' citas completadas';
-  document.getElementById('dashExpenses').textContent = '$' + expTotal.toLocaleString();
-  document.getElementById('dashExpensesCount').textContent = monthExp.length + ' registros';
+  document.getElementById('dashExpenses').textContent = '$' + expenses.toLocaleString();
   document.getElementById('dashProfit').textContent = '$' + profit.toLocaleString();
   document.getElementById('dashMargin').textContent = margin + '% margen';
-  document.getElementById('dashClients').textContent = activeClients;
-  document.getElementById('dashPending').textContent = '$' + pendingPayments.toLocaleString();
-  document.getElementById('dashOverdue').textContent = '$' + overduePayments.toLocaleString();
+  document.getElementById('dashClients').textContent = activeClients.length;
 
-  const newLeads = leads.filter(l => l.status === 'nuevo').length;
-  const badge = document.getElementById('badgeSolicitudes');
-  if (newLeads > 0) { badge.textContent = newLeads; badge.style.display = 'inline-block'; }
-  else badge.style.display = 'none';
-
-  // ALERTS
-  const alerts = getAlerts();
-  const alertsEl = document.getElementById('dashAlerts');
-  if (alerts.length > 0) {
-    alertsEl.innerHTML = alerts.slice(0, 5).map(a => `
-      <div class="alert-item alert-${a.type}">
-        <div class="alert-content">
-          <strong>${a.title}</strong>
-          <span>${a.message}</span>
-        </div>
-        <button class="btn-alert" onclick="${a.action.toString().includes('waClient') ? `waClient('${a.clientId}')` : a.action.toString().includes('editClient') ? `editClient('${a.clientId}')` : `showTab('calendario')`}">${a.actionLabel}</button>
-      </div>
-    `).join('');
-  } else {
-    alertsEl.innerHTML = '<div class="alert-item alert-success"><div class="alert-content"><strong>¡Todo en orden!</strong><span>No hay alertas pendientes.</span></div></div>';
-  }
-
+  // Próximas citas (pendientes ordenadas por fecha)
   const todayStr = now.toISOString().split('T')[0];
   const upcoming = appts
-    .filter(a => a.date >= todayStr && a.status === 'pendiente')
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .filter(a => a.status === 'pendiente' && a.date >= todayStr)
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
     .slice(0, 5);
 
-  const upEl = document.getElementById('upcomingAppointments');
-  upEl.innerHTML = upcoming.length ? upcoming.map(a => {
-    const c = clients.find(x => x.id === a.client_id);
-    return `<div class="dash-item">
-      <div class="dash-item-info">
-        <span class="dash-item-name">${c?.name || 'Desconocido'}</span>
-        <span class="dash-item-meta">${formatDate(a.date)} ${a.time || ''} — ${c?.address || ''} — <span class="pay-badge pay-${a.paymentStatus}">${STATUS_LABELS[a.paymentStatus] || a.paymentStatus}</span></span>
+  const upcomingEl = document.getElementById('upcomingAppointments');
+  if (upcoming.length === 0) {
+    upcomingEl.innerHTML = '<p class="empty">No hay citas pendientes próximas. ¡Buen trabajo! ✨</p>';
+  } else {
+    upcomingEl.innerHTML = upcoming.map(a => `
+      <div class="dash-item">
+        <div class="dash-item-info">
+          <span class="dash-item-name">${a.clients?.name || 'Cliente'} <strong style="color:var(--success);">$${a.price}</strong></span>
+          <span class="dash-item-meta">📅 ${formatDate(a.date)} ${a.time ? '• ⏰ ' + a.time : ''} — 📍 ${a.clients?.address || 'Sin dirección'}</span>
+          ${a.addons && a.addons.length ? `<span class="dash-item-addons">Extras: ${a.addons.join(', ')}</span>` : ''}
+        </div>
+        <div class="dash-item-actions">
+          <button class="btn-action btn-complete" title="Marcar como Completada" onclick="quickCompleteAppt('${a.id}')">✓ Completar</button>
+          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=Hola ${encodeURIComponent(a.clients?.name || '')}, te recordamos tu cita de limpieza de Ad Sparkling para el ${formatDate(a.date)} a las ${a.time || 'hora acordada'}. ¡Nos vemos pronto!" target="_blank" class="btn-action btn-wa-sm" title="Recordar por WhatsApp">📱 Recordar</a>
+        </div>
       </div>
-      <div class="dash-item-actions">
-        <button class="btn-icon btn-wa-sm" onclick="waAppt('${a.client_id}')" title="WhatsApp">📱</button>
-        <button class="btn-icon btn-edit" onclick="completeAppt('${a.id}')" title="Completar">✓</button>
-      </div>
-    </div>`;
-  }).join('') : '<p class="empty">No hay citas próximas</p>';
+    `).join('');
+  }
 
-  const d30 = new Date(); d30.setDate(d30.getDate() - 30);
-  const d30str = d30.toISOString().split('T')[0];
-  const inactive = clients.filter(c => c.status === 'activo' && (!c.last_visit || c.last_visit < d30str));
+  // Clientes inactivos (+30 días)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
 
-  const inEl = document.getElementById('inactiveClients');
-  inEl.innerHTML = inactive.length ? inactive.map(c => `
-    <div class="dash-item">
-      <div class="dash-item-info">
-        <span class="dash-item-name">${c.name} ${getClientTier(c).icon}</span>
-        <span class="dash-item-meta">Última: ${formatDate(c.last_visit)} — ${c.phone}</span>
-      </div>
-      <a href="https://wa.me/${cleanPhone(c.phone)}?text=Hola ${c.name}, notamos que han pasado más de 30 días desde tu última limpieza. ¿Te gustaría reactivar tu agenda?" class="dash-item-action" target="_blank">Contactar →</a>
-    </div>
-  `).join('') : '<p class="empty">Todos están al día 🎉</p>';
+  const inactive = clients.filter(c => {
+    if (c.status !== 'activo') return false;
+    return !c.last_visit || c.last_visit < thirtyDaysAgoStr;
+  });
 
-  const recent = leads.filter(l => l.status === 'nuevo').slice(0, 3);
-  const rlEl = document.getElementById('recentLeads');
-  rlEl.innerHTML = recent.length ? recent.map(l => `
-    <div class="dash-item">
-      <div class="dash-item-info">
-        <span class="dash-item-name">${l.name}</span>
-        <span class="dash-item-meta">${l.address} — ${l.size_sqft ? l.size_sqft + ' sqft' : ''}</span>
+  const inactiveEl = document.getElementById('inactiveClients');
+  if (inactive.length === 0) {
+    inactiveEl.innerHTML = '<p class="empty">Todos tus clientes están al día con sus visitas 🎉</p>';
+  } else {
+    inactiveEl.innerHTML = inactive.map(c => `
+      <div class="dash-item">
+        <div class="dash-item-info">
+          <span class="dash-item-name">${c.name}</span>
+          <span class="dash-item-meta">Última visita: ${c.last_visit ? formatDate(c.last_visit) : 'Sin registro'} — 📞 ${c.phone}</span>
+        </div>
+        <a href="https://wa.me/${cleanPhone(c.phone)}?text=Hola ${encodeURIComponent(c.name)}, te saluda Anggie de Ad Sparkling Cleaning ✨. Notamos que han pasado varios días desde tu última limpieza. ¿Te gustaría agendar una visita esta semana?" class="dash-item-action" target="_blank">📱 Reactivar por WhatsApp →</a>
       </div>
-      <button class="btn-icon btn-wa-sm" onclick="waLead('${l.id}')" title="WhatsApp">📱</button>
-    </div>
-  `).join('') : '<p class="empty">No hay solicitudes nuevas</p>';
+    `).join('');
+  }
 }
 
-function getClientTier(client) {
-  return computeClientScore(client);
+async function quickCompleteAppt(id) {
+  if (confirm('¿Marcar esta cita como completada? Esto sumará el pago a tus ingresos del mes.')) {
+    await DataStore.updateAppointmentStatus(id, 'completada');
+    loadDashboard();
+  }
 }
 
 // ============================================
 // LEADS
 // ============================================
-let leadFilter = '';
-function renderLeads() {
-  let leads = DB.get('leads', []);
-  if (leadFilter) {
-    const f = leadFilter.toLowerCase();
-    leads = leads.filter(l => l.name.toLowerCase().includes(f) || l.phone.includes(f) || l.address.toLowerCase().includes(f));
-  }
-  leads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+let allLeads = [];
 
+async function loadLeads() {
+  allLeads = await DataStore.getLeads();
+  renderLeadsTable(allLeads);
+}
+
+function renderLeadsTable(leads) {
   const tbody = document.getElementById('leadsTable');
-  tbody.innerHTML = leads.length ? leads.map(l => `
+  if (!leads || leads.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">No hay leads registrados aún.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = leads.map(l => `
     <tr>
       <td><strong>${l.name}</strong></td>
-      <td>${l.phone}</td>
-      <td>${l.address}</td>
-      <td>${l.size_sqft ? l.size_sqft + ' sqft' : '-'}<br>${l.frequency ? FREQ_LABELS[l.frequency] : ''}</td>
-      <td><span class="badge badge-${l.status}">${STATUS_LABELS[l.status] || l.status}</span></td>
-      <td>${formatDate(l.created_at)}</td>
+      <td><a href="tel:${cleanPhone(l.phone)}" style="color:inherit;">${l.phone}</a></td>
+      <td title="${l.address}">${truncate(l.address, 30)}</td>
+      <td>${l.size_sqft ? l.size_sqft + ' sqft' : '-'}</td>
+      <td>${l.frequency ? freqLabel(l.frequency) : '-'}</td>
       <td>
-        <button class="btn-icon btn-wa-sm" onclick="waLead('${l.id}')" title="WhatsApp">📱</button>
-        <button class="btn-icon btn-edit" onclick="quoteLead('${l.id}')" title="Cotizar">💰</button>
-        <button class="btn-icon btn-convert" onclick="convertLead('${l.id}')" title="Convertir">👤</button>
-        <button class="btn-icon" onclick="cycleLeadStatus('${l.id}')" title="Estado">🔄</button>
-        <button class="btn-icon btn-delete" onclick="deleteLead('${l.id}')" title="Eliminar">🗑</button>
+        <select class="status-select status-${l.status}" onchange="changeLeadStatus('${l.id}', this.value)">
+          <option value="nuevo" ${l.status === 'nuevo' ? 'selected' : ''}>Nuevo</option>
+          <option value="contactado" ${l.status === 'contactado' ? 'selected' : ''}>Contactado</option>
+          <option value="agendado" ${l.status === 'agendado' ? 'selected' : ''}>Agendado</option>
+          <option value="descartado" ${l.status === 'descartado' ? 'selected' : ''}>Descartado</option>
+        </select>
+      </td>
+      <td><small>${formatDate(l.created_at)}</small></td>
+      <td class="action-cell">
+        <a href="https://wa.me/${cleanPhone(l.phone)}?text=Hola ${encodeURIComponent(l.name)}, te saluda Anggie de Ad Sparkling Cleaning ✨. Recibimos tu solicitud de cotización para ${l.address}. ¿Tienes alguna fecha en mente para comenzar?" target="_blank" class="btn-table-action btn-wa-table" title="Contactar por WhatsApp">📱 Chat</a>
+        <button class="btn-table-action btn-convert-table" onclick="convertLeadToClient('${l.id}')" title="Convertir a Cliente">👥 Convertir</button>
+        <button class="btn-table-action btn-del-table" onclick="deleteLead('${l.id}')" title="Eliminar lead">🗑</button>
       </td>
     </tr>
-  `).join('') : '<tr><td colspan="7" class="empty-cell">No hay solicitudes</td></tr>';
+  `).join('');
 }
 
-function filterLeads() { leadFilter = document.getElementById('leadSearch').value; renderLeads(); }
-
-function saveLeadModal() {
-  const lead = {
-    id: 'lead_' + Date.now(),
-    name: document.getElementById('mLeadName').value.trim(),
-    phone: document.getElementById('mLeadPhone').value.trim(),
-    address: document.getElementById('mLeadAddress').value.trim(),
-    size_sqft: document.getElementById('mLeadSize').value ? parseInt(document.getElementById('mLeadSize').value) : null,
-    frequency: document.getElementById('mLeadFreq').value || null,
-    extras_requested: [],
-    notes: document.getElementById('mLeadNotes').value.trim(),
-    status: 'nuevo', assigned_price: null, angie_notes: '', whatsapp_sent: false,
-    created_at: DB.now()
-  };
-  if (!lead.name || !lead.phone || !lead.address) { alert('Completa los campos obligatorios'); return; }
-  const leads = DB.get('leads', []); leads.unshift(lead); DB.set('leads', leads);
-  closeModal('leadModal'); renderLeads(); renderDashboard();
+function filterLeads(query) {
+  const q = query.toLowerCase().trim();
+  if (!q) {
+    renderLeadsTable(allLeads);
+    return;
+  }
+  const filtered = allLeads.filter(l => 
+    (l.name && l.name.toLowerCase().includes(q)) ||
+    (l.phone && l.phone.includes(q)) ||
+    (l.address && l.address.toLowerCase().includes(q)) ||
+    (l.status && l.status.toLowerCase().includes(q))
+  );
+  renderLeadsTable(filtered);
 }
 
-function waLead(id) {
-  const l = DB.get('leads', []).find(x => x.id === id);
-  if (!l) return;
-  let msg = 'Hola ' + l.name + ', soy Anggie de Ad Sparkling Cleaning. ';
-  if (l.assigned_price) {
-    msg += 'Tu cotización es de $' + l.assigned_price + '. ';
-    if (l.angie_notes) msg += l.angie_notes + ' ';
+async function changeLeadStatus(id, newStatus) {
+  await DataStore.updateLead(id, { status: newStatus });
+  const lead = allLeads.find(l => l.id == id);
+  if (lead) lead.status = newStatus;
+  loadLeads();
+}
+
+async function deleteLead(id) {
+  if (confirm('¿Seguro que deseas eliminar este lead?')) {
+    await DataStore.deleteLead(id);
+    loadLeads();
+  }
+}
+
+async function saveManualLead() {
+  const name = document.getElementById('lName').value.trim();
+  const phone = document.getElementById('lPhone').value.trim();
+  const address = document.getElementById('lAddress').value.trim();
+  const size = document.getElementById('lSize').value ? parseInt(document.getElementById('lSize').value) : null;
+  const freq = document.getElementById('lFreq').value || null;
+  const notes = document.getElementById('lNotes').value.trim();
+
+  if (!name || !phone) {
+    alert('Por favor ingresa al menos nombre y teléfono del lead.');
+    return;
+  }
+
+  await DataStore.saveLead({
+    name, phone, address, size_sqft: size, frequency: freq, notes, status: 'nuevo'
+  });
+
+  // Limpiar formulario y cerrar
+  document.getElementById('lName').value = '';
+  document.getElementById('lPhone').value = '';
+  document.getElementById('lAddress').value = '';
+  document.getElementById('lSize').value = '';
+  document.getElementById('lFreq').value = '';
+  document.getElementById('lNotes').value = '';
+  toggleForm('leadForm');
+  loadLeads();
+  alert('Lead guardado exitosamente ✅');
+}
+
+function convertLeadToClient(leadId) {
+  const lead = allLeads.find(l => l.id == leadId);
+  if (!lead) return;
+
+  showTab('clients');
+  const form = document.getElementById('clientForm');
+  form.style.display = 'block';
+
+  document.getElementById('cId').value = '';
+  document.getElementById('cName').value = lead.name || '';
+  document.getElementById('cPhone').value = lead.phone || '';
+  document.getElementById('cAddress').value = lead.address || '';
+  document.getElementById('cSize').value = lead.size_sqft || '';
+  document.getElementById('cFreq').value = lead.frequency || '';
+  
+  if (lead.size_sqft && lead.frequency && PRICING[lead.size_sqft]) {
+    document.getElementById('cPrice').value = PRICING[lead.size_sqft][lead.frequency] || '';
   } else {
-    msg += 'Recibí tu solicitud de cotización. ¿Podemos coordinar una visita para evaluar tu hogar? ';
+    document.getElementById('cPrice').value = '';
   }
-  msg += '¿Qué día te funciona mejor?';
-  window.open('https://wa.me/' + cleanPhone(l.phone) + '?text=' + encodeURIComponent(msg), '_blank');
-  const leads = DB.get('leads', []);
-  const idx = leads.findIndex(x => x.id === id);
-  if (idx >= 0) { leads[idx].whatsapp_sent = true; DB.set('leads', leads); }
-}
 
-function quoteLead(id) {
-  const l = DB.get('leads', []).find(x => x.id === id);
-  if (!l) return;
-  document.getElementById('mQuoteLeadId').value = id;
-  document.getElementById('mQuoteLeadInfo').innerHTML = `<strong>${l.name}</strong> — ${l.phone}<br>${l.address} | ${l.size_sqft ? l.size_sqft + ' sqft' : 'Sin tamaño'} | ${l.frequency ? FREQ_LABELS[l.frequency] : 'Sin frecuencia'}`;
-  document.getElementById('mQuotePrice').value = l.assigned_price || '';
-  document.getElementById('mQuoteFreq').value = l.frequency || '';
-  openModal('quoteLeadModal');
-}
-
-function saveQuoteOnly() {
-  const id = document.getElementById('mQuoteLeadId').value;
-  const price = parseFloat(document.getElementById('mQuotePrice').value);
-  const freq = document.getElementById('mQuoteFreq').value;
-  const msg = document.getElementById('mQuoteMessage').value.trim();
-  const leads = DB.get('leads', []);
-  const idx = leads.findIndex(l => l.id === id);
-  if (idx >= 0) {
-    leads[idx].assigned_price = price || null;
-    leads[idx].frequency = freq || leads[idx].frequency;
-    leads[idx].angie_notes = msg;
-    leads[idx].status = 'contactado';
-    DB.set('leads', leads);
-  }
-  closeModal('quoteLeadModal'); renderLeads(); renderDashboard();
-}
-
-function sendQuoteFromModal() { saveQuoteOnly(); waLead(document.getElementById('mQuoteLeadId').value); }
-
-function convertLead(id) {
-  const l = DB.get('leads', []).find(x => x.id === id);
-  if (!l) return;
-  if (!confirm('¿Convertir "' + l.name + '" en cliente?')) return;
-  const client = {
-    id: 'c_' + Date.now(), name: l.name, phone: l.phone, address: l.address,
-    size_sqft: l.size_sqft, frequency: l.frequency, base_price: l.assigned_price,
-    notes: l.notes, status: 'activo', last_visit: null, next_visit: null,
-    rating: 3, cancelCount: 0, totalRevenue: 0, totalAppointments: 0,
-    contractStatus: 'activo', paymentDueDate: null
-  };
-  const clients = DB.get('clients', []); clients.push(client); DB.set('clients', clients);
-  const leads = DB.get('leads', []);
-  const idx = leads.findIndex(x => x.id === id);
-  if (idx >= 0) { leads[idx].status = 'agendado'; DB.set('leads', leads); }
-  renderLeads(); renderClients(); renderDashboard();
-  alert('Cliente creado ✅');
-}
-
-function cycleLeadStatus(id) {
-  const leads = DB.get('leads', []);
-  const idx = leads.findIndex(l => l.id === id);
-  if (idx < 0) return;
-  const states = ['nuevo', 'contactado', 'agendado', 'descartado'];
-  leads[idx].status = states[(states.indexOf(leads[idx].status) + 1) % states.length];
-  DB.set('leads', leads); renderLeads();
-}
-
-function deleteLead(id) {
-  if (!confirm('¿Eliminar esta solicitud?')) return;
-  DB.set('leads', DB.get('leads', []).filter(l => l.id !== id));
-  renderLeads(); renderDashboard();
+  document.getElementById('cNotes').value = lead.notes ? `Lead convertido. Notas: ${lead.notes}` : 'Lead convertido desde la web';
+  document.getElementById('cFormTitle').textContent = 'Convertir Lead a Cliente';
+  form.scrollIntoView({ behavior: 'smooth' });
 }
 
 // ============================================
-// CLIENTES (con Scoring)
+// CLIENTES
 // ============================================
-let clientFilter = '';
-let clientSort = 'name'; // name, score, revenue, visits, lastVisit
+let allClients = [];
 
-function renderClients() {
-  let clients = DB.get('clients', []);
-  if (clientFilter) {
-    const f = clientFilter.toLowerCase();
-    clients = clients.filter(c => c.name.toLowerCase().includes(f) || c.phone.includes(f));
-  }
+async function loadClients() {
+  allClients = await DataStore.getClients();
+  renderClientsTable(allClients);
+}
 
-  // Compute scores for sorting
-  clients = clients.map(c => ({ ...c, _score: computeClientScore(c) }));
-
-  if (clientSort === 'name') clients.sort((a, b) => a.name.localeCompare(b.name));
-  else if (clientSort === 'score') clients.sort((a, b) => b._score.score - a._score.score);
-  else if (clientSort === 'revenue') clients.sort((a, b) => b._score.revenue - a._score.revenue);
-  else if (clientSort === 'visits') clients.sort((a, b) => b._score.completed - a._score.completed);
-  else if (clientSort === 'lastVisit') clients.sort((a, b) => (b.last_visit || '0').localeCompare(a.last_visit || '0'));
-
+function renderClientsTable(clients) {
   const tbody = document.getElementById('clientsTable');
-  tbody.innerHTML = clients.length ? clients.map(c => {
-    const s = c._score;
-    return `<tr>
-      <td>
-        <strong>${c.name}</strong>
-        <div class="client-tier tier-${s.tier}">${s.tierIcon} ${s.tierLabel}</div>
-      </td>
-      <td>${c.phone}</td>
-      <td>${c.address}</td>
-      <td>$${c.base_price || '-'}</td>
-      <td>${c.frequency ? FREQ_LABELS[c.frequency] : '-'}</td>
-      <td>${formatDate(c.last_visit)}</td>
-      <td><span class="badge badge-${c.status}">${STATUS_LABELS[c.status] || c.status}</span></td>
-      <td>
-        <div class="client-score-bar" title="Score: ${s.score}/100">
-          <div class="client-score-fill" style="width:${s.score}%;background:${s.score >= 70 ? '#2d8a5e' : s.score >= 40 ? '#d4a017' : '#c0392b'}"></div>
-        </div>
-      </td>
-      <td>
-        <button class="btn-icon btn-wa-sm" onclick="waClient('${c.id}')" title="WhatsApp">📱</button>
-        <button class="btn-icon btn-edit" onclick="editClient('${c.id}')" title="Editar">✏️</button>
-        <button class="btn-icon btn-convert" onclick="quickAppt('${c.id}')" title="Agendar">📅</button>
-        <button class="btn-icon btn-delete" onclick="deleteClient('${c.id}')" title="Eliminar">🗑</button>
-      </td>
-    </tr>`;
-  }).join('') : '<tr><td colspan="9" class="empty-cell">No hay clientes</td></tr>';
-
-  // Render client ranking summary
-  renderClientRanking(clients);
-}
-
-function renderClientRanking(allClients) {
-  const container = document.getElementById('clientRanking');
-  if (!container) return;
-
-  const scored = allClients.map(c => ({ ...c, score: computeClientScore(c) }));
-  const best = scored.filter(c => c.score.tier === 'vip').slice(0, 3);
-  const worst = scored.filter(c => c.score.tier === 'problematico' || c.score.tier === 'riesgo').slice(0, 3);
-  const frequent = scored.sort((a, b) => b.score.completed - a.score.completed).slice(0, 3);
-
-  container.innerHTML = `
-    <div class="ranking-grid">
-      <div class="ranking-card">
-        <h4>🏆 Mejores clientes</h4>
-        ${best.length ? best.map(c => `<div class="rank-item"><span>${c.name}</span><span class="rank-score">${c.score.score} pts</span></div>`).join('') : '<span class="rank-empty">Sin datos</span>'}
-      </div>
-      <div class="ranking-card">
-        <h4>⚠️ Necesitan atención</h4>
-        ${worst.length ? worst.map(c => `<div class="rank-item rank-warn"><span>${c.name}</span><span class="rank-score">${c.score.cancelRate.toFixed(0)}% cancel</span></div>`).join('') : '<span class="rank-empty">Todos bien</span>'}
-      </div>
-      <div class="ranking-card">
-        <h4>🔄 Más frecuentes</h4>
-        ${frequent.length ? frequent.map(c => `<div class="rank-item"><span>${c.name}</span><span class="rank-score">${c.score.completed} visitas</span></div>`).join('') : '<span class="rank-empty">Sin datos</span>'}
-      </div>
-    </div>
-  `;
-}
-
-function filterClients() { clientFilter = document.getElementById('clientSearch').value; renderClients(); }
-function sortClients(sortBy) { clientSort = sortBy; renderClients(); }
-
-function saveClientModal() {
-  const id = document.getElementById('mClientId').value;
-  const data = {
-    name: document.getElementById('mClientName').value.trim(),
-    phone: document.getElementById('mClientPhone').value.trim(),
-    address: document.getElementById('mClientAddress').value.trim(),
-    size_sqft: document.getElementById('mClientSize').value ? parseInt(document.getElementById('mClientSize').value) : null,
-    frequency: document.getElementById('mClientFreq').value || null,
-    base_price: document.getElementById('mClientPrice').value ? parseInt(document.getElementById('mClientPrice').value) : null,
-    next_visit: document.getElementById('mClientNext').value || null,
-    status: document.getElementById('mClientStatus').value,
-    notes: document.getElementById('mClientNotes').value.trim(),
-    contractStatus: document.getElementById('mClientContract').value,
-    paymentDueDate: document.getElementById('mClientPaymentDue').value || null
-  };
-  if (!data.name || !data.phone || !data.address) { alert('Nombre, teléfono y dirección son obligatorios'); return; }
-
-  const clients = DB.get('clients', []);
-  if (id) {
-    const idx = clients.findIndex(c => c.id === id);
-    if (idx >= 0) clients[idx] = { ...clients[idx], ...data };
-  } else {
-    data.id = 'c_' + Date.now(); data.last_visit = null;
-    data.rating = 3; data.cancelCount = 0; data.totalRevenue = 0; data.totalAppointments = 0;
-    clients.push(data);
+  if (!clients || clients.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">No hay clientes registrados aún.</td></tr>';
+    return;
   }
-  DB.set('clients', clients);
-  closeModal('clientModal'); renderClients(); renderDashboard();
+
+  tbody.innerHTML = clients.map(c => `
+    <tr>
+      <td><strong>${c.name}</strong></td>
+      <td><a href="tel:${cleanPhone(c.phone)}" style="color:inherit;">${c.phone}</a></td>
+      <td title="${c.address}">${truncate(c.address, 28)}</td>
+      <td><strong>$${c.base_price || '-'}</strong></td>
+      <td>${freqLabel(c.frequency)}</td>
+      <td>${formatDate(c.last_visit)}</td>
+      <td>${formatDate(c.next_visit)}</td>
+      <td>
+        <span class="badge badge-${c.status}">${c.status}</span>
+      </td>
+      <td class="action-cell">
+        <button class="btn-table-action btn-schedule-table" onclick="scheduleForClient('${c.id}')" title="Agendar Cita">📅 Cita</button>
+        <button class="btn-table-action btn-edit-table" onclick="editClient('${c.id}')" title="Editar cliente">✏️</button>
+        <a href="https://wa.me/${cleanPhone(c.phone)}" target="_blank" class="btn-table-action btn-wa-table" title="Enviar WhatsApp">📱</a>
+        <button class="btn-table-action btn-del-table" onclick="deleteClient('${c.id}')" title="Eliminar cliente">🗑</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterClients(query) {
+  const q = query.toLowerCase().trim();
+  if (!q) {
+    renderClientsTable(allClients);
+    return;
+  }
+  const filtered = allClients.filter(c => 
+    (c.name && c.name.toLowerCase().includes(q)) ||
+    (c.phone && c.phone.includes(q)) ||
+    (c.address && c.address.toLowerCase().includes(q)) ||
+    (c.notes && c.notes.toLowerCase().includes(q))
+  );
+  renderClientsTable(filtered);
+}
+
+function resetClientForm() {
+  document.getElementById('cId').value = '';
+  document.getElementById('cName').value = '';
+  document.getElementById('cPhone').value = '';
+  document.getElementById('cAddress').value = '';
+  document.getElementById('cSize').value = '';
+  document.getElementById('cFreq').value = '';
+  document.getElementById('cPrice').value = '';
+  document.getElementById('cNextVisit').value = '';
+  document.getElementById('cNotes').value = '';
+  document.getElementById('cStatus').value = 'activo';
+  document.getElementById('cFormTitle').textContent = 'Agregar Cliente';
 }
 
 function editClient(id) {
-  const c = DB.get('clients', []).find(x => x.id === id);
-  if (!c) return;
-  document.getElementById('clientModalTitle').textContent = 'Editar cliente';
-  document.getElementById('mClientId').value = c.id;
-  document.getElementById('mClientName').value = c.name;
-  document.getElementById('mClientPhone').value = c.phone;
-  document.getElementById('mClientAddress').value = c.address;
-  document.getElementById('mClientSize').value = c.size_sqft || '';
-  document.getElementById('mClientFreq').value = c.frequency || '';
-  document.getElementById('mClientPrice').value = c.base_price || '';
-  document.getElementById('mClientNext').value = c.next_visit || '';
-  document.getElementById('mClientStatus').value = c.status;
-  document.getElementById('mClientNotes').value = c.notes || '';
-  document.getElementById('mClientContract').value = c.contractStatus || 'activo';
-  document.getElementById('mClientPaymentDue').value = c.paymentDueDate || '';
-  openModal('clientModal');
+  const client = allClients.find(c => c.id == id);
+  if (!client) return;
+
+  const form = document.getElementById('clientForm');
+  form.style.display = 'block';
+
+  document.getElementById('cId').value = client.id;
+  document.getElementById('cName').value = client.name || '';
+  document.getElementById('cPhone').value = client.phone || '';
+  document.getElementById('cAddress').value = client.address || '';
+  document.getElementById('cSize').value = client.size_sqft || '';
+  document.getElementById('cFreq').value = client.frequency || '';
+  document.getElementById('cPrice').value = client.base_price || '';
+  document.getElementById('cNextVisit').value = client.next_visit || '';
+  document.getElementById('cNotes').value = client.notes || '';
+  document.getElementById('cStatus').value = client.status || 'activo';
+  document.getElementById('cFormTitle').textContent = 'Editar Cliente: ' + client.name;
+
+  form.scrollIntoView({ behavior: 'smooth' });
 }
 
-function waClient(id) {
-  const c = DB.get('clients', []).find(x => x.id === id);
-  if (!c) return;
-  window.open('https://wa.me/' + cleanPhone(c.phone), '_blank');
+async function saveClient() {
+  const id = document.getElementById('cId').value;
+  const name = document.getElementById('cName').value.trim();
+  const phone = document.getElementById('cPhone').value.trim();
+  const address = document.getElementById('cAddress').value.trim();
+  const size = document.getElementById('cSize').value ? parseInt(document.getElementById('cSize').value) : null;
+  const freq = document.getElementById('cFreq').value || null;
+  const price = document.getElementById('cPrice').value ? parseInt(document.getElementById('cPrice').value) : null;
+  const nextVisit = document.getElementById('cNextVisit').value || null;
+  const notes = document.getElementById('cNotes').value.trim();
+  const status = document.getElementById('cStatus').value || 'activo';
+
+  if (!name || !phone || !address) {
+    alert('Nombre, teléfono y dirección son obligatorios.');
+    return;
+  }
+
+  const clientData = {
+    id: id || undefined,
+    name,
+    phone,
+    address,
+    size_sqft: size,
+    frequency: freq,
+    base_price: price,
+    next_visit: nextVisit,
+    notes,
+    status
+  };
+
+  await DataStore.saveClient(clientData);
+  toggleForm('clientForm');
+  resetClientForm();
+  loadClients();
+  loadDashboard();
+  alert('Cliente guardado con éxito ✅');
 }
 
-function deleteClient(id) {
-  if (!confirm('¿Eliminar este cliente? Se perderán sus citas.')) return;
-  DB.set('clients', DB.get('clients', []).filter(c => c.id !== id));
-  DB.set('appointments', DB.get('appointments', []).filter(a => a.client_id !== id));
-  renderClients(); renderDashboard();
+async function deleteClient(id) {
+  if (confirm('¿Seguro que deseas eliminar este cliente?')) {
+    await DataStore.deleteClient(id);
+    loadClients();
+    loadDashboard();
+  }
 }
 
-function quickAppt(clientId) {
-  showTab('citas');
-  document.getElementById('mApptClient').value = clientId;
-  fillApptPrice();
-  openModal('appointmentModal');
+function scheduleForClient(clientId) {
+  showTab('appointments');
+  const form = document.getElementById('apptForm');
+  form.style.display = 'block';
+
+  const select = document.getElementById('aClient');
+  select.value = clientId;
+  onClientSelectChange();
+
+  document.getElementById('aDate').value = new Date().toISOString().split('T')[0];
+  form.scrollIntoView({ behavior: 'smooth' });
 }
 
 // ============================================
 // CITAS
 // ============================================
-function renderAppointments() {
-  const appts = DB.get('appointments', []).sort((a, b) => b.date.localeCompare(a.date));
-  const clients = DB.get('clients', []);
+let allAppointments = [];
 
+async function loadAppointments() {
+  allAppointments = await DataStore.getAppointments();
+  renderAppointmentsTable(allAppointments);
+}
+
+function renderAppointmentsTable(appts) {
   const tbody = document.getElementById('appointmentsTable');
-  tbody.innerHTML = appts.length ? appts.map(a => {
-    const c = clients.find(x => x.id === a.client_id);
-    return `<tr>
-      <td>${formatDate(a.date)} ${a.time || ''}</td>
-      <td><strong>${c?.name || 'Desconocido'}</strong></td>
-      <td>${c?.address || '-'}</td>
-      <td>$${a.price}</td>
-      <td>${a.cleaning_time ? Math.floor(a.cleaning_time/60) + 'h ' + (a.cleaning_time%60) + 'm' : '-'}</td>
-      <td><span class="badge badge-${a.status}">${STATUS_LABELS[a.status] || a.status}</span></td>
-      <td><span class="pay-badge pay-${a.paymentStatus}">${STATUS_LABELS[a.paymentStatus] || a.paymentStatus}</span></td>
+  if (!appts || appts.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">No hay citas registradas aún.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = appts.map(a => `
+    <tr>
+      <td><strong>${formatDate(a.date)}</strong><br><small>${a.time || ''}</small></td>
+      <td><strong>${a.clients?.name || 'Cliente'}</strong></td>
+      <td title="${a.clients?.address || ''}">${truncate(a.clients?.address || '-', 25)}</td>
+      <td><strong style="color:var(--primary);">$${a.price}</strong></td>
+      <td>${(a.addons || []).join(', ') || '-'}</td>
       <td>
-        <button class="btn-icon btn-edit" onclick="editAppt('${a.id}')" title="Editar">✏️</button>
-        ${a.status === 'pendiente' ? `<button class="btn-icon btn-convert" onclick="completeAppt('${a.id}')" title="Completar">✓</button>` : ''}
-        ${a.status === 'completada' && a.paymentStatus !== 'pagado' ? `<button class="btn-icon btn-wa-sm" onclick="markApptPaid('${a.id}')" title="Marcar pagado">💵</button>` : ''}
-        <button class="btn-icon btn-delete" onclick="deleteAppt('${a.id}')" title="Eliminar">🗑</button>
+        <select class="status-select status-${a.status}" onchange="changeApptStatus('${a.id}', this.value)">
+          <option value="pendiente" ${a.status === 'pendiente' ? 'selected' : ''}>Pendiente</option>
+          <option value="completada" ${a.status === 'completada' ? 'selected' : ''}>Completada</option>
+          <option value="cancelada" ${a.status === 'cancelada' ? 'selected' : ''}>Cancelada</option>
+        </select>
       </td>
-    </tr>`;
-  }).join('') : '<tr><td colspan="8" class="empty-cell">No hay citas</td></tr>';
+      <td title="${a.notes || ''}"><small>${truncate(a.notes || '-', 20)}</small></td>
+      <td class="action-cell">
+        <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=Hola ${encodeURIComponent(a.clients?.name || '')}, te saluda Anggie de Ad Sparkling Cleaning sobre tu cita del ${formatDate(a.date)} ${a.time ? 'a las ' + a.time : ''}." target="_blank" class="btn-table-action btn-wa-table" title="WhatsApp">📱</a>
+        <button class="btn-table-action btn-edit-table" onclick="editAppt('${a.id}')" title="Editar cita">✏️</button>
+        <button class="btn-table-action btn-del-table" onclick="deleteAppt('${a.id}')" title="Eliminar cita">🗑</button>
+      </td>
+    </tr>
+  `).join('');
 }
 
-function populateClientSelect() {
-  const clients = DB.get('clients', []).filter(c => c.status === 'activo').sort((a, b) => a.name.localeCompare(b.name));
-  const opts = '<option value="">Seleccionar cliente...</option>' + 
-    clients.map(c => `<option value="${c.id}" data-price="${c.base_price || ''}">${c.name} — ${c.address}</option>`).join('');
-  document.getElementById('mApptClient').innerHTML = opts;
-  document.getElementById('qClient').innerHTML = '<option value="">-- Cliente nuevo --</option>' + 
-    clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+async function loadClientsForSelect() {
+  const clients = await DataStore.getClients();
+  const select = document.getElementById('aClient');
+  if (!select) return;
+
+  select.innerHTML = '<option value="">Seleccionar cliente...</option>' + 
+    clients.map(c => `<option value="${c.id}" data-price="${c.base_price || 0}">${c.name} (${c.address ? truncate(c.address, 25) : 'Sin dir'})</option>`).join('');
 }
 
-function fillApptPrice() {
-  const sel = document.getElementById('mApptClient');
-  const price = sel.options[sel.selectedIndex]?.dataset.price;
-  if (price) document.getElementById('mApptPrice').value = price;
-}
-
-function saveApptModal() {
-  const id = document.getElementById('mApptId').value;
-  const clientId = document.getElementById('mApptClient').value;
-  if (!clientId) { alert('Selecciona un cliente'); return; }
-
-  const data = {
-    client_id: clientId,
-    date: document.getElementById('mApptDate').value,
-    time: document.getElementById('mApptTime').value.trim(),
-    price: parseInt(document.getElementById('mApptPrice').value) || 0,
-    cleaning_time: document.getElementById('mApptTimeSpent').value ? parseInt(document.getElementById('mApptTimeSpent').value) : null,
-    status: document.getElementById('mApptStatus').value,
-    paymentStatus: document.getElementById('mApptPayment').value,
-    contractType: document.getElementById('mApptContract').value,
-    notes: document.getElementById('mApptNotes').value.trim(),
-    addons: []
-  };
-  if (!data.date) { alert('La fecha es obligatoria'); return; }
-
-  const appts = DB.get('appointments', []);
-  const oldAppt = id ? appts.find(a => a.id === id) : null;
-
-  if (id) {
-    const idx = appts.findIndex(a => a.id === id);
-    if (idx >= 0) appts[idx] = { ...appts[idx], ...data };
-  } else {
-    data.id = 'a_' + Date.now();
-    appts.push(data);
-  }
-  DB.set('appointments', appts);
-
-  // Update client stats
-  updateClientStats(clientId);
-
-  // Handle status changes
-  if (data.status === 'cancelada' && (!oldAppt || oldAppt.status !== 'cancelada')) {
-    const clients = DB.get('clients', []);
-    const cidx = clients.findIndex(c => c.id === clientId);
-    if (cidx >= 0) { clients[cidx].cancelCount = (clients[cidx].cancelCount || 0) + 1; DB.set('clients', clients); }
-  }
-
-  closeModal('appointmentModal');
-  document.getElementById('apptModalTitle').textContent = 'Nueva cita';
-  renderAppointments(); renderDashboard(); renderCalendar();
-}
-
-function updateClientStats(clientId) {
-  const appts = DB.get('appointments', []).filter(a => a.client_id === clientId);
-  const completed = appts.filter(a => a.status === 'completada');
-  const revenue = completed.reduce((s, a) => s + (a.price || 0), 0);
-  const clients = DB.get('clients', []);
-  const idx = clients.findIndex(c => c.id === clientId);
-  if (idx >= 0) {
-    clients[idx].totalAppointments = completed.length;
-    clients[idx].totalRevenue = revenue;
-    if (completed.length > 0) {
-      const last = completed.sort((a, b) => b.date.localeCompare(a.date))[0];
-      clients[idx].last_visit = last.date;
+function onClientSelectChange() {
+  const select = document.getElementById('aClient');
+  const selected = select.options[select.selectedIndex];
+  if (selected && selected.dataset.price) {
+    const basePrice = parseInt(selected.dataset.price) || 0;
+    if (basePrice > 0) {
+      document.getElementById('aPrice').value = basePrice;
     }
-    DB.set('clients', clients);
   }
+}
+
+function resetApptForm() {
+  document.getElementById('aId').value = '';
+  document.getElementById('aClient').value = '';
+  document.getElementById('aDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('aTime').value = '09:00 AM';
+  document.getElementById('aPrice').value = '';
+  document.getElementById('aAddons').value = '';
+  document.getElementById('aNotes').value = '';
+  document.getElementById('aStatus').value = 'pendiente';
+  document.getElementById('aFormTitle').textContent = 'Agregar Cita';
 }
 
 function editAppt(id) {
-  const a = DB.get('appointments', []).find(x => x.id === id);
-  if (!a) return;
-  populateClientSelect();
-  document.getElementById('apptModalTitle').textContent = 'Editar cita';
-  document.getElementById('mApptId').value = a.id;
-  document.getElementById('mApptClient').value = a.client_id;
-  document.getElementById('mApptDate').value = a.date;
-  document.getElementById('mApptTime').value = a.time || '';
-  document.getElementById('mApptPrice').value = a.price;
-  document.getElementById('mApptTimeSpent').value = a.cleaning_time || '';
-  document.getElementById('mApptStatus').value = a.status;
-  document.getElementById('mApptPayment').value = a.paymentStatus || 'pendiente_pago';
-  document.getElementById('mApptContract').value = a.contractType || 'regular';
-  document.getElementById('mApptNotes').value = a.notes || '';
-  openModal('appointmentModal');
+  const appt = allAppointments.find(a => a.id == id);
+  if (!appt) return;
+
+  const form = document.getElementById('apptForm');
+  form.style.display = 'block';
+
+  document.getElementById('aId').value = appt.id;
+  document.getElementById('aClient').value = appt.client_id;
+  document.getElementById('aDate').value = appt.date || '';
+  document.getElementById('aTime').value = appt.time || '';
+  document.getElementById('aPrice').value = appt.price || '';
+  document.getElementById('aAddons').value = (appt.addons || []).join(', ');
+  document.getElementById('aNotes').value = appt.notes || '';
+  document.getElementById('aStatus').value = appt.status || 'pendiente';
+  document.getElementById('aFormTitle').textContent = 'Editar Cita';
+
+  form.scrollIntoView({ behavior: 'smooth' });
 }
 
-function completeAppt(id) {
-  const appts = DB.get('appointments', []);
-  const idx = appts.findIndex(a => a.id === id);
-  if (idx < 0) return;
-  appts[idx].status = 'completada';
-  DB.set('appointments', appts);
-  updateClientStats(appts[idx].client_id);
-  renderAppointments(); renderDashboard(); renderCalendar();
-}
+async function saveAppointment() {
+  const id = document.getElementById('aId').value;
+  const clientId = document.getElementById('aClient').value;
+  const date = document.getElementById('aDate').value;
+  const time = document.getElementById('aTime').value.trim();
+  const price = parseInt(document.getElementById('aPrice').value) || 0;
+  const addonsRaw = document.getElementById('aAddons').value;
+  const notes = document.getElementById('aNotes').value.trim();
+  const status = document.getElementById('aStatus').value || 'pendiente';
 
-function markApptPaid(id) {
-  const appts = DB.get('appointments', []);
-  const idx = appts.findIndex(a => a.id === id);
-  if (idx < 0) return;
-  appts[idx].paymentStatus = 'pagado';
-  DB.set('appointments', appts);
-  renderAppointments(); renderDashboard(); renderFinanzas();
-}
-
-function deleteAppt(id) {
-  if (!confirm('¿Eliminar esta cita?')) return;
-  const appt = DB.get('appointments', []).find(a => a.id === id);
-  DB.set('appointments', DB.get('appointments', []).filter(a => a.id !== id));
-  if (appt) updateClientStats(appt.client_id);
-  renderAppointments(); renderDashboard(); renderCalendar();
-}
-
-// ============================================
-// CALENDARIO
-// ============================================
-let calCurrentDate = new Date();
-let calView = 'month'; // month, week
-
-function renderCalendar() {
-  const container = document.getElementById('calendarContainer');
-  if (!container) return;
-
-  const year = calCurrentDate.getFullYear();
-  const month = calCurrentDate.getMonth();
-
-  document.getElementById('calMonthYear').textContent = calCurrentDate.toLocaleDateString('es-US', { month: 'long', year: 'numeric' });
-
-  const appts = DB.get('appointments', []);
-  const clients = DB.get('clients', []);
-
-  if (calView === 'month') {
-    renderMonthView(container, year, month, appts, clients);
-  } else {
-    renderWeekView(container, year, month, appts, clients);
-  }
-}
-
-function renderMonthView(container, year, month, appts, clients) {
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const startPad = firstDay.getDay();
-  const daysInMonth = lastDay.getDate();
-
-  let html = '<div class="cal-grid">';
-  const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-  dayNames.forEach(d => html += `<div class="cal-day-header">${d}</div>`);
-
-  for (let i = 0; i < startPad; i++) html += '<div class="cal-day empty"></div>';
-
-  const todayStr = new Date().toISOString().split('T')[0];
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dayAppts = appts.filter(a => a.date === dateStr).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-    const isToday = dateStr === todayStr;
-
-    html += `<div class="cal-day ${isToday ? 'today' : ''}" onclick="showDayDetails('${dateStr}')">`;
-    html += `<div class="cal-day-num">${d}</div>`;
-    if (dayAppts.length > 0) {
-      html += '<div class="cal-day-events">';
-      dayAppts.forEach(a => {
-        const c = clients.find(x => x.id === a.client_id);
-        const statusColor = a.status === 'completada' ? 'green' : a.status === 'cancelada' ? 'red' : a.status === 'no_show' ? 'gray' : 'orange';
-        html += `<div class="cal-event cal-${statusColor}" title="${c?.name || 'Desconocido'} — ${a.time || 'Sin hora'} — $${a.price}">
-          <span class="cal-event-time">${a.time || '—'}</span>
-          <span class="cal-event-name">${c?.name?.split(' ')[0] || '?'}</span>
-          <span class="cal-event-pay pay-${a.paymentStatus}"></span>
-        </div>`;
-      });
-      html += '</div>';
-    }
-    html += '</div>';
-  }
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-function renderWeekView(container, year, month, appts, clients) {
-  // Simple week view showing next 7 days from current date
-  let html = '<div class="cal-week">';
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(calCurrentDate);
-    d.setDate(d.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
-    const dayAppts = appts.filter(a => a.date === dateStr).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-    const isToday = i === 0;
-
-    html += `<div class="cal-week-day ${isToday ? 'today' : ''}">`;
-    html += `<div class="cal-week-header">${d.toLocaleDateString('es-US', { weekday: 'short', day: 'numeric' })}</div>`;
-    html += '<div class="cal-week-events">';
-    if (dayAppts.length === 0) {
-      html += '<div class="cal-week-empty">Sin citas</div>';
-    } else {
-      dayAppts.forEach(a => {
-        const c = clients.find(x => x.id === a.client_id);
-        const statusColor = a.status === 'completada' ? 'green' : a.status === 'cancelada' ? 'red' : a.status === 'no_show' ? 'gray' : 'orange';
-        html += `<div class="cal-week-event cal-${statusColor}">
-          <div class="cal-week-time">${a.time || '—'}</div>
-          <div class="cal-week-client">${c?.name || '?'}</div>
-          <div class="cal-week-meta">$${a.price} · ${STATUS_LABELS[a.paymentStatus] || a.paymentStatus}</div>
-        </div>`;
-      });
-    }
-    html += '</div></div>';
-  }
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-function showDayDetails(dateStr) {
-  const appts = DB.get('appointments', []).filter(a => a.date === dateStr).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-  const clients = DB.get('clients', []);
-
-  let html = `<h3>${formatDate(dateStr)}</h3>`;
-  if (appts.length === 0) {
-    html += '<p class="empty">Sin citas este día</p>';
-  } else {
-    html += '<div class="day-details-list">';
-    appts.forEach(a => {
-      const c = clients.find(x => x.id === a.client_id);
-      html += `<div class="day-detail-item">
-        <div class="day-detail-time">${a.time || 'Sin hora'}</div>
-        <div class="day-detail-info">
-          <strong>${c?.name || 'Desconocido'}</strong>
-          <span>${c?.address || ''} · $${a.price}</span>
-          <span class="badge badge-${a.status}">${STATUS_LABELS[a.status]}</span>
-          <span class="pay-badge pay-${a.paymentStatus}">${STATUS_LABELS[a.paymentStatus]}</span>
-        </div>
-        <div class="day-detail-actions">
-          <button class="btn-icon btn-wa-sm" onclick="waClient('${a.client_id}')">📱</button>
-          ${a.status === 'pendiente' ? `<button class="btn-icon btn-convert" onclick="completeAppt('${a.id}')">✓</button>` : ''}
-        </div>
-      </div>`;
-    });
-    html += '</div>';
+  if (!clientId || !date) {
+    alert('Por favor selecciona un cliente y la fecha de la cita.');
+    return;
   }
 
-  document.getElementById('dayDetailContent').innerHTML = html;
-  openModal('dayDetailModal');
+  const addons = addonsRaw ? addonsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+  const apptData = {
+    id: id || undefined,
+    client_id: clientId,
+    date,
+    time,
+    price,
+    addons,
+    notes,
+    status
+  };
+
+  await DataStore.saveAppointment(apptData);
+  toggleForm('apptForm');
+  resetApptForm();
+  loadAppointments();
+  loadDashboard();
+  alert('Cita guardada correctamente ✅');
 }
 
-function prevCalMonth() { calCurrentDate.setMonth(calCurrentDate.getMonth() - 1); renderCalendar(); }
-function nextCalMonth() { calCurrentDate.setMonth(calCurrentDate.getMonth() + 1); renderCalendar(); }
-function todayCal() { calCurrentDate = new Date(); renderCalendar(); }
-function setCalView(view) { calView = view; renderCalendar(); }
+async function changeApptStatus(id, newStatus) {
+  await DataStore.updateAppointmentStatus(id, newStatus);
+  loadAppointments();
+  loadDashboard();
+}
+
+async function deleteAppt(id) {
+  if (confirm('¿Seguro que deseas eliminar esta cita?')) {
+    await DataStore.deleteAppointment(id);
+    loadAppointments();
+    loadDashboard();
+  }
+}
 
 // ============================================
 // GASTOS
 // ============================================
-function renderExpenses() {
-  const expenses = DB.get('expenses', []).sort((a, b) => b.date.localeCompare(a.date));
+let allExpenses = [];
 
+async function loadExpenses() {
+  allExpenses = await DataStore.getExpenses();
+  renderExpensesTable(allExpenses);
+}
+
+function renderExpensesTable(exps) {
   const tbody = document.getElementById('expensesTable');
-  tbody.innerHTML = expenses.length ? expenses.map(e => `
-    <tr>
-      <td>${formatDate(e.date)}</td>
-      <td><span class="badge" style="background:${catColor(e.category)}20;color:${catColor(e.category)}">${e.category}</span></td>
-      <td>${e.description || '-'}</td>
-      <td><strong>$${parseFloat(e.amount).toFixed(2)}</strong></td>
-      <td><button class="btn-icon btn-delete" onclick="deleteExpense('${e.id}')">🗑</button></td>
-    </tr>
-  `).join('') : '<tr><td colspan="5" class="empty-cell">No hay gastos</td></tr>';
-}
+  if (!exps || exps.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">No hay gastos registrados aún.</td></tr>';
+    return;
+  }
 
-function populateExpenseCategories() {
-  const cats = DB.get('config', {}).expenseCategories || [];
-  document.getElementById('mExpCat').innerHTML = '<option value="">Categoría...</option>' + 
-    cats.map(c => `<option value="${c}">${c}</option>`).join('');
-  document.getElementById('mExpDate').value = new Date().toISOString().split('T')[0];
-}
-
-function saveExpenseModal() {
-  const data = {
-    id: 'e_' + Date.now(),
-    category: document.getElementById('mExpCat').value,
-    amount: parseFloat(document.getElementById('mExpAmount').value),
-    date: document.getElementById('mExpDate').value,
-    description: document.getElementById('mExpDesc').value.trim()
+  const catLabels = {
+    insumos: 'Insumos de limpieza',
+    gasolina: 'Gasolina / Transporte',
+    salario_asistente: 'Salario asistente',
+    equipo: 'Equipo / Herramientas',
+    otro: 'Otro'
   };
-  if (!data.category || isNaN(data.amount)) { alert('Categoría y monto son obligatorios'); return; }
 
-  const expenses = DB.get('expenses', []); expenses.push(data); DB.set('expenses', expenses);
-  closeModal('expenseModal'); renderExpenses(); renderDashboard();
-}
+  const total = exps.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  const totalEl = document.getElementById('expensesTotalHeader');
+  if (totalEl) totalEl.textContent = 'Total: $' + total.toFixed(2);
 
-function deleteExpense(id) {
-  if (!confirm('¿Eliminar este gasto?')) return;
-  DB.set('expenses', DB.get('expenses', []).filter(e => e.id !== id));
-  renderExpenses(); renderDashboard();
-}
-
-function catColor(cat) {
-  const map = { 'Insumos': '#1565c0', 'Gasolina': '#e65100', 'Auto': '#2e7d32', 'Salario asistente': '#6a1b9a', 'Equipo': '#d4a017', 'Otro': '#5a5a6e' };
-  return map[cat] || '#5a5a6e';
-}
-
-// ============================================
-// COTIZADOR
-// ============================================
-function renderCotizador() {
-  populateClientSelect();
-
-  const tbody = document.getElementById('refTableBody');
-  tbody.innerHTML = Object.entries(SIZE_LABELS).map(([k, label]) => {
-    const p = PRICING[k];
-    return `<tr><td><strong>${label}</strong></td><td>$${p[10]}</td><td>$${p[15]}</td><td>$${p[30]}</td><td>$${p.deep}</td></tr>`;
-  }).join('');
-
-  const extras = (DB.get('config', {}).extras || []).filter(e => e.active);
-  document.getElementById('refExtras').innerHTML = extras.map(e => 
-    `<span class="ref-extra-tag">${e.name}: $${e.price}${e.perUnit ? '/u' : ''}</span>`
-  ).join('');
-
-  const qContainer = document.getElementById('quoteAddons');
-  qContainer.innerHTML = extras.map(e => `
-    <label class="quote-addon-item">
-      <input type="checkbox" value="${e.id}" data-price="${e.price}" onchange="calcQuote()">
-      <span>${e.name} +$${e.price}${e.perUnit ? '/u' : ''}</span>
-    </label>
+  tbody.innerHTML = exps.map(e => `
+    <tr>
+      <td><strong>${formatDate(e.date)}</strong></td>
+      <td><span class="badge badge-cat-${e.category}">${catLabels[e.category] || e.category}</span></td>
+      <td>${e.description || '-'}</td>
+      <td><strong style="color:var(--danger);">$${parseFloat(e.amount).toFixed(2)}</strong></td>
+      <td class="action-cell">
+        <button class="btn-table-action btn-del-table" onclick="deleteExpense('${e.id}')" title="Eliminar gasto">🗑</button>
+      </td>
+    </tr>
   `).join('');
-
-  calcQuote();
 }
 
-function autoFillClient() {
-  const sel = document.getElementById('qClient');
-  const cid = sel.value;
-  if (!cid) return;
-  const c = DB.get('clients', []).find(x => x.id === cid);
-  if (!c) return;
-  document.getElementById('qName').value = c.name;
-  document.getElementById('qPhone').value = c.phone;
-  document.getElementById('qSize').value = c.size_sqft || '';
-  document.getElementById('qFinalPrice').value = c.base_price || '';
-  calcQuote();
+function filterExpenses(category) {
+  if (!category || category === 'todas') {
+    renderExpensesTable(allExpenses);
+  } else {
+    const filtered = allExpenses.filter(e => e.category === category);
+    renderExpensesTable(filtered);
+  }
 }
 
-function calcQuote() {
-  const size = parseInt(document.getElementById('qSize').value);
-  const freq = document.getElementById('qFreq').value;
-  let total = 0;
-  if (size && PRICING[size] && PRICING[size][freq]) total = PRICING[size][freq];
-  document.querySelectorAll('#quoteAddons input:checked').forEach(el => {
+async function saveExpense() {
+  const category = document.getElementById('eCategory').value;
+  const amount = parseFloat(document.getElementById('eAmount').value);
+  const date = document.getElementById('eDate').value || new Date().toISOString().split('T')[0];
+  const desc = document.getElementById('eDesc').value.trim();
+
+  if (!category || isNaN(amount) || amount <= 0) {
+    alert('Por favor selecciona una categoría e ingresa un monto válido.');
+    return;
+  }
+
+  await DataStore.saveExpense({
+    category,
+    amount,
+    date,
+    description: desc
+  });
+
+  document.getElementById('eAmount').value = '';
+  document.getElementById('eDesc').value = '';
+  toggleForm('expenseForm');
+  loadExpenses();
+  loadDashboard();
+  alert('Gasto guardado ✅');
+}
+
+async function deleteExpense(id) {
+  if (confirm('¿Seguro que deseas eliminar este registro de gasto?')) {
+    await DataStore.deleteExpense(id);
+    loadExpenses();
+    loadDashboard();
+  }
+}
+
+// ============================================
+// COTIZADOR RÁPIDO
+// ============================================
+function qcCalculate() {
+  const sizeSelect = document.getElementById('qcSize');
+  const freqSelect = document.getElementById('qcFreq');
+  if (!sizeSelect || !freqSelect) return 0;
+
+  const size = parseInt(sizeSelect.value) || 2200;
+  const freq = freqSelect.value || '15';
+  let total = (PRICING[size] && PRICING[size][freq]) ? PRICING[size][freq] : 195;
+
+  document.querySelectorAll('.qc-check input:checked').forEach(el => {
     total += parseInt(el.dataset.price) || 0;
   });
-  document.getElementById('qCalcPrice').value = total || '';
-  const finalInput = document.getElementById('qFinalPrice');
-  const final = finalInput.value ? parseInt(finalInput.value) : total;
-  document.getElementById('qDisplayTotal').textContent = '$' + (final || 0);
+
+  const totalEl = document.getElementById('qcTotal');
+  if (totalEl) totalEl.textContent = '$' + total;
+  return total;
 }
 
-function sendQuoteWhatsApp() {
-  const name = document.getElementById('qName').value.trim();
-  const phone = document.getElementById('qPhone').value.trim();
-  const final = document.getElementById('qFinalPrice').value || document.getElementById('qCalcPrice').value;
-  const notes = document.getElementById('qNotes').value.trim();
-  if (!name || !phone || !final) { alert('Completa nombre, teléfono y precio'); return; }
+function qcSendWhatsApp() {
+  const total = qcCalculate();
+  const sizeSelect = document.getElementById('qcSize');
+  const freqSelect = document.getElementById('qcFreq');
 
-  let msg = '¡Hola ' + name + '! Soy Anggie de *Ad Sparkling Cleaning*.\n\n';
-  msg += 'Tu cotización personalizada:\n';
-  const size = document.getElementById('qSize');
-  if (size.value) msg += '📍 Tamaño: ' + size.options[size.selectedIndex].text + '\n';
-  msg += '💰 *Total: $' + final + '*\n';
-  if (notes) msg += '📝 ' + notes + '\n';
-  msg += '\n¿Te gustaría agendar? Confírmanos tu dirección completa. ¡Gracias! ✨';
-  window.open('https://wa.me/' + cleanPhone(phone) + '?text=' + encodeURIComponent(msg), '_blank');
-}
+  const addonsChecked = [];
+  document.querySelectorAll('.qc-check input:checked').forEach(el => {
+    addonsChecked.push(el.parentElement.textContent.trim());
+  });
 
-function saveQuoteAsLead() {
-  const name = document.getElementById('qName').value.trim();
-  const phone = document.getElementById('qPhone').value.trim();
-  if (!name || !phone) { alert('Nombre y teléfono son obligatorios'); return; }
-  const lead = {
-    id: 'lead_' + Date.now(), name, phone, address: '',
-    size_sqft: document.getElementById('qSize').value ? parseInt(document.getElementById('qSize').value) : null,
-    frequency: document.getElementById('qFreq').value,
-    extras_requested: [],
-    notes: document.getElementById('qNotes').value,
-    status: 'nuevo',
-    assigned_price: document.getElementById('qFinalPrice').value ? parseInt(document.getElementById('qFinalPrice').value) : null,
-    angie_notes: '', whatsapp_sent: false,
-    created_at: DB.now()
-  };
-  const leads = DB.get('leads', []); leads.unshift(lead); DB.set('leads', leads);
-  alert('Guardado como solicitud ✅'); renderLeads(); renderDashboard();
-}
-
-function saveQuoteAsClient() {
-  const name = document.getElementById('qName').value.trim();
-  const phone = document.getElementById('qPhone').value.trim();
-  if (!name || !phone) { alert('Nombre y teléfono son obligatorios'); return; }
-  const client = {
-    id: 'c_' + Date.now(), name, phone, address: '',
-    size_sqft: document.getElementById('qSize').value ? parseInt(document.getElementById('qSize').value) : null,
-    frequency: document.getElementById('qFreq').value,
-    base_price: document.getElementById('qFinalPrice').value ? parseInt(document.getElementById('qFinalPrice').value) : null,
-    notes: document.getElementById('qNotes').value,
-    status: 'activo', last_visit: null, next_visit: null,
-    rating: 3, cancelCount: 0, totalRevenue: 0, totalAppointments: 0,
-    contractStatus: 'activo', paymentDueDate: null
-  };
-  const clients = DB.get('clients', []); clients.push(client); DB.set('clients', clients);
-  alert('Cliente creado ✅'); renderClients(); renderDashboard();
-}
-
-// ============================================
-// FINANZAS PRO
-// ============================================
-function renderFinanzas() {
-  const now = new Date();
-  const months = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push(d.toISOString().split('T')[0].slice(0, 7));
+  let msg = '¡Hola! Soy Anggie de *Ad Sparkling Cleaning*. Te comparto tu cotización personalizada:%0A%0A';
+  msg += '📍 *Tamaño:* ' + sizeSelect.options[sizeSelect.selectedIndex].text.split('—')[0].trim() + '%0A';
+  msg += '🗓 *Frecuencia:* ' + freqSelect.options[freqSelect.selectedIndex].text + '%0A';
+  if (addonsChecked.length) {
+    msg += '➕ *Extras incluidos:* ' + addonsChecked.join(', ') + '%0A';
   }
+  msg += '%0A💰 *Total estimado: $' + total + '*%0A%0A';
+  msg += '¿Te gustaría reservar fecha en la agenda? Confírmanos tu dirección. ¡Muchas gracias! ✨';
 
-  const appts = DB.get('appointments', []).filter(a => a.status === 'completada');
-  const expenses = DB.get('expenses', []);
-  const clients = DB.get('clients', []);
-
-  const data = months.map(m => {
-    const rev = appts.filter(a => a.date.startsWith(m)).reduce((s, a) => s + a.price, 0);
-    const exp = expenses.filter(e => e.date.startsWith(m)).reduce((s, e) => s + parseFloat(e.amount), 0);
-    return { month: m, revenue: rev, expenses: exp, profit: rev - exp };
-  });
-
-  const totalRev = data.reduce((s, d) => s + d.revenue, 0);
-  const totalExp = data.reduce((s, d) => s + d.expenses, 0);
-  const avgRevPerAppt = appts.length > 0 ? totalRev / appts.length : 0;
-
-  // Pagos pendientes y vencidos
-  const pendingPayments = DB.get('appointments', []).filter(a => a.paymentStatus === 'pendiente_pago' && a.status === 'completada').reduce((s, a) => s + a.price, 0);
-  const overduePayments = DB.get('appointments', []).filter(a => a.paymentStatus === 'vencido').reduce((s, a) => s + a.price, 0);
-  const paidThisMonth = appts.filter(a => a.date.startsWith(months[5])).reduce((s, a) => s + a.price, 0);
-
-  document.getElementById('finRevenue').textContent = '$' + totalRev.toLocaleString();
-  document.getElementById('finExpenses').textContent = '$' + totalExp.toLocaleString();
-  document.getElementById('finProfit').textContent = '$' + (totalRev - totalExp).toLocaleString();
-  document.getElementById('finAvgPerAppt').textContent = '$' + avgRevPerAppt.toFixed(0);
-  document.getElementById('finPending').textContent = '$' + pendingPayments.toLocaleString();
-  document.getElementById('finOverdue').textContent = '$' + overduePayments.toLocaleString();
-  document.getElementById('finPaidThisMonth').textContent = '$' + paidThisMonth.toLocaleString();
-
-  drawBarChart('financeChart', data);
-
-  const curMonth = now.toISOString().split('T')[0].slice(0, 7);
-  const curExp = expenses.filter(e => e.date.startsWith(curMonth));
-  const catTotals = {};
-  curExp.forEach(e => { catTotals[e.category] = (catTotals[e.category] || 0) + parseFloat(e.amount); });
-  drawPieChart('categoryChart', catTotals);
-
-  // Revenue by client
-  const revByClient = {};
-  appts.forEach(a => {
-    revByClient[a.client_id] = (revByClient[a.client_id] || 0) + a.price;
-  });
-  const topClients = Object.entries(revByClient)
-    .map(([cid, rev]) => ({ name: clients.find(c => c.id === cid)?.name || 'Desconocido', revenue: rev }))
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 5);
-
-  const topClientEl = document.getElementById('topClientsChart');
-  if (topClientEl && topClients.length > 0) {
-    drawHorizontalBarChart('topClientsChart', topClients);
-  } else if (topClientEl) {
-    const ctx = topClientEl.getContext('2d');
-    ctx.clearRect(0, 0, topClientEl.width, topClientEl.height);
-    ctx.fillStyle = '#8a8a9e'; ctx.font = '14px Inter'; ctx.textAlign = 'center';
-    ctx.fillText('Sin datos suficientes', topClientEl.width/2, topClientEl.height/2);
-  }
-
-  // Monthly trend projection
-  const trend = data.map(d => d.profit);
-  const avgGrowth = trend.length > 1 ? (trend[trend.length-1] - trend[0]) / (trend.length - 1) : 0;
-  const projection = trend[trend.length-1] + avgGrowth;
-  document.getElementById('finProjection').textContent = '$' + Math.round(projection).toLocaleString();
+  window.open('https://wa.me/?text=' + msg, '_blank');
 }
 
-function drawBarChart(canvasId, data) {
-  const canvas = document.getElementById(canvasId);
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width, h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
+function qcCopyText() {
+  const total = qcCalculate();
+  const sizeSelect = document.getElementById('qcSize');
+  const freqSelect = document.getElementById('qcFreq');
 
-  const max = Math.max(...data.map(d => Math.max(d.revenue, d.expenses)), 1);
-  const barW = 40, gap = 60, startX = 60, startY = h - 40;
-  const chartH = h - 80;
-
-  ctx.strokeStyle = '#e8e8ec'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(40, 20); ctx.lineTo(40, startY); ctx.lineTo(w-20, startY); ctx.stroke();
-
-  data.forEach((d, i) => {
-    const x = startX + i * (barW * 2 + gap);
-    const rh = (d.revenue / max) * chartH;
-    const eh = (d.expenses / max) * chartH;
-    ctx.fillStyle = '#2d8a5e'; ctx.fillRect(x, startY - rh, barW, rh);
-    ctx.fillStyle = '#c0392b'; ctx.fillRect(x + barW + 4, startY - eh, barW, eh);
-    ctx.fillStyle = '#5a5a6e'; ctx.font = '11px Inter'; ctx.textAlign = 'center';
-    ctx.fillText(d.month.slice(5), x + barW, startY + 20);
+  const addonsChecked = [];
+  document.querySelectorAll('.qc-check input:checked').forEach(el => {
+    addonsChecked.push(el.parentElement.textContent.trim());
   });
 
-  ctx.fillStyle = '#2d8a5e'; ctx.fillRect(w - 140, 10, 12, 12);
-  ctx.fillStyle = '#1a1a2e'; ctx.fillText('Ingresos', w - 110, 20);
-  ctx.fillStyle = '#c0392b'; ctx.fillRect(w - 140, 28, 12, 12);
-  ctx.fillStyle = '#1a1a2e'; ctx.fillText('Gastos', w - 110, 38);
-}
+  let text = `Ad Sparkling Cleaning — Cotización\n\n`;
+  text += `Tamaño: ${sizeSelect.options[sizeSelect.selectedIndex].text.split('—')[0].trim()}\n`;
+  text += `Frecuencia: ${freqSelect.options[freqSelect.selectedIndex].text}\n`;
+  if (addonsChecked.length) text += `Extras: ${addonsChecked.join(', ')}\n`;
+  text += `Total: $${total}\n\n`;
+  text += `Precio sujeto a confirmación al evaluar la propiedad.`;
 
-function drawPieChart(canvasId, data) {
-  const canvas = document.getElementById(canvasId);
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width, h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
-
-  const total = Object.values(data).reduce((s, v) => s + v, 0);
-  if (total === 0) { ctx.fillStyle = '#8a8a9e'; ctx.font = '14px Inter'; ctx.textAlign = 'center'; ctx.fillText('Sin datos este mes', w/2, h/2); return; }
-
-  const colors = ['#1565c0', '#e65100', '#2e7d32', '#6a1b9a', '#d4a017', '#5a5a6e', '#c0392b'];
-  let angle = -Math.PI / 2;
-  const cx = w / 2 - 80, cy = h / 2, r = Math.min(w, h) / 2 - 40;
-
-  Object.entries(data).forEach(([cat, val], i) => {
-    const slice = (val / total) * Math.PI * 2;
-    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, angle, angle + slice);
-    ctx.fillStyle = colors[i % colors.length]; ctx.fill();
-    angle += slice;
-  });
-
-  let ly = 30;
-  Object.entries(data).forEach(([cat, val], i) => {
-    ctx.fillStyle = colors[i % colors.length]; ctx.fillRect(w - 200, ly, 12, 12);
-    ctx.fillStyle = '#1a1a2e'; ctx.font = '12px Inter'; ctx.textAlign = 'left';
-    ctx.fillText(cat + ' ($' + val.toFixed(0) + ')', w - 180, ly + 10);
-    ly += 22;
+  navigator.clipboard.writeText(text).then(() => {
+    alert('Cotización copiada al portapapeles ✅');
+  }).catch(() => {
+    alert('Texto de cotización:\n\n' + text);
   });
 }
 
-function drawHorizontalBarChart(canvasId, data) {
-  const canvas = document.getElementById(canvasId);
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width, h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
+function qcSaveAsLead() {
+  const total = qcCalculate();
+  const size = parseInt(document.getElementById('qcSize').value);
+  const freq = document.getElementById('qcFreq').value;
 
-  const max = Math.max(...data.map(d => d.revenue), 1);
-  const barH = 28, gap = 12, startY = 30, startX = 140;
-  const chartW = w - startX - 40;
+  const leadName = prompt('Ingresa el nombre del prospecto:');
+  if (!leadName) return;
+  const leadPhone = prompt('Ingresa el teléfono del prospecto:') || '';
+  const leadAddress = prompt('Ingresa la dirección:') || '';
 
-  data.forEach((d, i) => {
-    const y = startY + i * (barH + gap);
-    const bw = (d.revenue / max) * chartW;
-    ctx.fillStyle = '#e8e8ec'; ctx.fillRect(startX, y, chartW, barH);
-    ctx.fillStyle = '#2d8a5e'; ctx.fillRect(startX, y, bw, barH);
-    ctx.fillStyle = '#1a1a2e'; ctx.font = '12px Inter'; ctx.textAlign = 'right';
-    ctx.fillText(d.name, startX - 10, y + barH/2 + 4);
-    ctx.fillStyle = '#fff'; ctx.font = '11px Inter'; ctx.textAlign = 'left';
-    ctx.fillText('$' + d.revenue.toLocaleString(), startX + 8, y + barH/2 + 4);
+  DataStore.saveLead({
+    name: leadName,
+    phone: leadPhone,
+    address: leadAddress,
+    size_sqft: size,
+    frequency: freq,
+    notes: `Cotización rápida: $${total}`,
+    status: 'nuevo'
   });
+
+  alert('Cotización guardada como Lead en el panel ✅');
+}
+
+function qcCreateClient() {
+  const total = qcCalculate();
+  const size = parseInt(document.getElementById('qcSize').value);
+  const freq = document.getElementById('qcFreq').value;
+
+  showTab('clients');
+  const form = document.getElementById('clientForm');
+  form.style.display = 'block';
+
+  document.getElementById('cId').value = '';
+  document.getElementById('cSize').value = size;
+  document.getElementById('cFreq').value = freq;
+  document.getElementById('cPrice').value = total;
+  document.getElementById('cNotes').value = 'Cliente creado desde cotizador rápido';
+  document.getElementById('cFormTitle').textContent = 'Crear Cliente desde Cotizador';
+
+  form.scrollIntoView({ behavior: 'smooth' });
 }
 
 // ============================================
-// CONFIGURACIÓN
+// AJUSTES & CONFIGURACIÓN SUPABASE
 // ============================================
-function renderConfig() {
-  const cfg = DB.get('config', {});
-  document.getElementById('cfgName').value = cfg.companyName || '';
-  document.getElementById('cfgPhone').value = cfg.phone || '';
-  document.getElementById('cfgAddress').value = cfg.address || '';
-
-  const exContainer = document.getElementById('configExtras');
-  exContainer.innerHTML = (cfg.extras || []).map((e, i) => `
-    <div class="config-item">
-      <input type="checkbox" ${e.active ? 'checked' : ''} onchange="toggleExtraActive(${i})">
-      <input type="text" value="${e.name}" onchange="updateExtra(${i}, 'name', this.value)" placeholder="Nombre">
-      <input type="number" value="${e.price}" onchange="updateExtra(${i}, 'price', this.value)" placeholder="Precio">
-      <button class="btn-icon btn-delete" onclick="removeExtra(${i})">🗑</button>
-    </div>
-  `).join('');
-
-  const niContainer = document.getElementById('configNotIncluded');
-  niContainer.innerHTML = (cfg.notIncluded || []).map((n, i) => `
-    <div class="config-item">
-      <input type="checkbox" ${n.active ? 'checked' : ''} onchange="toggleNotIncludedActive(${i})">
-      <input type="text" value="${n.name}" onchange="updateNotIncluded(${i}, this.value)" placeholder="Nombre" style="flex:1">
-      <button class="btn-icon btn-delete" onclick="removeNotIncluded(${i})">🗑</button>
-    </div>
-  `).join('');
-
-  const ecContainer = document.getElementById('configExpenseCats');
-  ecContainer.innerHTML = (cfg.expenseCategories || []).map((c, i) => `
-    <div class="config-item">
-      <input type="text" value="${c}" onchange="updateExpenseCat(${i}, this.value)" placeholder="Categoría" style="flex:1">
-      <button class="btn-icon btn-delete" onclick="removeExpenseCat(${i})">🗑</button>
-    </div>
-  `).join('');
+function openSettingsModal() {
+  const modal = document.getElementById('settingsModal');
+  if (!modal) return;
+  document.getElementById('cfgSupabaseUrl').value = SUPABASE_URL.includes('TU-PROJECT') ? '' : SUPABASE_URL;
+  document.getElementById('cfgSupabaseKey').value = SUPABASE_KEY.includes('TU-ANON-KEY') ? '' : SUPABASE_KEY;
+  modal.style.display = 'flex';
 }
 
-function saveCompanyConfig() {
-  const cfg = DB.get('config', {});
-  cfg.companyName = document.getElementById('cfgName').value;
-  cfg.phone = document.getElementById('cfgPhone').value;
-  cfg.address = document.getElementById('cfgAddress').value;
-  DB.set('config', cfg);
+function closeSettingsModal() {
+  const modal = document.getElementById('settingsModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function saveSettings() {
+  const url = document.getElementById('cfgSupabaseUrl').value.trim();
+  const key = document.getElementById('cfgSupabaseKey').value.trim();
+
+  const settings = {
+    supabaseUrl: url || 'https://TU-PROJECT.supabase.co',
+    supabaseKey: key || 'TU-ANON-KEY'
+  };
+
+  localStorage.setItem(DataStore.KEYS.SETTINGS, JSON.stringify(settings));
+  SUPABASE_URL = settings.supabaseUrl;
+  SUPABASE_KEY = settings.supabaseKey;
+
+  DataStore.initSupabase();
+  closeSettingsModal();
+  loadDashboard();
   alert('Configuración guardada ✅');
 }
 
-function addExtraItem() {
-  const cfg = DB.get('config', {});
-  cfg.extras = cfg.extras || [];
-  cfg.extras.push({ id: 'ex_' + Date.now(), name: 'Nuevo adicional', price: 0, active: true });
-  DB.set('config', cfg); renderConfig();
-}
-function updateExtra(i, field, val) {
-  const cfg = DB.get('config', {});
-  if (field === 'price') cfg.extras[i].price = parseInt(val) || 0;
-  else cfg.extras[i].name = val;
-  DB.set('config', cfg);
-}
-function toggleExtraActive(i) {
-  const cfg = DB.get('config', {});
-  cfg.extras[i].active = !cfg.extras[i].active;
-  DB.set('config', cfg); renderConfig();
-}
-function removeExtra(i) {
-  const cfg = DB.get('config', {}); cfg.extras.splice(i, 1); DB.set('config', cfg); renderConfig();
+function resetDemoData() {
+  if (confirm('¿Restaurar todos los datos a la demostración inicial? (Esto sobreescribirá cambios locales)')) {
+    localStorage.removeItem(DataStore.KEYS.CLIENTS);
+    localStorage.removeItem(DataStore.KEYS.APPTS);
+    localStorage.removeItem(DataStore.KEYS.EXPENSES);
+    localStorage.removeItem(DataStore.KEYS.LEADS);
+    DataStore.seedInitialData();
+    closeSettingsModal();
+    loadDashboard();
+    alert('Datos de prueba restaurados ✅');
+  }
 }
 
-function addNotIncludedItem() {
-  const cfg = DB.get('config', {});
-  cfg.notIncluded = cfg.notIncluded || [];
-  cfg.notIncluded.push({ id: 'ni_' + Date.now(), name: 'Nuevo item', active: true });
-  DB.set('config', cfg); renderConfig();
-}
-function updateNotIncluded(i, val) {
-  const cfg = DB.get('config', {}); cfg.notIncluded[i].name = val; DB.set('config', cfg);
-}
-function toggleNotIncludedActive(i) {
-  const cfg = DB.get('config', {});
-  cfg.notIncluded[i].active = !cfg.notIncluded[i].active;
-  DB.set('config', cfg); renderConfig();
-}
-function removeNotIncluded(i) {
-  const cfg = DB.get('config', {}); cfg.notIncluded.splice(i, 1); DB.set('config', cfg); renderConfig();
+// ============================================
+// PWA INSTALLATION & MOBILE EXPERIENCE
+// ============================================
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const installBtns = document.querySelectorAll('.btn-install-pwa');
+  installBtns.forEach(btn => btn.style.display = 'flex');
+});
+
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choice) => {
+      if (choice.outcome === 'accepted') {
+        console.log('PWA instalada');
+      }
+      deferredPrompt = null;
+    });
+  } else {
+    // Si está en iOS Safari o ya instalada
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isIOS) {
+      alert('Para instalar en iPhone/iPad:\n1. Toca el botón Compartir (cuadrado con flecha hacia arriba)\n2. Selecciona "Añadir a pantalla de inicio" 📲');
+    } else {
+      alert('Para instalar esta app:\n1. Toca el menú de tu navegador (los tres puntos)\n2. Selecciona "Instalar aplicación" o "Añadir a pantalla de inicio" 📲');
+    }
+  }
 }
 
-function addExpenseCategory() {
-  const cfg = DB.get('config', {});
-  cfg.expenseCategories = cfg.expenseCategories || [];
-  cfg.expenseCategories.push('Nueva categoría');
-  DB.set('config', cfg); renderConfig();
-}
-function updateExpenseCat(i, val) {
-  const cfg = DB.get('config', {}); cfg.expenseCategories[i] = val; DB.set('config', cfg);
-}
-function removeExpenseCat(i) {
-  const cfg = DB.get('config', {}); cfg.expenseCategories.splice(i, 1); DB.set('config', cfg); renderConfig();
-}
-
-function resetAllData() {
-  if (!confirm('⚠️ ¿ESTÁS SEGURA? Esto borra TODO. No se puede deshacer.')) return;
-  if (prompt('Escribe BORRAR para confirmar:') !== 'BORRAR') return;
-  localStorage.removeItem('asc_initialized_v3');
-  localStorage.removeItem('asc_config');
-  localStorage.removeItem('asc_leads');
-  localStorage.removeItem('asc_clients');
-  localStorage.removeItem('asc_appointments');
-  localStorage.removeItem('asc_expenses');
-  location.reload();
+// Registrar Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('Service Worker registrado correctamente'))
+      .catch(err => console.log('Service Worker no se pudo registrar:', err));
+  });
 }
 
 // ============================================
 // UTILIDADES
 // ============================================
-function formatDate(str) {
-  if (!str) return '-';
-  const d = new Date(str);
-  if (isNaN(d)) return str;
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr + (dateStr.length === 10 ? 'T00:00:00' : ''));
+  if (isNaN(d)) return dateStr;
   return d.toLocaleDateString('es-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
-function cleanPhone(p) {
-  return (p || '').replace(/[^0-9]/g, '');
+
+function freqLabel(freq) {
+  const labels = { '10': 'Cada 10 días', '15': 'Quincenal', '30': 'Mensual', 'deep': 'Profunda' };
+  return labels[freq] || freq || '-';
 }
 
-// Sync landing -> admin
-window.addEventListener('storage', (e) => {
-  if (e.key === 'asc_notify_new_lead') { renderDashboard(); renderLeads(); }
-});
-
-// Init
-function waAppt(clientId) {
-  const c = DB.get('clients', []).find(x => x.id === clientId);
-  if (c) window.open('https://wa.me/' + cleanPhone(c.phone), '_blank');
+function cleanPhone(phone) {
+  return String(phone || '').replace(/[^0-9]/g, '');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  initData(); renderDashboard();
-  document.getElementById('qSize')?.addEventListener('change', calcQuote);
-  document.getElementById('qFreq')?.addEventListener('change', calcQuote);
-  document.getElementById('qFinalPrice')?.addEventListener('input', calcQuote);
+function truncate(str, max) {
+  if (!str) return '';
+  return str.length > max ? str.substring(0, max) + '...' : str;
+}
+
+// ============================================
+// INICIALIZACIÓN
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+  // Inicializar almacén de datos
+  DataStore.init();
+
+  // Fecha por defecto en gastos y citas
+  const today = new Date().toISOString().split('T')[0];
+  const eDate = document.getElementById('eDate');
+  if (eDate) eDate.value = today;
+  const aDate = document.getElementById('aDate');
+  if (aDate) aDate.value = today;
+
+  // Listeners del cotizador rápido
+  const qcSize = document.getElementById('qcSize');
+  if (qcSize) qcSize.addEventListener('change', qcCalculate);
+  const qcFreq = document.getElementById('qcFreq');
+  if (qcFreq) qcFreq.addEventListener('change', qcCalculate);
+  document.querySelectorAll('.qc-check input').forEach(el => {
+    el.addEventListener('change', qcCalculate);
+  });
+
+  // Selector de cliente en formulario de citas
+  const aClientSelect = document.getElementById('aClient');
+  if (aClientSelect) {
+    aClientSelect.addEventListener('change', onClientSelectChange);
+  }
+
+  // Cargar Dashboard inicial
+  loadDashboard();
 });
