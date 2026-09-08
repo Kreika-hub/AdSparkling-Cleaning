@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Capa_1" data-name="Capa 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 344.5">
+  <defs>
+    <style>
+      .cls-1, .cls-2 {
+        letter-spacing: .5em;
+      }
+
+      .cls-1, .cls-3, .cls-4, .cls-5 {
+        font-family: Montserrat-ExtraLight, Montserrat;
+        font-variation-settings: 'wght' 200;
+        font-weight: 200;
+      }
+
+      .cls-6 {
+        letter-spacing: -.1em;
+      }
+
+      .cls-6, .cls-7 {
+        font-family: AtteronPersonalUseOnly-Reg, 'Atteron Personal Use Only';
+      }
+
+      .cls-2 {
+        font-family: Montserrat-Medium, Montserrat;
+        font-variation-settings: 'wght' 500;
+        font-weight: 500;
+      }
+
+      .cls-8 {
+        fill: #f0d6e7;
+      }
+
+      .cls-9 {
+        font-family: Bauhaus-Bold, Bauhaus;
+        font-weight: 700;
+        letter-spacing: 0em;
+      }
+
+      .cls-10 {
+        font-size: 40.57px;
+      }
+
+      .cls-10, .cls-11 {
+        fill: #fff;
+      }
+
+      .cls-3 {
+        letter-spacing: .49em;
+      }
+
+      .cls-4 {
+        letter-spacing: .5em;
+      }
+
+      .cls-11 {
+        font-size: 142.25px;
+      }
+
+      .cls-5 {
+        letter-spacing: .49em;
+      }
+    </style>
+  </defs>
+  <text class="cls-10" transform="translate(359.23 269.89) scale(.97 1)"><tspan class="cls-5" x="0" y="0">c</tspan><tspan class="cls-1" x="42.15" y="0">l</tspan><tspan class="cls-3" x="72.78" y="0">e</tspan><tspan class="cls-4" x="116.44" y="0">aning</tspan><tspan class="cls-2" x="333.57" y="0">llC</tspan><tspan class="cls-1" x="445.99" y="0"> </tspan></text>
+  <g>
+    <g>
+      <path class="cls-8" d="m820.33,94.34c1.08-13.96,12.28-24.89,25.81-25.97-6.86-.68-12.79-3.35-17.65-8.24-4.86-4.89-7.5-10.84-8.06-17.46-2.26,14.77-10.88,23.41-25.72,25.78,6.73.6,12.67,3.29,17.53,8.19,4.86,4.9,7.49,10.84,8.09,17.69Z"/>
+      <path class="cls-8" d="m848.29,62.13c.86-4.51,3.71-7.37,8.31-8.31-2.11-.4-3.99-1.25-5.51-2.78-1.52-1.53-2.41-3.37-2.79-5.53-.97,4.6-3.72,7.38-8.51,8.31,4.76.95,7.55,3.71,8.5,8.32Z"/>
+      <path class="cls-8" d="m837.89,42.5c-3.4-.72-5.4-2.66-6.15-6.12-.76,3.46-2.77,5.4-6.12,6.12,3.37.72,5.35,2.67,6.11,6.11.76-3.41,2.73-5.4,6.16-6.1Z"/>
+      <path class="cls-8" d="m856.99,38.37c-1.69-.52-2.78-1.61-3.28-3.5-.51,1.89-1.59,2.98-3.49,3.49,1.87.52,2.97,1.58,3.49,3.51.52-1.9,1.59-2.97,3.28-3.5Z"/>
+    </g>
+    <text class="cls-11" transform="translate(87.68 212.56) scale(1.01 1)"><tspan class="cls-7" x="0" y="0">Ads</tspan><tspan class="cls-6" x="283.49" y="0">p</tspan><tspan class="cls-7" x="361.3" y="0">arkling</tspan><tspan class="cls-9" x="909.65" y="0"> </tspan></text>
+  </g>
+</svg>

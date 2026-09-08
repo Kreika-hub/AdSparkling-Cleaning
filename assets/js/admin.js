@@ -1,15 +1,10 @@
 /* ============================================
    ADMIN PANEL — Ad Sparkling Cleaning
-   Gestión completa, LocalStorage + Supabase sync,
-   Dashboard, CRUD, WhatsApp y PWA
+   Autenticación (Clave Anggie2026), PWA Push,
+   CRUD completo y Gestión Autónoma
    ============================================ */
 
-// ============================================
-// CONFIGURACIÓN & ESTADO
-// ============================================
-let SUPABASE_URL = 'https://TU-PROJECT.supabase.co';
-let SUPABASE_KEY = 'TU-ANON-KEY';
-let supabase = null;
+const DEFAULT_PASSWORD = 'Anggie2026';
 
 const PRICING = {
   1200: { 10: 150, 15: 150, 30: 180, deep: 240 },
@@ -21,7 +16,7 @@ const PRICING = {
 };
 
 // ============================================
-// DATASTORE: LOCALSTORAGE + SUPABASE HYBRID
+// DATASTORE (PERSISTENCIA AUTÓNOMA LOCAL)
 // ============================================
 const DataStore = {
   KEYS: {
@@ -29,54 +24,28 @@ const DataStore = {
     CLIENTS: 'adsparkling_clients',
     APPTS: 'adsparkling_appointments',
     EXPENSES: 'adsparkling_expenses',
-    SETTINGS: 'adsparkling_settings'
+    AUTH_PASS: 'adsparkling_admin_password',
+    AUTH_SESSION: 'adsparkling_logged_in'
   },
 
   init() {
-    this.loadSettings();
-    this.initSupabase();
     this.seedInitialData();
   },
 
-  loadSettings() {
-    const raw = localStorage.getItem(this.KEYS.SETTINGS);
-    if (raw) {
-      try {
-        const s = JSON.parse(raw);
-        if (s.supabaseUrl) SUPABASE_URL = s.supabaseUrl;
-        if (s.supabaseKey) SUPABASE_KEY = s.supabaseKey;
-      } catch (e) {
-        console.error('Error cargando settings:', e);
-      }
-    }
+  getPassword() {
+    return localStorage.getItem(this.KEYS.AUTH_PASS) || DEFAULT_PASSWORD;
   },
 
-  initSupabase() {
-    if (SUPABASE_URL && !SUPABASE_URL.includes('TU-PROJECT') && window.supabase) {
-      try {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        this.updateConnectionStatus(true);
-      } catch (err) {
-        console.warn('Error conectando a Supabase:', err);
-        this.updateConnectionStatus(false);
-      }
-    } else {
-      supabase = null;
-      this.updateConnectionStatus(false);
-    }
+  setPassword(newPass) {
+    localStorage.setItem(this.KEYS.AUTH_PASS, newPass);
   },
 
-  updateConnectionStatus(connected) {
-    const badge = document.getElementById('connStatusBadge');
-    if (badge) {
-      if (connected) {
-        badge.className = 'conn-badge online';
-        badge.innerHTML = '<span class="dot"></span> Supabase Conectado';
-      } else {
-        badge.className = 'conn-badge local';
-        badge.innerHTML = '<span class="dot"></span> Modo Local (Offline)';
-      }
-    }
+  isLoggedIn() {
+    return localStorage.getItem(this.KEYS.AUTH_SESSION) === 'true';
+  },
+
+  setLoggedIn(val) {
+    localStorage.setItem(this.KEYS.AUTH_SESSION, val ? 'true' : 'false');
   },
 
   seedInitialData() {
@@ -248,7 +217,6 @@ const DataStore = {
     }
   },
 
-  // Helper local storage genérico
   getList(key) {
     try {
       return JSON.parse(localStorage.getItem(key)) || [];
@@ -261,82 +229,38 @@ const DataStore = {
     localStorage.setItem(key, JSON.stringify(items));
   },
 
-  // LEADS
-  async getLeads() {
-    if (supabase) {
-      const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
-      if (!error && data) return data;
-    }
-    return this.getList(this.KEYS.LEADS);
-  },
-
-  async saveLead(lead) {
+  // Leads
+  getLeads() { return this.getList(this.KEYS.LEADS); },
+  saveLead(lead) {
     lead.id = lead.id || 'l-' + Date.now();
     lead.created_at = lead.created_at || new Date().toISOString();
     lead.status = lead.status || 'nuevo';
-
-    const leads = this.getList(this.KEYS.LEADS);
+    const leads = this.getLeads();
     leads.unshift(lead);
     this.setList(this.KEYS.LEADS, leads);
-
-    if (supabase) {
-      try {
-        await supabase.from('leads').insert([lead]);
-      } catch (e) {
-        console.warn('Error sincronizando lead con Supabase:', e);
-      }
-    }
     return lead;
   },
-
-  async updateLead(id, updates) {
-    const leads = this.getList(this.KEYS.LEADS);
+  updateLead(id, updates) {
+    const leads = this.getLeads();
     const idx = leads.findIndex(l => l.id == id);
     if (idx !== -1) {
       leads[idx] = { ...leads[idx], ...updates, updated_at: new Date().toISOString() };
       this.setList(this.KEYS.LEADS, leads);
     }
-
-    if (supabase) {
-      try {
-        await supabase.from('leads').update(updates).eq('id', id);
-      } catch (e) {
-        console.warn('Error actualizando lead en Supabase:', e);
-      }
-    }
   },
-
-  async deleteLead(id) {
-    const leads = this.getList(this.KEYS.LEADS).filter(l => l.id != id);
+  deleteLead(id) {
+    const leads = this.getLeads().filter(l => l.id != id);
     this.setList(this.KEYS.LEADS, leads);
-
-    if (supabase) {
-      try {
-        await supabase.from('leads').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Error eliminando lead en Supabase:', e);
-      }
-    }
   },
 
-  // CLIENTS
-  async getClients() {
-    if (supabase) {
-      const { data, error } = await supabase.from('clients').select('*').order('name');
-      if (!error && data) return data;
-    }
-    return this.getList(this.KEYS.CLIENTS);
-  },
-
-  async saveClient(client) {
-    const clients = this.getList(this.KEYS.CLIENTS);
+  // Clientes
+  getClients() { return this.getList(this.KEYS.CLIENTS); },
+  saveClient(client) {
+    const clients = this.getClients();
     if (client.id) {
       const idx = clients.findIndex(c => c.id == client.id);
-      if (idx !== -1) {
-        clients[idx] = { ...clients[idx], ...client };
-      } else {
-        clients.push(client);
-      }
+      if (idx !== -1) clients[idx] = { ...clients[idx], ...client };
+      else clients.push(client);
     } else {
       client.id = 'c-' + Date.now();
       client.created_at = new Date().toISOString();
@@ -344,45 +268,23 @@ const DataStore = {
       clients.push(client);
     }
     this.setList(this.KEYS.CLIENTS, clients);
-
-    if (supabase) {
-      try {
-        await supabase.from('clients').upsert([client]);
-      } catch (e) {
-        console.warn('Error guardando cliente en Supabase:', e);
-      }
-    }
     return client;
   },
-
-  async deleteClient(id) {
-    const clients = this.getList(this.KEYS.CLIENTS).filter(c => c.id != id);
+  deleteClient(id) {
+    const clients = this.getClients().filter(c => c.id != id);
     this.setList(this.KEYS.CLIENTS, clients);
-
-    if (supabase) {
-      try {
-        await supabase.from('clients').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Error eliminando cliente en Supabase:', e);
-      }
-    }
   },
 
-  // APPOINTMENTS
-  async getAppointments() {
-    if (supabase) {
-      const { data, error } = await supabase.from('appointments').select('*, clients(name, address, phone)').order('date', { ascending: false });
-      if (!error && data) return data;
-    }
+  // Citas
+  getAppointments() {
     const appts = this.getList(this.KEYS.APPTS);
-    const clients = this.getList(this.KEYS.CLIENTS);
+    const clients = this.getClients();
     return appts.map(a => {
       const client = clients.find(c => c.id == a.client_id) || {};
       return { ...a, clients: { name: client.name || 'Sin asignar', address: client.address || '', phone: client.phone || '' } };
     });
   },
-
-  async saveAppointment(appt) {
+  saveAppointment(appt) {
     const appts = this.getList(this.KEYS.APPTS);
     if (appt.id) {
       const idx = appts.findIndex(a => a.id == appt.id);
@@ -397,38 +299,23 @@ const DataStore = {
     this.setList(this.KEYS.APPTS, appts);
 
     // Actualizar fecha última/próxima visita en el cliente
-    const clients = this.getList(this.KEYS.CLIENTS);
+    const clients = this.getClients();
     const cIdx = clients.findIndex(c => c.id == appt.client_id);
     if (cIdx !== -1) {
-      if (appt.status === 'completada') {
-        clients[cIdx].last_visit = appt.date;
-      } else {
-        clients[cIdx].next_visit = appt.date;
-      }
+      if (appt.status === 'completada') clients[cIdx].last_visit = appt.date;
+      else clients[cIdx].next_visit = appt.date;
       this.setList(this.KEYS.CLIENTS, clients);
-    }
-
-    if (supabase) {
-      try {
-        const cleanAppt = { ...appt };
-        delete cleanAppt.clients;
-        await supabase.from('appointments').upsert([cleanAppt]);
-      } catch (e) {
-        console.warn('Error guardando cita en Supabase:', e);
-      }
     }
     return appt;
   },
-
-  async updateAppointmentStatus(id, newStatus) {
+  updateAppointmentStatus(id, newStatus) {
     const appts = this.getList(this.KEYS.APPTS);
     const idx = appts.findIndex(a => a.id == id);
     if (idx !== -1) {
       appts[idx].status = newStatus;
       this.setList(this.KEYS.APPTS, appts);
-
       if (newStatus === 'completada') {
-        const clients = this.getList(this.KEYS.CLIENTS);
+        const clients = this.getClients();
         const cIdx = clients.findIndex(c => c.id == appts[idx].client_id);
         if (cIdx !== -1) {
           clients[cIdx].last_visit = appts[idx].date;
@@ -436,68 +323,158 @@ const DataStore = {
         }
       }
     }
-
-    if (supabase) {
-      try {
-        await supabase.from('appointments').update({ status: newStatus }).eq('id', id);
-      } catch (e) {
-        console.warn('Error actualizando estado de cita:', e);
-      }
-    }
   },
-
-  async deleteAppointment(id) {
+  deleteAppointment(id) {
     const appts = this.getList(this.KEYS.APPTS).filter(a => a.id != id);
     this.setList(this.KEYS.APPTS, appts);
-
-    if (supabase) {
-      try {
-        await supabase.from('appointments').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Error eliminando cita en Supabase:', e);
-      }
-    }
   },
 
-  // EXPENSES
-  async getExpenses() {
-    if (supabase) {
-      const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
-      if (!error && data) return data;
-    }
-    return this.getList(this.KEYS.EXPENSES);
-  },
-
-  async saveExpense(exp) {
+  // Gastos
+  getExpenses() { return this.getList(this.KEYS.EXPENSES); },
+  saveExpense(exp) {
     exp.id = exp.id || 'e-' + Date.now();
     exp.created_at = new Date().toISOString();
-    const exps = this.getList(this.KEYS.EXPENSES);
+    const exps = this.getExpenses();
     exps.unshift(exp);
     this.setList(this.KEYS.EXPENSES, exps);
-
-    if (supabase) {
-      try {
-        await supabase.from('expenses').insert([exp]);
-      } catch (e) {
-        console.warn('Error guardando gasto en Supabase:', e);
-      }
-    }
     return exp;
   },
-
-  async deleteExpense(id) {
-    const exps = this.getList(this.KEYS.EXPENSES).filter(e => e.id != id);
+  deleteExpense(id) {
+    const exps = this.getExpenses().filter(e => e.id != id);
     this.setList(this.KEYS.EXPENSES, exps);
-
-    if (supabase) {
-      try {
-        await supabase.from('expenses').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Error eliminando gasto en Supabase:', e);
-      }
-    }
   }
 };
+
+// ============================================
+// AUTENTICACIÓN & LOGIN
+// ============================================
+function checkAuth() {
+  const isLogged = DataStore.isLoggedIn();
+  const loginScreen = document.getElementById('loginScreen');
+  const adminApp = document.getElementById('adminApp');
+
+  if (isLogged) {
+    loginScreen.style.display = 'none';
+    adminApp.style.display = 'block';
+    loadDashboard();
+  } else {
+    loginScreen.style.display = 'flex';
+    adminApp.style.display = 'none';
+    setupPushCard();
+  }
+}
+
+function handleLogin(e) {
+  e.preventDefault();
+  const input = document.getElementById('loginPassword');
+  const errorMsg = document.getElementById('loginError');
+  const currentPassword = DataStore.getPassword();
+
+  if (input.value === currentPassword) {
+    errorMsg.style.display = 'none';
+    DataStore.setLoggedIn(true);
+    input.value = '';
+    checkAuth();
+  } else {
+    errorMsg.style.display = 'block';
+    input.focus();
+  }
+}
+
+function handleLogout() {
+  if (confirm('¿Cerrar sesión del panel de administración?')) {
+    DataStore.setLoggedIn(false);
+    checkAuth();
+  }
+}
+
+function togglePasswordVisibility(fieldId) {
+  const field = document.getElementById(fieldId);
+  if (field) {
+    field.type = field.type === 'password' ? 'text' : 'password';
+  }
+}
+
+function saveNewPassword() {
+  const current = document.getElementById('pwdCurrent').value;
+  const newPass = document.getElementById('pwdNew').value;
+  const confirmPass = document.getElementById('pwdConfirm').value;
+  const storedPass = DataStore.getPassword();
+
+  if (current !== storedPass) {
+    alert('La contraseña actual es incorrecta.');
+    return;
+  }
+  if (!newPass || newPass.length < 4) {
+    alert('La nueva contraseña debe tener al menos 4 caracteres.');
+    return;
+  }
+  if (newPass !== confirmPass) {
+    alert('La nueva contraseña y su confirmación no coinciden.');
+    return;
+  }
+
+  DataStore.setPassword(newPass);
+  document.getElementById('pwdCurrent').value = '';
+  document.getElementById('pwdNew').value = '';
+  document.getElementById('pwdConfirm').value = '';
+  closeSettingsModal();
+  alert('¡Contraseña actualizada exitosamente! ✅');
+}
+
+// ============================================
+// PUSH NATIVO DE DESCARGA (PWA)
+// ============================================
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('btnAndroidInstall');
+  if (btn) btn.style.display = 'flex';
+});
+
+function setupPushCard() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const iosBox = document.getElementById('iosInstallBox');
+  const androidBtn = document.getElementById('btnAndroidInstall');
+
+  if (isIOS) {
+    if (iosBox) iosBox.style.display = 'block';
+    if (androidBtn) androidBtn.style.display = 'none';
+  } else {
+    if (iosBox) iosBox.style.display = 'none';
+    if (androidBtn) androidBtn.style.display = 'flex';
+  }
+}
+
+function dismissPushCard() {
+  const card = document.getElementById('nativePushCard');
+  if (card) card.style.display = 'none';
+}
+
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choice) => {
+      deferredPrompt = null;
+    });
+  } else {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isIOS) {
+      alert('Para instalar en iPhone:\n1. Toca el botón Compartir (cuadrado con flecha 📤 en Safari)\n2. Selecciona "Añadir a pantalla de inicio" 📲');
+    } else {
+      alert('Para instalar en tu celular:\n1. Toca el menú de tu navegador (los tres puntos arriba a la derecha)\n2. Toca "Instalar aplicación" o "Añadir a pantalla principal" 📲');
+    }
+  }
+}
+
+// Registrar Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
 
 // ============================================
 // NAVEGACIÓN & PESTAÑAS
@@ -517,7 +494,7 @@ function showTab(tabId) {
   const overlay = document.querySelector('.mobile-overlay');
   if (overlay) overlay.classList.remove('active');
 
-  // Cargar datos
+  // Cargar datos según pestaña
   if (tabId === 'dashboard') loadDashboard();
   if (tabId === 'leads') loadLeads();
   if (tabId === 'clients') loadClients();
@@ -546,14 +523,14 @@ function toggleForm(formId) {
 // ============================================
 // DASHBOARD
 // ============================================
-async function loadDashboard() {
+function loadDashboard() {
   const now = new Date();
   const curYear = now.getFullYear();
   const curMonth = now.getMonth();
 
-  const appts = await DataStore.getAppointments();
-  const exps = await DataStore.getExpenses();
-  const clients = await DataStore.getClients();
+  const appts = DataStore.getAppointments();
+  const exps = DataStore.getExpenses();
+  const clients = DataStore.getClients();
 
   // Ingresos del mes (citas completadas del mes actual)
   const monthAppts = appts.filter(a => {
@@ -575,14 +552,14 @@ async function loadDashboard() {
   const profit = revenue - expenses;
   const margin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
 
-  // Actualizar DOM Stats
+  // Actualizar DOM
   document.getElementById('dashRevenue').textContent = '$' + revenue.toLocaleString();
   document.getElementById('dashExpenses').textContent = '$' + expenses.toLocaleString();
   document.getElementById('dashProfit').textContent = '$' + profit.toLocaleString();
   document.getElementById('dashMargin').textContent = margin + '% margen';
   document.getElementById('dashClients').textContent = activeClients.length;
 
-  // Próximas citas (pendientes ordenadas por fecha)
+  // Próximas citas pendientes
   const todayStr = now.toISOString().split('T')[0];
   const upcoming = appts
     .filter(a => a.status === 'pendiente' && a.date >= todayStr)
@@ -591,12 +568,12 @@ async function loadDashboard() {
 
   const upcomingEl = document.getElementById('upcomingAppointments');
   if (upcoming.length === 0) {
-    upcomingEl.innerHTML = '<p class="empty">No hay citas pendientes próximas. ¡Buen trabajo! ✨</p>';
+    upcomingEl.innerHTML = '<p class="empty">No hay citas pendientes próximas. ¡Todo al día! ✨</p>';
   } else {
     upcomingEl.innerHTML = upcoming.map(a => `
       <div class="dash-item">
         <div class="dash-item-info">
-          <span class="dash-item-name">${a.clients?.name || 'Cliente'} <strong style="color:var(--success);">$${a.price}</strong></span>
+          <span class="dash-item-name">${a.clients?.name || 'Cliente'} <strong style="color:var(--success); font-weight:800;">$${a.price}</strong></span>
           <span class="dash-item-meta">📅 ${formatDate(a.date)} ${a.time ? '• ⏰ ' + a.time : ''} — 📍 ${a.clients?.address || 'Sin dirección'}</span>
           ${a.addons && a.addons.length ? `<span class="dash-item-addons">Extras: ${a.addons.join(', ')}</span>` : ''}
         </div>
@@ -634,9 +611,9 @@ async function loadDashboard() {
   }
 }
 
-async function quickCompleteAppt(id) {
+function quickCompleteAppt(id) {
   if (confirm('¿Marcar esta cita como completada? Esto sumará el pago a tus ingresos del mes.')) {
-    await DataStore.updateAppointmentStatus(id, 'completada');
+    DataStore.updateAppointmentStatus(id, 'completada');
     loadDashboard();
   }
 }
@@ -646,8 +623,8 @@ async function quickCompleteAppt(id) {
 // ============================================
 let allLeads = [];
 
-async function loadLeads() {
-  allLeads = await DataStore.getLeads();
+function loadLeads() {
+  allLeads = DataStore.getLeads();
   renderLeadsTable(allLeads);
 }
 
@@ -661,7 +638,7 @@ function renderLeadsTable(leads) {
   tbody.innerHTML = leads.map(l => `
     <tr>
       <td><strong>${l.name}</strong></td>
-      <td><a href="tel:${cleanPhone(l.phone)}" style="color:inherit;">${l.phone}</a></td>
+      <td><a href="tel:${cleanPhone(l.phone)}" style="color:inherit; font-weight:600;">${l.phone}</a></td>
       <td title="${l.address}">${truncate(l.address, 30)}</td>
       <td>${l.size_sqft ? l.size_sqft + ' sqft' : '-'}</td>
       <td>${l.frequency ? freqLabel(l.frequency) : '-'}</td>
@@ -698,21 +675,21 @@ function filterLeads(query) {
   renderLeadsTable(filtered);
 }
 
-async function changeLeadStatus(id, newStatus) {
-  await DataStore.updateLead(id, { status: newStatus });
+function changeLeadStatus(id, newStatus) {
+  DataStore.updateLead(id, { status: newStatus });
   const lead = allLeads.find(l => l.id == id);
   if (lead) lead.status = newStatus;
   loadLeads();
 }
 
-async function deleteLead(id) {
+function deleteLead(id) {
   if (confirm('¿Seguro que deseas eliminar este lead?')) {
-    await DataStore.deleteLead(id);
+    DataStore.deleteLead(id);
     loadLeads();
   }
 }
 
-async function saveManualLead() {
+function saveManualLead() {
   const name = document.getElementById('lName').value.trim();
   const phone = document.getElementById('lPhone').value.trim();
   const address = document.getElementById('lAddress').value.trim();
@@ -725,11 +702,10 @@ async function saveManualLead() {
     return;
   }
 
-  await DataStore.saveLead({
+  DataStore.saveLead({
     name, phone, address, size_sqft: size, frequency: freq, notes, status: 'nuevo'
   });
 
-  // Limpiar formulario y cerrar
   document.getElementById('lName').value = '';
   document.getElementById('lPhone').value = '';
   document.getElementById('lAddress').value = '';
@@ -772,30 +748,28 @@ function convertLeadToClient(leadId) {
 // ============================================
 let allClients = [];
 
-async function loadClients() {
-  allClients = await DataStore.getClients();
+function loadClients() {
+  allClients = DataStore.getClients();
   renderClientsTable(allClients);
 }
 
 function renderClientsTable(clients) {
   const tbody = document.getElementById('clientsTable');
   if (!clients || clients.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">No hay clientes registrados aún.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-cell">No hay clientes registrados aún.</td></tr>';
     return;
   }
 
   tbody.innerHTML = clients.map(c => `
     <tr>
       <td><strong>${c.name}</strong></td>
-      <td><a href="tel:${cleanPhone(c.phone)}" style="color:inherit;">${c.phone}</a></td>
+      <td><a href="tel:${cleanPhone(c.phone)}" style="color:inherit; font-weight:600;">${c.phone}</a></td>
       <td title="${c.address}">${truncate(c.address, 28)}</td>
-      <td><strong>$${c.base_price || '-'}</strong></td>
+      <td><strong style="color:var(--primary);">$${c.base_price || '-'}</strong></td>
       <td>${freqLabel(c.frequency)}</td>
       <td>${formatDate(c.last_visit)}</td>
       <td>${formatDate(c.next_visit)}</td>
-      <td>
-        <span class="badge badge-${c.status}">${c.status}</span>
-      </td>
+      <td><span class="badge badge-${c.status}">${c.status}</span></td>
       <td class="action-cell">
         <button class="btn-table-action btn-schedule-table" onclick="scheduleForClient('${c.id}')" title="Agendar Cita">📅 Cita</button>
         <button class="btn-table-action btn-edit-table" onclick="editClient('${c.id}')" title="Editar cliente">✏️</button>
@@ -857,7 +831,7 @@ function editClient(id) {
   form.scrollIntoView({ behavior: 'smooth' });
 }
 
-async function saveClient() {
+function saveClient() {
   const id = document.getElementById('cId').value;
   const name = document.getElementById('cName').value.trim();
   const phone = document.getElementById('cPhone').value.trim();
@@ -887,7 +861,7 @@ async function saveClient() {
     status
   };
 
-  await DataStore.saveClient(clientData);
+  DataStore.saveClient(clientData);
   toggleForm('clientForm');
   resetClientForm();
   loadClients();
@@ -895,9 +869,9 @@ async function saveClient() {
   alert('Cliente guardado con éxito ✅');
 }
 
-async function deleteClient(id) {
+function deleteClient(id) {
   if (confirm('¿Seguro que deseas eliminar este cliente?')) {
-    await DataStore.deleteClient(id);
+    DataStore.deleteClient(id);
     loadClients();
     loadDashboard();
   }
@@ -921,8 +895,8 @@ function scheduleForClient(clientId) {
 // ============================================
 let allAppointments = [];
 
-async function loadAppointments() {
-  allAppointments = await DataStore.getAppointments();
+function loadAppointments() {
+  allAppointments = DataStore.getAppointments();
   renderAppointmentsTable(allAppointments);
 }
 
@@ -938,7 +912,7 @@ function renderAppointmentsTable(appts) {
       <td><strong>${formatDate(a.date)}</strong><br><small>${a.time || ''}</small></td>
       <td><strong>${a.clients?.name || 'Cliente'}</strong></td>
       <td title="${a.clients?.address || ''}">${truncate(a.clients?.address || '-', 25)}</td>
-      <td><strong style="color:var(--primary);">$${a.price}</strong></td>
+      <td><strong style="color:var(--primary); font-weight:800;">$${a.price}</strong></td>
       <td>${(a.addons || []).join(', ') || '-'}</td>
       <td>
         <select class="status-select status-${a.status}" onchange="changeApptStatus('${a.id}', this.value)">
@@ -957,8 +931,8 @@ function renderAppointmentsTable(appts) {
   `).join('');
 }
 
-async function loadClientsForSelect() {
-  const clients = await DataStore.getClients();
+function loadClientsForSelect() {
+  const clients = DataStore.getClients();
   const select = document.getElementById('aClient');
   if (!select) return;
 
@@ -1009,7 +983,7 @@ function editAppt(id) {
   form.scrollIntoView({ behavior: 'smooth' });
 }
 
-async function saveAppointment() {
+function saveAppointment() {
   const id = document.getElementById('aId').value;
   const clientId = document.getElementById('aClient').value;
   const date = document.getElementById('aDate').value;
@@ -1037,7 +1011,7 @@ async function saveAppointment() {
     status
   };
 
-  await DataStore.saveAppointment(apptData);
+  DataStore.saveAppointment(apptData);
   toggleForm('apptForm');
   resetApptForm();
   loadAppointments();
@@ -1045,15 +1019,15 @@ async function saveAppointment() {
   alert('Cita guardada correctamente ✅');
 }
 
-async function changeApptStatus(id, newStatus) {
-  await DataStore.updateAppointmentStatus(id, newStatus);
+function changeApptStatus(id, newStatus) {
+  DataStore.updateAppointmentStatus(id, newStatus);
   loadAppointments();
   loadDashboard();
 }
 
-async function deleteAppt(id) {
+function deleteAppt(id) {
   if (confirm('¿Seguro que deseas eliminar esta cita?')) {
-    await DataStore.deleteAppointment(id);
+    DataStore.deleteAppointment(id);
     loadAppointments();
     loadDashboard();
   }
@@ -1064,8 +1038,8 @@ async function deleteAppt(id) {
 // ============================================
 let allExpenses = [];
 
-async function loadExpenses() {
-  allExpenses = await DataStore.getExpenses();
+function loadExpenses() {
+  allExpenses = DataStore.getExpenses();
   renderExpensesTable(allExpenses);
 }
 
@@ -1093,7 +1067,7 @@ function renderExpensesTable(exps) {
       <td><strong>${formatDate(e.date)}</strong></td>
       <td><span class="badge badge-cat-${e.category}">${catLabels[e.category] || e.category}</span></td>
       <td>${e.description || '-'}</td>
-      <td><strong style="color:var(--danger);">$${parseFloat(e.amount).toFixed(2)}</strong></td>
+      <td><strong style="color:var(--danger); font-weight:800;">$${parseFloat(e.amount).toFixed(2)}</strong></td>
       <td class="action-cell">
         <button class="btn-table-action btn-del-table" onclick="deleteExpense('${e.id}')" title="Eliminar gasto">🗑</button>
       </td>
@@ -1110,7 +1084,7 @@ function filterExpenses(category) {
   }
 }
 
-async function saveExpense() {
+function saveExpense() {
   const category = document.getElementById('eCategory').value;
   const amount = parseFloat(document.getElementById('eAmount').value);
   const date = document.getElementById('eDate').value || new Date().toISOString().split('T')[0];
@@ -1121,7 +1095,7 @@ async function saveExpense() {
     return;
   }
 
-  await DataStore.saveExpense({
+  DataStore.saveExpense({
     category,
     amount,
     date,
@@ -1136,9 +1110,9 @@ async function saveExpense() {
   alert('Gasto guardado ✅');
 }
 
-async function deleteExpense(id) {
+function deleteExpense(id) {
   if (confirm('¿Seguro que deseas eliminar este registro de gasto?')) {
-    await DataStore.deleteExpense(id);
+    DataStore.deleteExpense(id);
     loadExpenses();
     loadDashboard();
   }
@@ -1254,38 +1228,16 @@ function qcCreateClient() {
 }
 
 // ============================================
-// AJUSTES & CONFIGURACIÓN SUPABASE
+// AJUSTES & MODAL
 // ============================================
 function openSettingsModal() {
   const modal = document.getElementById('settingsModal');
-  if (!modal) return;
-  document.getElementById('cfgSupabaseUrl').value = SUPABASE_URL.includes('TU-PROJECT') ? '' : SUPABASE_URL;
-  document.getElementById('cfgSupabaseKey').value = SUPABASE_KEY.includes('TU-ANON-KEY') ? '' : SUPABASE_KEY;
-  modal.style.display = 'flex';
+  if (modal) modal.style.display = 'flex';
 }
 
 function closeSettingsModal() {
   const modal = document.getElementById('settingsModal');
   if (modal) modal.style.display = 'none';
-}
-
-function saveSettings() {
-  const url = document.getElementById('cfgSupabaseUrl').value.trim();
-  const key = document.getElementById('cfgSupabaseKey').value.trim();
-
-  const settings = {
-    supabaseUrl: url || 'https://TU-PROJECT.supabase.co',
-    supabaseKey: key || 'TU-ANON-KEY'
-  };
-
-  localStorage.setItem(DataStore.KEYS.SETTINGS, JSON.stringify(settings));
-  SUPABASE_URL = settings.supabaseUrl;
-  SUPABASE_KEY = settings.supabaseKey;
-
-  DataStore.initSupabase();
-  closeSettingsModal();
-  loadDashboard();
-  alert('Configuración guardada ✅');
 }
 
 function resetDemoData() {
@@ -1297,49 +1249,8 @@ function resetDemoData() {
     DataStore.seedInitialData();
     closeSettingsModal();
     loadDashboard();
-    alert('Datos de prueba restaurados ✅');
+    alert('Datos de prueba restaurados exitosamente ✅');
   }
-}
-
-// ============================================
-// PWA INSTALLATION & MOBILE EXPERIENCE
-// ============================================
-let deferredPrompt = null;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  const installBtns = document.querySelectorAll('.btn-install-pwa');
-  installBtns.forEach(btn => btn.style.display = 'flex');
-});
-
-function installPWA() {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then((choice) => {
-      if (choice.outcome === 'accepted') {
-        console.log('PWA instalada');
-      }
-      deferredPrompt = null;
-    });
-  } else {
-    // Si está en iOS Safari o ya instalada
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    if (isIOS) {
-      alert('Para instalar en iPhone/iPad:\n1. Toca el botón Compartir (cuadrado con flecha hacia arriba)\n2. Selecciona "Añadir a pantalla de inicio" 📲');
-    } else {
-      alert('Para instalar esta app:\n1. Toca el menú de tu navegador (los tres puntos)\n2. Selecciona "Instalar aplicación" o "Añadir a pantalla de inicio" 📲');
-    }
-  }
-}
-
-// Registrar Service Worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('Service Worker registrado correctamente'))
-      .catch(err => console.log('Service Worker no se pudo registrar:', err));
-  });
 }
 
 // ============================================
@@ -1370,10 +1281,12 @@ function truncate(str, max) {
 // INICIALIZACIÓN
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-  // Inicializar almacén de datos
   DataStore.init();
 
-  // Fecha por defecto en gastos y citas
+  // Verificar estado de sesión
+  checkAuth();
+
+  // Fecha por defecto en formularios
   const today = new Date().toISOString().split('T')[0];
   const eDate = document.getElementById('eDate');
   if (eDate) eDate.value = today;
@@ -1389,12 +1302,9 @@ document.addEventListener('DOMContentLoaded', function() {
     el.addEventListener('change', qcCalculate);
   });
 
-  // Selector de cliente en formulario de citas
+  // Selector de cliente en citas
   const aClientSelect = document.getElementById('aClient');
   if (aClientSelect) {
     aClientSelect.addEventListener('change', onClientSelectChange);
   }
-
-  // Cargar Dashboard inicial
-  loadDashboard();
 });

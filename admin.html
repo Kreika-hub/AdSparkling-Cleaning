@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Panel Admin — Ad Sparkling Cleaning</title>
+  <title>Ad Sparkling Cleaning — Panel de Control</title>
   
   <!-- PWA & Mobile Optimization -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1a1a2e">
+  <meta name="theme-color" content="#31013F">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Ad Sparkling">
@@ -15,516 +15,589 @@
   
   <!-- Fonts & Styles -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/admin.css">
-  
-  <!-- Supabase JS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
-  <!-- MOBILE TOP BAR -->
-  <header class="mobile-header">
-    <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Abrir menú">☰</button>
-    <div class="mobile-header-brand">
-      <span class="sparkle">✦</span>
-      <span>Ad Sparkling</span>
-    </div>
-    <div class="mobile-header-actions">
-      <button class="btn-icon-mobile btn-install-pwa" onclick="installPWA()" title="Instalar en el celular">📲</button>
-      <button class="btn-icon-mobile" onclick="openSettingsModal()" title="Ajustes">⚙️</button>
-    </div>
-  </header>
 
-  <div class="mobile-overlay" onclick="toggleSidebar()"></div>
-
-  <div class="admin-layout">
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <div class="sidebar-brand">
-        <span class="sparkle">✦</span>
-        <span>Ad Sparkling</span>
-        <button class="sidebar-close-btn" onclick="toggleSidebar()">✕</button>
-      </div>
-
-      <!-- Estado de conexión -->
-      <div class="sidebar-status-box">
-        <div id="connStatusBadge" class="conn-badge local">
-          <span class="dot"></span> Modo Local (Offline)
+  <!-- ============================================
+       1. PANTALLA DE INICIO / LOGIN
+       ============================================ -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-container">
+      
+      <!-- PUSH NATIVO DE DESCARGA / BIENVENIDA -->
+      <div id="nativePushCard" class="native-push-card">
+        <div class="push-header">
+          <div class="push-app-icon">✦</div>
+          <div class="push-title-box">
+            <h4>¡Hola Anggie! ✨</h4>
+            <p id="pushSubtitle">Descarga la app en tu teléfono para gestionar todo</p>
+          </div>
+          <button class="push-close" onclick="dismissPushCard()" title="Cerrar">✕</button>
         </div>
-      </div>
 
-      <!-- Menú de navegación -->
-      <nav class="sidebar-nav">
-        <a href="#dashboard" class="nav-item active" data-tab="dashboard" onclick="showTab('dashboard')">
-          <span class="nav-icon">📊</span> Dashboard
-        </a>
-        <a href="#leads" class="nav-item" data-tab="leads" onclick="showTab('leads')">
-          <span class="nav-icon">📥</span> Leads
-        </a>
-        <a href="#clients" class="nav-item" data-tab="clients" onclick="showTab('clients')">
-          <span class="nav-icon">👥</span> Clientes
-        </a>
-        <a href="#appointments" class="nav-item" data-tab="appointments" onclick="showTab('appointments')">
-          <span class="nav-icon">📅</span> Citas
-        </a>
-        <a href="#expenses" class="nav-item" data-tab="expenses" onclick="showTab('expenses')">
-          <span class="nav-icon">💸</span> Gastos
-        </a>
-        <a href="#cotizar" class="nav-item" data-tab="cotizar" onclick="showTab('cotizar')">
-          <span class="nav-icon">🧮</span> Cotizador
-        </a>
-      </nav>
-
-      <!-- Acciones de pie de sidebar -->
-      <div class="sidebar-footer">
-        <button class="btn-sidebar-action btn-install-pwa" onclick="installPWA()">
-          <span>📲</span> Instalar en el teléfono
+        <!-- Botón para Android / PC -->
+        <button id="btnAndroidInstall" class="btn-push-install" onclick="installPWA()">
+          <span>📲</span> Instalar App en mi Celular
         </button>
-        <button class="btn-sidebar-action" onclick="openSettingsModal()">
-          <span>⚙️</span> Ajustes & Supabase
-        </button>
-        <a href="index.html" target="_blank" class="sidebar-link-web">
-          Ver página web →
-        </a>
-      </div>
-    </aside>
 
-    <!-- MAIN CONTENT -->
-    <main class="main">
-      <!-- DASHBOARD -->
-      <div id="tab-dashboard" class="tab-panel active">
-        <div class="panel-header">
-          <div>
-            <h1>Dashboard</h1>
-            <p class="tab-desc">Resumen en tiempo real del negocio de limpieza.</p>
-          </div>
-          <div class="header-actions-desktop">
-            <button class="btn-add" onclick="showTab('appointments'); toggleForm('apptForm');">+ Nueva cita</button>
-          </div>
-        </div>
-
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-label">Ingresos este mes</div>
-            <div class="stat-value" id="dashRevenue">$0</div>
-            <div class="stat-sub">Citas completadas</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Gastos este mes</div>
-            <div class="stat-value" id="dashExpenses">$0</div>
-            <div class="stat-sub">Insumos, gasolina y pagos</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Ganancia neta</div>
-            <div class="stat-value" id="dashProfit">$0</div>
-            <div class="stat-sub" id="dashMargin">0% margen</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Clientes activos</div>
-            <div class="stat-value" id="dashClients">0</div>
-            <div class="stat-sub">Con servicio regular</div>
-          </div>
-        </div>
-
-        <div class="dash-section">
-          <div class="section-title-row">
-            <h2>📅 Próximas citas agendadas</h2>
-            <button class="btn-text-action" onclick="showTab('appointments')">Ver todas →</button>
-          </div>
-          <div id="upcomingAppointments" class="dash-list">
-            <p class="empty">Cargando citas...</p>
-          </div>
-        </div>
-
-        <div class="dash-section">
-          <div class="section-title-row">
-            <h2>⚠️ Clientes inactivos (+30 días)</h2>
-            <span class="badge-hint">Oportunidad de reactivación</span>
-          </div>
-          <div id="inactiveClients" class="dash-list">
-            <p class="empty">Cargando...</p>
-          </div>
+        <!-- Instrucciones Nativas para iPhone / iOS -->
+        <div id="iosInstallBox" class="ios-instructions-box" style="display:none;">
+          <strong>📲 Cómo instalar en tu iPhone:</strong>
+          <ol>
+            <li>Toca el botón <strong>Compartir</strong> (el cuadrado con la flecha hacia arriba 📤) en Safari.</li>
+            <li>Selecciona <strong>"Añadir a pantalla de inicio"</strong>.</li>
+            <li>Toca <strong>"Añadir"</strong> y ¡listo! Se abrirá como app nativa.</li>
+          </ol>
         </div>
       </div>
 
-      <!-- LEADS -->
-      <div id="tab-leads" class="tab-panel">
-        <div class="panel-header">
-          <div>
-            <h1>Leads y Prospectos</h1>
-            <p class="tab-desc">Personas que solicitaron cotización desde la web o llamadas directas.</p>
-          </div>
-          <button class="btn-add" onclick="toggleForm('leadForm')">+ Nuevo lead manual</button>
+      <!-- CARD DE ACCESO -->
+      <div class="login-card">
+        <div class="login-brand">
+          <span class="logo-sparkle">✦</span>
+          <h2>Ad Sparkling</h2>
+          <p>Ingresa tu contraseña de administradora</p>
         </div>
 
-        <!-- Formulario Agregar Lead -->
-        <div id="leadForm" class="form-panel" style="display:none;">
-          <h3>Registrar nuevo prospecto / lead</h3>
-          <div class="form-grid">
-            <input type="text" id="lName" placeholder="Nombre completo *" required>
-            <input type="tel" id="lPhone" placeholder="Teléfono *" required>
-            <input type="text" id="lAddress" placeholder="Dirección completa">
-            <input type="number" id="lSize" placeholder="Tamaño aprox. (sqft)">
-            <select id="lFreq">
-              <option value="">Frecuencia solicitada...</option>
-              <option value="10">Cada 10 días</option>
-              <option value="15">Quincenal</option>
-              <option value="30">Mensual</option>
-              <option value="deep">Profunda / Mudanza</option>
-            </select>
-            <input type="text" id="lNotes" placeholder="Notas o requerimientos especiales">
-          </div>
-          <div class="form-actions">
-            <button class="btn-save" onclick="saveManualLead()">Guardar lead</button>
-            <button class="btn-cancel" onclick="toggleForm('leadForm')">Cancelar</button>
-          </div>
-        </div>
-
-        <!-- Buscador -->
-        <div class="table-toolbar">
-          <input type="text" class="search-input" placeholder="🔍 Buscar leads por nombre, teléfono, dirección o estado..." oninput="filterLeads(this.value)">
-        </div>
-
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Teléfono</th>
-                <th>Dirección</th>
-                <th>Tamaño</th>
-                <th>Frecuencia</th>
-                <th>Estado</th>
-                <th>Fecha</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="leadsTable">
-              <tr><td colspan="8" class="empty-cell">Cargando leads...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- CLIENTES -->
-      <div id="tab-clients" class="tab-panel">
-        <div class="panel-header">
-          <div>
-            <h1>Clientes</h1>
-            <p class="tab-desc">Tus clientes registrados con servicio recurrente o puntual.</p>
-          </div>
-          <button class="btn-add" onclick="resetClientForm(); toggleForm('clientForm');">+ Nuevo cliente</button>
-        </div>
-
-        <!-- Formulario Cliente -->
-        <div id="clientForm" class="form-panel" style="display:none;">
-          <h3 id="cFormTitle">Agregar cliente</h3>
-          <input type="hidden" id="cId">
-          <div class="form-grid">
-            <input type="text" id="cName" placeholder="Nombre completo *" required>
-            <input type="tel" id="cPhone" placeholder="Teléfono *" required>
-            <input type="text" id="cAddress" placeholder="Dirección completa *" required>
-            <input type="number" id="cSize" placeholder="Tamaño sqft (ej. 2200)">
-            <select id="cFreq">
-              <option value="">Frecuencia de limpieza...</option>
-              <option value="10">Cada 10 días</option>
-              <option value="15">Quincenal</option>
-              <option value="30">Mensual</option>
-              <option value="deep">Profunda / Mudanza</option>
-            </select>
-            <input type="number" id="cPrice" placeholder="Precio base $ (ej. 195)">
-            <input type="date" id="cNextVisit" placeholder="Próxima visita">
-            <select id="cStatus">
-              <option value="activo">Estado: Activo</option>
-              <option value="pausado">Estado: Pausado</option>
-              <option value="inactivo">Estado: Inactivo</option>
-            </select>
-            <input type="text" id="cNotes" placeholder="Notas (código de entrada, mascotas, etc.)">
-          </div>
-          <div class="form-actions">
-            <button class="btn-save" onclick="saveClient()">Guardar cliente</button>
-            <button class="btn-cancel" onclick="toggleForm('clientForm')">Cancelar</button>
-          </div>
-        </div>
-
-        <!-- Buscador -->
-        <div class="table-toolbar">
-          <input type="text" class="search-input" placeholder="🔍 Buscar clientes por nombre, teléfono o dirección..." oninput="filterClients(this.value)">
-        </div>
-
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Teléfono</th>
-                <th>Dirección</th>
-                <th>Precio Base</th>
-                <th>Frecuencia</th>
-                <th>Última Visita</th>
-                <th>Próxima</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="clientsTable">
-              <tr><td colspan="9" class="empty-cell">Cargando clientes...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- CITAS -->
-      <div id="tab-appointments" class="tab-panel">
-        <div class="panel-header">
-          <div>
-            <h1>Citas y Servicios</h1>
-            <p class="tab-desc">Registro y control de visitas programadas y completadas.</p>
-          </div>
-          <button class="btn-add" onclick="resetApptForm(); toggleForm('apptForm');">+ Nueva cita</button>
-        </div>
-
-        <!-- Formulario Cita -->
-        <div id="apptForm" class="form-panel" style="display:none;">
-          <h3 id="aFormTitle">Agregar cita</h3>
-          <input type="hidden" id="aId">
-          <div class="form-grid">
-            <select id="aClient" required>
-              <option value="">Seleccionar cliente...</option>
-            </select>
-            <input type="date" id="aDate" required>
-            <input type="text" id="aTime" placeholder="Hora (ej. 09:00 AM)">
-            <input type="number" id="aPrice" placeholder="Precio a cobrar $ *" required>
-            <select id="aStatus">
-              <option value="pendiente">Estado: Pendiente</option>
-              <option value="completada">Estado: Completada</option>
-              <option value="cancelada">Estado: Cancelada</option>
-            </select>
-            <input type="text" id="aAddons" placeholder="Adicionales (Horno, Nevera, Persianas...)">
-            <input type="text" id="aNotes" placeholder="Notas de la cita">
-          </div>
-          <div class="form-actions">
-            <button class="btn-save" onclick="saveAppointment()">Guardar cita</button>
-            <button class="btn-cancel" onclick="toggleForm('apptForm')">Cancelar</button>
-          </div>
-        </div>
-
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Fecha / Hora</th>
-                <th>Cliente</th>
-                <th>Dirección</th>
-                <th>Precio</th>
-                <th>Adicionales</th>
-                <th>Estado</th>
-                <th>Notas</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="appointmentsTable">
-              <tr><td colspan="8" class="empty-cell">Cargando citas...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- GASTOS -->
-      <div id="tab-expenses" class="tab-panel">
-        <div class="panel-header">
-          <div>
-            <h1>Control de Gastos</h1>
-            <p class="tab-desc">Registra todos los costos operativos: insumos, gasolina, ayudantes, etc.</p>
-          </div>
-          <div class="header-actions-desktop">
-            <span id="expensesTotalHeader" class="total-badge-header">Total: $0.00</span>
-            <button class="btn-add" onclick="toggleForm('expenseForm')">+ Registrar gasto</button>
-          </div>
-        </div>
-
-        <!-- Formulario Gasto -->
-        <div id="expenseForm" class="form-panel" style="display:none;">
-          <h3>Registrar gasto operativo</h3>
-          <div class="form-grid">
-            <select id="eCategory" required>
-              <option value="">Selecciona categoría...</option>
-              <option value="insumos">🧴 Insumos de limpieza</option>
-              <option value="gasolina">⛽ Gasolina / Transporte</option>
-              <option value="salario_asistente">🤝 Salario asistente</option>
-              <option value="equipo">🧹 Equipo / Herramientas</option>
-              <option value="otro">📦 Otro gasto</option>
-            </select>
-            <input type="number" id="eAmount" placeholder="Monto en $ *" step="0.01" required>
-            <input type="date" id="eDate">
-            <input type="text" id="eDesc" placeholder="Descripción (ej. Compra Home Depot, microfibras)">
-          </div>
-          <div class="form-actions">
-            <button class="btn-save" onclick="saveExpense()">Guardar gasto</button>
-            <button class="btn-cancel" onclick="toggleForm('expenseForm')">Cancelar</button>
-          </div>
-        </div>
-
-        <!-- Filtro de gastos -->
-        <div class="table-toolbar">
-          <div class="filter-group">
-            <label>Filtrar por categoría:</label>
-            <select onchange="filterExpenses(this.value)">
-              <option value="todas">Todas las categorías</option>
-              <option value="insumos">Insumos de limpieza</option>
-              <option value="gasolina">Gasolina / Transporte</option>
-              <option value="salario_asistente">Salario asistente</option>
-              <option value="equipo">Equipo</option>
-              <option value="otro">Otro</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Categoría</th>
-                <th>Descripción</th>
-                <th>Monto</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody id="expensesTable">
-              <tr><td colspan="5" class="empty-cell">Cargando gastos...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- COTIZADOR RÁPIDO -->
-      <div id="tab-cotizar" class="tab-panel">
-        <div class="panel-header">
-          <div>
-            <h1>Cotizador Rápido</h1>
-            <p class="tab-desc">Calcula precios al instante y envíalos directo por WhatsApp o conviértelos en cliente.</p>
-          </div>
-        </div>
-
-        <div class="quick-calc-wrapper">
-          <div class="quick-calc">
-            <div class="qc-grid">
-              <div class="qc-field">
-                <label>Tamaño de la propiedad</label>
-                <select id="qcSize">
-                  <option value="1200">Hasta 1,200 sqft (~1-2 hab)</option>
-                  <option value="1700">1,201-1,700 sqft (~2-3 hab)</option>
-                  <option value="2200" selected>1,701-2,200 sqft (~3-4 hab)</option>
-                  <option value="2800">2,201-2,800 sqft (~4 hab)</option>
-                  <option value="3500">2,801-3,500 sqft (~4-5 hab)</option>
-                  <option value="4500">3,501-4,500 sqft (Casa grande)</option>
-                </select>
-              </div>
-              <div class="qc-field">
-                <label>Frecuencia de servicio</label>
-                <select id="qcFreq">
-                  <option value="10">Cada 10 días</option>
-                  <option value="15" selected>Quincenal</option>
-                  <option value="30">Mensual</option>
-                  <option value="deep">Profunda / Mudanza</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="qc-addons-label">Adicionales / Extras:</div>
-            <div class="qc-addons">
-              <label class="qc-check"><input type="checkbox" id="qcOven" data-price="40"> Horno (+$40)</label>
-              <label class="qc-check"><input type="checkbox" id="qcFridge" data-price="50"> Nevera (+$50)</label>
-              <label class="qc-check"><input type="checkbox" id="qcCabinets" data-price="50"> Gabinetes (+$50)</label>
-              <label class="qc-check"><input type="checkbox" id="qcDistance" data-price="50"> Distancia (+$50)</label>
-              <label class="qc-check"><input type="checkbox" id="qcOverdue" data-price="30"> +30 días sin limpiar (+$30)</label>
-            </div>
-
-            <div class="qc-total">
-              <div>
-                <span>Total Estimado:</span>
-                <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Insumos profesionales incluidos</p>
-              </div>
-              <span id="qcTotal" class="total-amount">$195</span>
-            </div>
-
-            <div class="qc-actions">
-              <button class="btn-wa" onclick="qcSendWhatsApp()">📱 Enviar por WhatsApp</button>
-              <button class="btn-copy" onclick="qcCopyText()">📋 Copiar texto</button>
-            </div>
-
-            <div class="qc-secondary-actions">
-              <button class="btn-qc-sub" onclick="qcSaveAsLead()">📥 Guardar como Lead</button>
-              <button class="btn-qc-sub" onclick="qcCreateClient()">👥 Crear Cliente con este precio</button>
+        <form id="loginForm" class="login-form" onsubmit="handleLogin(event)">
+          <div class="input-group">
+            <label>Contraseña</label>
+            <div class="input-password-wrap">
+              <input type="password" id="loginPassword" placeholder="Ingresa tu clave..." required autofocus>
+              <button type="button" class="btn-toggle-pwd" onclick="togglePasswordVisibility('loginPassword')">👁</button>
             </div>
           </div>
+
+          <div id="loginError" class="login-error-msg">
+            Contraseña incorrecta. Por favor intenta de nuevo.
+          </div>
+
+          <button type="submit" class="btn-login-submit">Ingresar a mi Panel 🚀</button>
+        </form>
+
+        <div class="login-footer-links">
+          <a href="index.html">← Volver a la página web</a>
         </div>
       </div>
-    </main>
+    </div>
   </div>
 
-  <!-- BOTTOM NAVIGATION FOR MOBILE -->
-  <nav class="bottom-nav">
-    <button class="bottom-nav-item active" data-tab="dashboard" onclick="showTab('dashboard')">
-      <span class="icon">📊</span>
-      <span class="label">Inicio</span>
-    </button>
-    <button class="bottom-nav-item" data-tab="leads" onclick="showTab('leads')">
-      <span class="icon">📥</span>
-      <span class="label">Leads</span>
-    </button>
-    <button class="bottom-nav-item" data-tab="clients" onclick="showTab('clients')">
-      <span class="icon">👥</span>
-      <span class="label">Clientes</span>
-    </button>
-    <button class="bottom-nav-item" data-tab="appointments" onclick="showTab('appointments')">
-      <span class="icon">📅</span>
-      <span class="label">Citas</span>
-    </button>
-    <button class="bottom-nav-item" data-tab="expenses" onclick="showTab('expenses')">
-      <span class="icon">💸</span>
-      <span class="label">Gastos</span>
-    </button>
-    <button class="bottom-nav-item" data-tab="cotizar" onclick="showTab('cotizar')">
-      <span class="icon">🧮</span>
-      <span class="label">Cotizar</span>
-    </button>
-  </nav>
+  <!-- ============================================
+       2. APLICACIÓN PRINCIPAL / PANEL ADMINISTRATIVO
+       ============================================ -->
+  <div id="adminApp" style="display:none;">
+    
+    <!-- MOBILE TOP BAR -->
+    <header class="mobile-header">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Abrir menú">☰</button>
+      <div class="mobile-header-brand">
+        <span class="sparkle">✦</span>
+        <span>Ad Sparkling</span>
+      </div>
+      <div class="mobile-header-actions">
+        <button class="btn-icon-mobile" onclick="installPWA()" title="Instalar en el celular">📲</button>
+        <button class="btn-icon-mobile" onclick="openSettingsModal()" title="Ajustes">⚙️</button>
+      </div>
+    </header>
 
-  <!-- MODAL DE AJUSTES & SUPABASE -->
+    <div class="mobile-overlay" onclick="toggleSidebar()"></div>
+
+    <div class="admin-layout">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="sparkle">✦</span>
+            <span>Ad Sparkling</span>
+          </div>
+          <button class="sidebar-close-btn" onclick="toggleSidebar()">✕</button>
+        </div>
+
+        <div class="sidebar-user-box">
+          <span class="user-badge-name">👑 Anggie (Admin)</span>
+        </div>
+
+        <!-- Menú de navegación -->
+        <nav class="sidebar-nav">
+          <a href="#dashboard" class="nav-item active" data-tab="dashboard" onclick="showTab('dashboard')">
+            <span>📊</span> Dashboard
+          </a>
+          <a href="#leads" class="nav-item" data-tab="leads" onclick="showTab('leads')">
+            <span>📥</span> Leads
+          </a>
+          <a href="#clients" class="nav-item" data-tab="clients" onclick="showTab('clients')">
+            <span>👥</span> Clientes
+          </a>
+          <a href="#appointments" class="nav-item" data-tab="appointments" onclick="showTab('appointments')">
+            <span>📅</span> Citas
+          </a>
+          <a href="#expenses" class="nav-item" data-tab="expenses" onclick="showTab('expenses')">
+            <span>💸</span> Gastos
+          </a>
+          <a href="#cotizar" class="nav-item" data-tab="cotizar" onclick="showTab('cotizar')">
+            <span>🧮</span> Cotizador
+          </a>
+        </nav>
+
+        <!-- Acciones del pie de sidebar -->
+        <div class="sidebar-footer">
+          <button class="btn-sidebar-action" onclick="installPWA()">
+            <span>📲</span> Descargar App
+          </button>
+          <button class="btn-sidebar-action" onclick="openSettingsModal()">
+            <span>⚙️</span> Ajustes y Contraseña
+          </button>
+          <button class="btn-sidebar-action btn-sidebar-logout" onclick="handleLogout()">
+            <span>🚪</span> Cerrar Sesión
+          </button>
+          <a href="index.html" target="_blank" class="sidebar-link-web">
+            Ver página web →
+          </a>
+        </div>
+      </aside>
+
+      <!-- MAIN CONTENT -->
+      <main class="main">
+        <!-- DASHBOARD -->
+        <div id="tab-dashboard" class="tab-panel active">
+          <div class="panel-header">
+            <div>
+              <h1>¡Bienvenida, Anggie! 👋</h1>
+              <p class="tab-desc">Control total de tus ingresos, citas y clientes.</p>
+            </div>
+            <div class="header-actions-desktop">
+              <button class="btn-add" onclick="showTab('appointments'); toggleForm('apptForm');">+ Nueva cita</button>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Ingresos este mes</div>
+              <div class="stat-value" id="dashRevenue">$0</div>
+              <div class="stat-sub">Citas completadas</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Gastos este mes</div>
+              <div class="stat-value" id="dashExpenses">$0</div>
+              <div class="stat-sub">Insumos, gasolina y pagos</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Ganancia neta</div>
+              <div class="stat-value" id="dashProfit">$0</div>
+              <div class="stat-sub" id="dashMargin">0% margen</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Clientes activos</div>
+              <div class="stat-value" id="dashClients">0</div>
+              <div class="stat-sub">Con servicio regular</div>
+            </div>
+          </div>
+
+          <div class="dash-section">
+            <div class="section-title-row">
+              <h2>📅 Próximas citas agendadas</h2>
+              <button class="btn-text-action" onclick="showTab('appointments')">Ver todas →</button>
+            </div>
+            <div id="upcomingAppointments" class="dash-list">
+              <p class="empty">Cargando citas...</p>
+            </div>
+          </div>
+
+          <div class="dash-section">
+            <div class="section-title-row">
+              <h2>⚠️ Clientes inactivos (+30 días)</h2>
+              <span class="badge-hint">Oportunidad de reactivación</span>
+            </div>
+            <div id="inactiveClients" class="dash-list">
+              <p class="empty">Cargando...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- LEADS -->
+        <div id="tab-leads" class="tab-panel">
+          <div class="panel-header">
+            <div>
+              <h1>Leads y Solicitudes</h1>
+              <p class="tab-desc">Personas que solicitaron cotización desde la web.</p>
+            </div>
+            <button class="btn-add" onclick="toggleForm('leadForm')">+ Nuevo lead manual</button>
+          </div>
+
+          <!-- Formulario Agregar Lead -->
+          <div id="leadForm" class="form-panel" style="display:none;">
+            <h3>Registrar nuevo prospecto / lead</h3>
+            <div class="form-grid">
+              <input type="text" id="lName" placeholder="Nombre completo *" required>
+              <input type="tel" id="lPhone" placeholder="Teléfono *" required>
+              <input type="text" id="lAddress" placeholder="Dirección completa">
+              <input type="number" id="lSize" placeholder="Tamaño aprox. (sqft)">
+              <select id="lFreq">
+                <option value="">Frecuencia solicitada...</option>
+                <option value="10">Cada 10 días</option>
+                <option value="15">Quincenal</option>
+                <option value="30">Mensual</option>
+                <option value="deep">Profunda / Mudanza</option>
+              </select>
+              <input type="text" id="lNotes" placeholder="Notas o requerimientos especiales">
+            </div>
+            <div class="form-actions">
+              <button class="btn-save" onclick="saveManualLead()">Guardar lead</button>
+              <button class="btn-cancel" onclick="toggleForm('leadForm')">Cancelar</button>
+            </div>
+          </div>
+
+          <!-- Buscador -->
+          <div class="table-toolbar">
+            <input type="text" class="search-input" placeholder="🔍 Buscar leads por nombre, teléfono, dirección o estado..." oninput="filterLeads(this.value)">
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Teléfono</th>
+                  <th>Dirección</th>
+                  <th>Tamaño</th>
+                  <th>Frecuencia</th>
+                  <th>Estado</th>
+                  <th>Fecha</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="leadsTable">
+                <tr><td colspan="8" class="empty-cell">Cargando leads...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- CLIENTES -->
+        <div id="tab-clients" class="tab-panel">
+          <div class="panel-header">
+            <div>
+              <h1>Clientes</h1>
+              <p class="tab-desc">Tus clientes registrados con servicio regular o puntual.</p>
+            </div>
+            <button class="btn-add" onclick="resetClientForm(); toggleForm('clientForm');">+ Nuevo cliente</button>
+          </div>
+
+          <!-- Formulario Cliente -->
+          <div id="clientForm" class="form-panel" style="display:none;">
+            <h3 id="cFormTitle">Agregar cliente</h3>
+            <input type="hidden" id="cId">
+            <div class="form-grid">
+              <input type="text" id="cName" placeholder="Nombre completo *" required>
+              <input type="tel" id="cPhone" placeholder="Teléfono *" required>
+              <input type="text" id="cAddress" placeholder="Dirección completa *" required>
+              <input type="number" id="cSize" placeholder="Tamaño sqft (ej. 2200)">
+              <select id="cFreq">
+                <option value="">Frecuencia de limpieza...</option>
+                <option value="10">Cada 10 días</option>
+                <option value="15">Quincenal</option>
+                <option value="30">Mensual</option>
+                <option value="deep">Profunda / Mudanza</option>
+              </select>
+              <input type="number" id="cPrice" placeholder="Precio base $ (ej. 195)">
+              <input type="date" id="cNextVisit" placeholder="Próxima visita">
+              <select id="cStatus">
+                <option value="activo">Estado: Activo</option>
+                <option value="pausado">Estado: Pausado</option>
+                <option value="inactivo">Estado: Inactivo</option>
+              </select>
+              <input type="text" id="cNotes" placeholder="Notas (código de portón, mascotas, etc.)">
+            </div>
+            <div class="form-actions">
+              <button class="btn-save" onclick="saveClient()">Guardar cliente</button>
+              <button class="btn-cancel" onclick="toggleForm('clientForm')">Cancelar</button>
+            </div>
+          </div>
+
+          <!-- Buscador -->
+          <div class="table-toolbar">
+            <input type="text" class="search-input" placeholder="🔍 Buscar clientes por nombre, teléfono o dirección..." oninput="filterClients(this.value)">
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Teléfono</th>
+                  <th>Dirección</th>
+                  <th>Precio Base</th>
+                  <th>Frecuencia</th>
+                  <th>Última Visita</th>
+                  <th>Próxima</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="clientsTable">
+                <tr><td colspan="9" class="empty-cell">Cargando clientes...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- CITAS -->
+        <div id="tab-appointments" class="tab-panel">
+          <div class="panel-header">
+            <div>
+              <h1>Citas y Servicios</h1>
+              <p class="tab-desc">Control y registro de visitas programadas y completadas.</p>
+            </div>
+            <button class="btn-add" onclick="resetApptForm(); toggleForm('apptForm');">+ Nueva cita</button>
+          </div>
+
+          <!-- Formulario Cita -->
+          <div id="apptForm" class="form-panel" style="display:none;">
+            <h3 id="aFormTitle">Agregar cita</h3>
+            <input type="hidden" id="aId">
+            <div class="form-grid">
+              <select id="aClient" required>
+                <option value="">Seleccionar cliente...</option>
+              </select>
+              <input type="date" id="aDate" required>
+              <input type="text" id="aTime" placeholder="Hora (ej. 09:00 AM)">
+              <input type="number" id="aPrice" placeholder="Precio a cobrar $ *" required>
+              <select id="aStatus">
+                <option value="pendiente">Estado: Pendiente</option>
+                <option value="completada">Estado: Completada</option>
+                <option value="cancelada">Estado: Cancelada</option>
+              </select>
+              <input type="text" id="aAddons" placeholder="Adicionales (Horno, Nevera, Persianas...)">
+              <input type="text" id="aNotes" placeholder="Notas de la cita">
+            </div>
+            <div class="form-actions">
+              <button class="btn-save" onclick="saveAppointment()">Guardar cita</button>
+              <button class="btn-cancel" onclick="toggleForm('apptForm')">Cancelar</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Fecha / Hora</th>
+                  <th>Cliente</th>
+                  <th>Dirección</th>
+                  <th>Precio</th>
+                  <th>Adicionales</th>
+                  <th>Estado</th>
+                  <th>Notas</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="appointmentsTable">
+                <tr><td colspan="8" class="empty-cell">Cargando citas...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- GASTOS -->
+        <div id="tab-expenses" class="tab-panel">
+          <div class="panel-header">
+            <div>
+              <h1>Control de Gastos</h1>
+              <p class="tab-desc">Registra todos los costos operativos de tu negocio.</p>
+            </div>
+            <div class="header-actions-desktop">
+              <span id="expensesTotalHeader" class="total-badge-header">Total: $0.00</span>
+              <button class="btn-add" onclick="toggleForm('expenseForm')">+ Registrar gasto</button>
+            </div>
+          </div>
+
+          <!-- Formulario Gasto -->
+          <div id="expenseForm" class="form-panel" style="display:none;">
+            <h3>Registrar gasto operativo</h3>
+            <div class="form-grid">
+              <select id="eCategory" required>
+                <option value="">Selecciona categoría...</option>
+                <option value="insumos">🧴 Insumos de limpieza</option>
+                <option value="gasolina">⛽ Gasolina / Transporte</option>
+                <option value="salario_asistente">🤝 Salario asistente</option>
+                <option value="equipo">🧹 Equipo / Herramientas</option>
+                <option value="otro">📦 Otro gasto</option>
+              </select>
+              <input type="number" id="eAmount" placeholder="Monto en $ *" step="0.01" required>
+              <input type="date" id="eDate">
+              <input type="text" id="eDesc" placeholder="Descripción (ej. Home Depot, microfibras)">
+            </div>
+            <div class="form-actions">
+              <button class="btn-save" onclick="saveExpense()">Guardar gasto</button>
+              <button class="btn-cancel" onclick="toggleForm('expenseForm')">Cancelar</button>
+            </div>
+          </div>
+
+          <!-- Filtro de gastos -->
+          <div class="table-toolbar">
+            <div class="filter-group">
+              <label>Filtrar por categoría:</label>
+              <select onchange="filterExpenses(this.value)">
+                <option value="todas">Todas las categorías</option>
+                <option value="insumos">Insumos de limpieza</option>
+                <option value="gasolina">Gasolina / Transporte</option>
+                <option value="salario_asistente">Salario asistente</option>
+                <option value="equipo">Equipo</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Categoría</th>
+                  <th>Descripción</th>
+                  <th>Monto</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="expensesTable">
+                <tr><td colspan="5" class="empty-cell">Cargando gastos...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- COTIZADOR RÁPIDO -->
+        <div id="tab-cotizar" class="tab-panel">
+          <div class="panel-header">
+            <div>
+              <h1>Cotizador Rápido</h1>
+              <p class="tab-desc">Genera cotizaciones al vuelo para WhatsApp o guárdalas como cliente.</p>
+            </div>
+          </div>
+
+          <div class="quick-calc-wrapper">
+            <div class="quick-calc">
+              <div class="qc-grid">
+                <div class="qc-field">
+                  <label>Tamaño de la propiedad</label>
+                  <select id="qcSize">
+                    <option value="1200">Hasta 1,200 sqft (~1-2 hab)</option>
+                    <option value="1700">1,201-1,700 sqft (~2-3 hab)</option>
+                    <option value="2200" selected>1,701-2,200 sqft (~3-4 hab)</option>
+                    <option value="2800">2,201-2,800 sqft (~4 hab)</option>
+                    <option value="3500">2,801-3,500 sqft (~4-5 hab)</option>
+                    <option value="4500">3,501-4,500 sqft (Casa grande)</option>
+                  </select>
+                </div>
+                <div class="qc-field">
+                  <label>Frecuencia de servicio</label>
+                  <select id="qcFreq">
+                    <option value="10">Cada 10 días</option>
+                    <option value="15" selected>Quincenal</option>
+                    <option value="30">Mensual</option>
+                    <option value="deep">Profunda / Mudanza</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="qc-addons-label">Adicionales / Extras:</div>
+              <div class="qc-addons">
+                <label class="qc-check"><input type="checkbox" id="qcOven" data-price="40"> Horno (+$40)</label>
+                <label class="qc-check"><input type="checkbox" id="qcFridge" data-price="50"> Nevera (+$50)</label>
+                <label class="qc-check"><input type="checkbox" id="qcCabinets" data-price="50"> Gabinetes (+$50)</label>
+                <label class="qc-check"><input type="checkbox" id="qcDistance" data-price="50"> Distancia (+$50)</label>
+                <label class="qc-check"><input type="checkbox" id="qcOverdue" data-price="30"> +30 días sin limpiar (+$30)</label>
+              </div>
+
+              <div class="qc-total">
+                <div>
+                  <span style="font-weight:700;">Total Estimado:</span>
+                  <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Insumos profesionales incluidos</p>
+                </div>
+                <span id="qcTotal" class="total-amount">$195</span>
+              </div>
+
+              <div class="qc-actions">
+                <button class="btn-wa" onclick="qcSendWhatsApp()">📱 Enviar por WhatsApp</button>
+                <button class="btn-copy" onclick="qcCopyText()">📋 Copiar texto</button>
+              </div>
+
+              <div class="qc-secondary-actions">
+                <button class="btn-qc-sub" onclick="qcSaveAsLead()">📥 Guardar como Lead</button>
+                <button class="btn-qc-sub" onclick="qcCreateClient()">👥 Crear Cliente con este precio</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- BOTTOM NAVIGATION FOR MOBILE -->
+    <nav class="bottom-nav">
+      <button class="bottom-nav-item active" data-tab="dashboard" onclick="showTab('dashboard')">
+        <span class="icon">📊</span>
+        <span>Inicio</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="leads" onclick="showTab('leads')">
+        <span class="icon">📥</span>
+        <span>Leads</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="clients" onclick="showTab('clients')">
+        <span class="icon">👥</span>
+        <span>Clientes</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="appointments" onclick="showTab('appointments')">
+        <span class="icon">📅</span>
+        <span>Citas</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="expenses" onclick="showTab('expenses')">
+        <span class="icon">💸</span>
+        <span>Gastos</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="cotizar" onclick="showTab('cotizar')">
+        <span class="icon">🧮</span>
+        <span>Cotizar</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ============================================
+       3. MODAL DE AJUSTES Y CAMBIO DE CONTRASEÑA
+       ============================================ -->
   <div id="settingsModal" class="modal-backdrop" style="display:none;">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>⚙️ Configuración del Sistema</h3>
+        <h3>⚙️ Ajustes de Cuenta & Contraseña</h3>
         <button class="modal-close" onclick="closeSettingsModal()">✕</button>
       </div>
       <div class="modal-body">
-        <p class="modal-desc">
-          El panel funciona de inmediato en <strong>Modo Local (Offline)</strong> guardando todo en tu dispositivo. Si deseas sincronizarlo en la nube con Supabase, ingresa tus credenciales aquí:
-        </p>
-
+        <h4 style="margin-bottom:12px; color:var(--primary);">🔒 Cambiar Contraseña de Acceso</h4>
+        
         <div class="form-field-modal">
-          <label>Project URL de Supabase:</label>
-          <input type="text" id="cfgSupabaseUrl" placeholder="https://xyzcompany.supabase.co">
+          <label>Contraseña Actual:</label>
+          <input type="password" id="pwdCurrent" placeholder="Tu clave actual">
         </div>
 
         <div class="form-field-modal">
-          <label>Anon Public API Key de Supabase:</label>
-          <input type="password" id="cfgSupabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+          <label>Nueva Contraseña:</label>
+          <input type="password" id="pwdNew" placeholder="Nueva contraseña">
+        </div>
+
+        <div class="form-field-modal">
+          <label>Confirmar Nueva Contraseña:</label>
+          <input type="password" id="pwdConfirm" placeholder="Repite la nueva contraseña">
         </div>
 
         <div class="modal-actions">
-          <button class="btn-save" onclick="saveSettings()">Guardar y Conectar</button>
+          <button class="btn-save" onclick="saveNewPassword()">Guardar Nueva Contraseña</button>
           <button class="btn-cancel" onclick="closeSettingsModal()">Cerrar</button>
         </div>
 
         <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border);">
 
-        <h4>Herramientas de Datos</h4>
-        <div class="data-tools-grid">
-          <button class="btn-outline-danger" onclick="resetDemoData()">🔄 Restaurar datos de ejemplo</button>
-        </div>
+        <h4 style="margin-bottom:10px; color:var(--primary);">📦 Gestión de Datos</h4>
+        <button class="btn-outline-danger" onclick="resetDemoData()">🔄 Restaurar datos de ejemplo</button>
       </div>
     </div>
   </div>
