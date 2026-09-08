@@ -2,6 +2,20 @@
 <svg id="Capa_1" data-name="Capa 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 344.5">
   <defs>
     <style>
+      @font-face {
+        font-family: 'Atteron Personal Use Only';
+        src: url('Atteron%20Personal%20Use%20Only.ttf') format('truetype'),
+             url('/Atteron%20Personal%20Use%20Only.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: 'AtteronPersonalUseOnly-Reg';
+        src: url('Atteron%20Personal%20Use%20Only.ttf') format('truetype'),
+             url('/Atteron%20Personal%20Use%20Only.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+      }
       .cls-1, .cls-2 {
         letter-spacing: .5em;
       }
@@ -17,7 +31,7 @@
       }
 
       .cls-6, .cls-7 {
-        font-family: AtteronPersonalUseOnly-Reg, 'Atteron Personal Use Only';
+        font-family: 'Atteron Personal Use Only', AtteronPersonalUseOnly-Reg, serif;
       }
 
       .cls-2 {

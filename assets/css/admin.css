@@ -4,6 +4,24 @@
    Login, PWA Push Nativo & 100% Responsive
    ============================================ */
 
+@font-face {
+  font-family: 'Atteron Personal Use Only';
+  src: url('../../Atteron%20Personal%20Use%20Only.ttf') format('truetype'),
+       url('../Atteron%20Personal%20Use%20Only.ttf') format('truetype'),
+       url('/Atteron%20Personal%20Use%20Only.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'AtteronPersonalUseOnly-Reg';
+  src: url('../../Atteron%20Personal%20Use%20Only.ttf') format('truetype'),
+       url('../Atteron%20Personal%20Use%20Only.ttf') format('truetype'),
+       url('/Atteron%20Personal%20Use%20Only.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
   --sidebar-w: 250px;
   --header-h: 58px;
