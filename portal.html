@@ -8,14 +8,14 @@
   <!-- Open Graph / WhatsApp Preview -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://ad-sparkling-cleaning.vercel.app/portal.html">
-  <meta property="og:title" content="Portal de Cliente — Ad Sparkling Cleaning LLC">
-  <meta property="og:description" content="Accede a tu portal privado para ver tus limpiezas programadas, historial y calificar nuestro servicio.">
-  <meta property="og:image" content="https://ad-sparkling-cleaning.vercel.app/imagenes%20comparativa/comedor%20limpio%20alfombra.jpeg">
+  <meta property="og:title" content="Client Portal — Ad Sparkling Cleaning LLC">
+  <meta property="og:description" content="Access your private client portal to view upcoming appointments, invoices, and service progress.">
+  <meta property="og:image" content="https://ad-sparkling-cleaning.vercel.app/og-banner.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="https://ad-sparkling-cleaning.vercel.app/imagenes%20comparativa/comedor%20limpio%20alfombra.jpeg">
+  <meta name="twitter:image" content="https://ad-sparkling-cleaning.vercel.app/og-banner.jpg">
 
   <!-- PWA & Mobile Optimization for Client -->
   <link rel="manifest" href="manifest-client.json">
@@ -26,7 +26,7 @@
   <link rel="apple-touch-icon" href="assets/images/icon-192.svg">
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Montserrat:wght@200;300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/portal.css">
 </head>
@@ -38,16 +38,16 @@
   <div id="portalLoginView" class="portal-container" style="display:none;">
     <div class="portal-login-card">
       <img src="assets/images/logo-color.svg" alt="Ad Sparkling Cleaning" style="height: 48px; margin-bottom: 16px;">
-      <h2 style="color:var(--primary); font-size:22px; font-weight:800; margin-bottom:6px;">Portal de Clientes</h2>
-      <p style="color:var(--text-sec); font-size:13px;">Ingresa tu número de teléfono para ver tus citas y detalles de tu servicio.</p>
+      <h2 style="color:var(--primary); font-size:22px; font-weight:800; margin-bottom:6px;" data-i18n="portal_title">Client Portal — Ad Sparkling</h2>
+      <p style="color:var(--text-sec); font-size:13px;" data-i18n="admin_login_sub">Enter your phone number to access your service details.</p>
 
       <form onsubmit="handleClientLogin(event)">
-        <input type="tel" id="clientPhoneInput" class="portal-login-input" placeholder="(305) 000-0000" required autofocus>
-        <button type="submit" class="btn-submit-review" style="margin-top:4px;">Ver Mi Portal ✨</button>
+        <input type="tel" id="clientPhoneInput" class="portal-login-input" placeholder="(786) 458-2442" required autofocus>
+        <button type="submit" class="btn-submit-review" style="margin-top:4px;">Enter Portal ✨</button>
       </form>
 
       <div class="portal-footer-note">
-        <a href="index.html" style="color:var(--text-muted); text-decoration:none;">← Volver al sitio web</a>
+        <a href="index.html" style="color:var(--text-muted); text-decoration:none;">← Return to website</a>
       </div>
     </div>
   </div>
@@ -61,10 +61,16 @@
       <div class="portal-container" style="padding-bottom:0;">
         <div class="portal-nav">
           <img src="assets/images/logo-white.svg" alt="Ad Sparkling Cleaning" class="portal-logo-img">
-          <button class="btn-header-action" onclick="handleClientLogout()">
-            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-            Salir
-          </button>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="lang-switcher" style="background:rgba(255,255,255,0.2); border-color:rgba(255,255,255,0.3);">
+              <button class="lang-btn active" style="color:#fff;" data-lang="en" onclick="setLanguage('en')">EN</button>
+              <button class="lang-btn" style="color:#fff;" data-lang="es" onclick="setLanguage('es')">ES</button>
+            </div>
+            <button class="btn-header-action" onclick="handleClientLogout()">
+              <svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+              Exit
+            </button>
+          </div>
         </div>
         <div class="portal-welcome">
           <h1 id="clientNameHeader">¡Hola! ✨</h1>
@@ -190,6 +196,7 @@
     </main>
   </div>
 
+  <script src="assets/js/i18n.js"></script>
   <script src="assets/js/portal.js"></script>
 </body>
 </html>

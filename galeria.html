@@ -41,11 +41,14 @@
         <img src="assets/images/logo-color.svg" alt="Ad Sparkling Cleaning" class="logo-img">
       </a>
       <div class="nav-links">
-        <a href="index.html">Inicio</a>
-        <a href="index.html#servicios">Servicios</a>
-        <a href="galeria.html" style="color:var(--primary); font-weight:800;">Trabajos</a>
-        <a href="index.html#precios">Precios</a>
-        <a href="index.html#cotizar" class="btn-nav-cta">Cotizar Ahora</a>
+        <a href="index.html" data-i18n="nav_home">Home</a>
+        <a href="index.html#servicios" data-i18n="nav_services">Services</a>
+        <a href="galeria.html" style="color:var(--primary); font-weight:800;" data-i18n="nav_gallery">Work & Philosophy</a>
+        <a href="index.html#solicitar" class="btn-nav-cta" data-i18n="nav_quote">Get a Quote</a>
+        <div class="lang-switcher">
+          <button class="lang-btn active" data-lang="en" onclick="setLanguage('en')">EN</button>
+          <button class="lang-btn" data-lang="es" onclick="setLanguage('es')">ES</button>
+        </div>
       </div>
     </div>
   </nav>
@@ -53,10 +56,10 @@
   <!-- HERO STORYTELLING -->
   <header class="gallery-hero">
     <div class="container">
-      <div class="gallery-hero-badge">✦ El Valor De Vivir En Armonía</div>
-      <h1>Tu Hogar: Tu Templo de Paz, Claridad y Abundancia</h1>
-      <p>
-        La limpieza profesional no es un gasto accesorio; es la inversión más inteligente en tu recurso no renovable más valioso: <strong>tu tiempo</strong> y la serenidad de tu familia.
+      <div class="gallery-hero-badge" data-i18n="gal_hero_badge">✦ The Value of Living in Harmony</div>
+      <h1 data-i18n="gal_hero_title">Your Home: Your Sanctuary of Peace & Clarity</h1>
+      <p data-i18n="gal_hero_sub">
+        Professional cleaning is not an expense—it is the smartest investment in your most non-renewable resource: <strong>your time</strong> and your family's tranquility.
       </p>
     </div>
   </header>
@@ -304,9 +307,10 @@
   <footer style="background:var(--primary); color:#fff; padding:40px 0; text-align:center;">
     <div class="container">
       <img src="assets/images/logo-white.svg" alt="Ad Sparkling Cleaning" style="height:38px; margin-bottom:12px;">
-      <p style="font-size:13px; color:rgba(255,255,255,0.6);">© 2026 Ad Sparkling Cleaning LLC. Todos los derechos reservados.<br>Miami-Dade & Broward County, FL.</p>
+      <p style="font-size:13px; color:rgba(255,255,255,0.6);" data-i18n="footer_copy">© 2026 Ad Sparkling Cleaning LLC. All rights reserved.<br>Miami-Dade & Broward County, FL.</p>
     </div>
   </footer>
 
+  <script src="assets/js/i18n.js"></script>
 </body>
 </html>
