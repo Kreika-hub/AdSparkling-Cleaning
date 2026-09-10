@@ -42,12 +42,12 @@
       <p style="color:var(--text-sec); font-size:13px;" data-i18n="admin_login_sub">Enter your phone number to access your service details.</p>
 
       <form onsubmit="handleClientLogin(event)">
-        <input type="tel" id="clientPhoneInput" class="portal-login-input" placeholder="(786) 458-2442" required autofocus>
-        <button type="submit" class="btn-submit-review" style="margin-top:4px;">Enter Portal ✨</button>
+        <input type="tel" id="clientPhoneInput" class="portal-login-input" placeholder="(786) 458-2442" required autofocus data-i18n="ph_client_phone">
+        <button type="submit" class="btn-submit-review" style="margin-top:4px;" data-i18n="portal_login_btn">Enter Portal ✨</button>
       </form>
 
       <div class="portal-footer-note">
-        <a href="index.html" style="color:var(--text-muted); text-decoration:none;">← Return to website</a>
+        <a href="index.html" style="color:var(--text-muted); text-decoration:none;" data-i18n="portal_back_link">← Return to website</a>
       </div>
     </div>
   </div>
@@ -68,7 +68,7 @@
             </div>
             <button class="btn-header-action" onclick="handleClientLogout()">
               <svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-              Exit
+              <span data-i18n="portal_exit_btn">Exit</span>
             </button>
           </div>
         </div>
@@ -86,9 +86,9 @@
         <div class="card-title-row">
           <div class="card-title">
             <svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            Próxima Limpieza Programada
+            <span data-i18n="portal_next_appt">Próxima Limpieza Programada</span>
           </div>
-          <span style="font-size:11px; background:var(--warning-bg); color:var(--warning); font-weight:700; padding:3px 8px; border-radius:12px;">Confirmada</span>
+          <span style="font-size:11px; background:var(--warning-bg); color:var(--warning); font-weight:700; padding:3px 8px; border-radius:12px;" data-i18n="portal_status_confirmed">Confirmada</span>
         </div>
 
         <div id="nextVisitDateBox" class="visit-highlight-box">
@@ -96,9 +96,9 @@
         </div>
 
         <div class="visit-actions-row">
-          <a id="btnWaContact" href="https://wa.me/13050000000" target="_blank" class="btn-visit-wa">
+          <a id="btnWaContact" href="https://wa.me/17864582442" target="_blank" class="btn-visit-wa">
             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-            Consultar o Modificar por WhatsApp
+            <span data-i18n="portal_wa_btn">Consultar o Modificar por WhatsApp</span>
           </a>
         </div>
       </section>
@@ -108,25 +108,25 @@
         <div class="card-title-row">
           <div class="card-title">
             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-            Detalles de tu Plan
+            <span data-i18n="portal_plan_title">Detalles de tu Plan</span>
           </div>
         </div>
 
         <div class="plan-grid">
           <div class="plan-item">
-            <div class="plan-item-label">Frecuencia</div>
+            <div class="plan-item-label" data-i18n="portal_lbl_freq">Frecuencia</div>
             <div class="plan-item-val" id="planFreq">Quincenal</div>
           </div>
           <div class="plan-item">
-            <div class="plan-item-label">Precio Acordado</div>
+            <div class="plan-item-label" data-i18n="portal_lbl_price">Precio Acordado</div>
             <div class="plan-item-val" id="planPrice">$195</div>
           </div>
           <div class="plan-item">
-            <div class="plan-item-label">Última Limpieza</div>
+            <div class="plan-item-label" data-i18n="portal_lbl_last">Última Limpieza</div>
             <div class="plan-item-val" id="lastVisitDate">Reciente</div>
           </div>
           <div class="plan-item">
-            <div class="plan-item-label">Zona</div>
+            <div class="plan-item-label" data-i18n="portal_lbl_zone">Zona</div>
             <div class="plan-item-val" id="planAddress" style="font-size:12px; font-weight:600;">Miami-Dade</div>
           </div>
         </div>
@@ -137,12 +137,12 @@
         <div class="card-title-row">
           <div class="card-title">
             <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-            ¿Cómo estuvo nuestro servicio?
+            <span data-i18n="portal_review_title">¿Cómo estuvo nuestro servicio?</span>
           </div>
         </div>
 
         <div id="reviewFormWrapper">
-          <p style="font-size:13px; color:var(--text-sec); margin-bottom:12px;">Tu opinión es fundamental para nosotros. Déjanos tu calificación y comentarios sobre el trabajo de Anggie:</p>
+          <p style="font-size:13px; color:var(--text-sec); margin-bottom:12px;" data-i18n="portal_review_intro">Tu opinión es fundamental para nosotros. Déjanos tu calificación y comentarios sobre el trabajo de Anggie:</p>
           
           <form onsubmit="submitClientReview(event)">
             <div class="rating-stars">
@@ -153,26 +153,26 @@
               <button type="button" class="star-btn active" data-val="5">★</button>
             </div>
 
-            <textarea id="reviewComment" class="review-textarea" placeholder="Escribe un comentario sobre qué tal quedó tu hogar, los detalles o la atención..."></textarea>
+            <textarea id="reviewComment" class="review-textarea" placeholder="Escribe un comentario sobre qué tal quedó tu hogar, los detalles o la atención..." data-i18n="ph_review_comment"></textarea>
 
             <!-- Adjuntar fotos -->
             <div class="photo-upload-wrap">
               <label class="photo-upload-btn">
                 <input type="file" id="reviewPhotoInput" accept="image/*" multiple style="display:none;" onchange="handlePhotoSelect(event)">
                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                <span>📷 Adjuntar fotos del resultado (Opcional)</span>
+                <span data-i18n="portal_photo_btn">📷 Adjuntar fotos del resultado (Opcional)</span>
               </label>
               <div id="photoPreviewGrid" class="photo-preview-grid"></div>
             </div>
 
-            <button type="submit" class="btn-submit-review">Enviar Calificación a Anggie ✨</button>
+            <button type="submit" class="btn-submit-review" data-i18n="portal_submit_review">Enviar Calificación a Anggie ✨</button>
           </form>
         </div>
 
         <div id="reviewSuccessBox" class="review-success-box">
           <div class="review-success-icon">✓</div>
-          <h3 style="color:var(--primary); font-size:16px; margin-bottom:4px;">¡Muchas gracias por tu reseña!</h3>
-          <p style="font-size:13px; color:var(--text-sec);">Anggie ha recibido tus comentarios con mucho aprecio. Nos encanta cuidar de tu hogar.</p>
+          <h3 style="color:var(--primary); font-size:16px; margin-bottom:4px;" data-i18n="portal_thanks_title">¡Muchas gracias por tu reseña!</h3>
+          <p style="font-size:13px; color:var(--text-sec);" data-i18n="portal_thanks_desc">Anggie ha recibido tus comentarios con mucho aprecio. Nos encanta cuidar de tu hogar.</p>
         </div>
       </section>
 
@@ -181,7 +181,7 @@
         <div class="card-title-row">
           <div class="card-title">
             <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            Historial de Limpiezas
+            <span data-i18n="portal_history">Historial de Limpiezas</span>
           </div>
         </div>
         <div id="historyList" class="history-list">
@@ -191,10 +191,11 @@
 
       <!-- FOOTER DEL PORTAL -->
       <footer style="text-align:center; padding: 20px 0; color:var(--text-muted); font-size:12px;">
-        <p>© 2026 Ad Sparkling Cleaning LLC • Miami-Dade & Broward, FL</p>
+        <p data-i18n="portal_footer_copy">© 2026 Ad Sparkling Cleaning LLC • Miami-Dade &amp; Broward, FL</p>
       </footer>
     </main>
   </div>
+
 
   <script src="assets/js/i18n.js"></script>
   <script src="assets/js/portal.js"></script>
