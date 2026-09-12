@@ -64,9 +64,11 @@ async function loginWithPhone(phone) {
       renderClientPortal(currentClient, data.history);
     } else {
       // Cliente no encontrado - mensaje honesto
+      document.getElementById('portalLoginView').style.display = 'block';
+      document.getElementById('portalMainView').style.display = 'none';
       const loginDiv = document.querySelector('.portal-login-card');
       loginDiv.innerHTML = `
-        <img src="negro.png" alt="Ad Sparkling" style="height: 60px; margin: 0 auto 20px auto; display:block;">
+        <img src="assets/images/logo-color.svg" alt="Ad Sparkling" style="height: 60px; margin: 0 auto 20px auto; display:block;">
         <h2 style="color:var(--text-dark); margin-bottom:10px;">Registro no encontrado</h2>
         <p style="color:var(--text-gray); margin-bottom:20px;">No encontramos un plan activo con el número <b>${cleanPhone}</b>. Si eres cliente nuevo o cambiaste de número, contáctanos.</p>
         <a href="https://wa.me/17864582442" class="btn-primary" style="display:inline-block; text-align:center;">Contactar por WhatsApp</a>

@@ -29,8 +29,8 @@ export default async function handler(req, res) {
   try {
     const { data: clients, error: clientErr } = await supabase
       .from('clients')
-      .select('id, name, address, next_visit, plan_freq, plan_price, zone')
-      .eq('phone', cleanPhone);
+      .select('id, name, address, next_visit, last_visit, frequency, base_price')
+      .ilike('phone', '%' + cleanPhone.slice(-10) + '%');
     
     if (clientErr) throw clientErr;
 
@@ -52,10 +52,11 @@ export default async function handler(req, res) {
       client: {
          id: client.id,
          name: client.name,
+         address: client.address,
          next_visit: client.next_visit,
-         plan_freq: client.plan_freq,
-         plan_price: client.plan_price,
-         zone: client.zone || client.address
+         last_visit: client.last_visit,
+         frequency: client.frequency,
+         base_price: client.base_price
       },
       history: appointments || []
     });
