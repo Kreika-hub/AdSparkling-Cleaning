@@ -52,6 +52,16 @@
   --shadow-lg: 0 12px 36px rgba(49, 1, 63, 0.16);
 }
 
+.svg-icon {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
 * { 
   margin: 0; 
   padding: 0; 
