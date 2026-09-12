@@ -47,38 +47,39 @@ function handleClientLogin(e) {
   loginWithPhone(clean);
 }
 
-function loginWithPhone(phone) {
+async function loginWithPhone(phone) {
   const cleanPhone = String(phone).replace(/[^0-9]/g, '');
-  const rawClients = localStorage.getItem('adsparkling_clients');
-  const clients = rawClients ? JSON.parse(rawClients) : [];
+  const btn = document.getElementById('btnPortalLogin');
+  if (btn) btn.textContent = 'Buscando...';
 
-  // Buscar cliente por teléfono
-  let client = clients.find(c => String(c.phone).replace(/[^0-9]/g, '') === cleanPhone);
+  try {
+    const res = await fetch('/api/portal?phone=' + cleanPhone);
+    const data = await res.json();
 
-  // Si no se encuentra exactamente, permitir buscar por coincidencia parcial o crear invitado
-  if (!client && clients.length > 0) {
-    client = clients.find(c => String(c.phone).includes(cleanPhone) || cleanPhone.includes(String(c.phone)));
+    if (res.ok && data.found) {
+      currentClient = data.client;
+      // Guardar en variable global el historial para renderClientPortal
+      window.clientHistory = data.history; 
+      localStorage.setItem('adsparkling_client_phone', cleanPhone);
+      renderClientPortal(currentClient, data.history);
+    } else {
+      // Cliente no encontrado - mensaje honesto
+      const loginDiv = document.querySelector('.portal-login-card');
+      loginDiv.innerHTML = `
+        <img src="negro.png" alt="Ad Sparkling" style="height: 60px; margin: 0 auto 20px auto; display:block;">
+        <h2 style="color:var(--text-dark); margin-bottom:10px;">Registro no encontrado</h2>
+        <p style="color:var(--text-gray); margin-bottom:20px;">No encontramos un plan activo con el número <b>${cleanPhone}</b>. Si eres cliente nuevo o cambiaste de número, contáctanos.</p>
+        <a href="https://wa.me/17864582442" class="btn-primary" style="display:inline-block; text-align:center;">Contactar por WhatsApp</a>
+        <a href="portal.html" class="btn-secondary" style="display:inline-block; text-align:center; margin-top:10px;">Intentar otro número</a>
+      `;
+      localStorage.removeItem('adsparkling_client_phone');
+    }
+  } catch (err) {
+    console.error('Error cargando portal:', err);
+    alert('Error conectando con el servidor. Por favor intenta de nuevo.');
+  } finally {
+    if (btn) btn.textContent = 'Acceder a mi Portal';
   }
-
-  // Fallback demo si entra con un número nuevo
-  if (!client) {
-    client = {
-      id: 'c-temp-' + cleanPhone,
-      name: 'Estimado/a Cliente',
-      phone: cleanPhone,
-      address: 'Miami-Dade & Broward, FL',
-      frequency: '15',
-      base_price: 195,
-      last_visit: new Date().toISOString().split('T')[0],
-      next_visit: null,
-      status: 'activo'
-    };
-  }
-
-  currentClient = client;
-  localStorage.setItem('adsparkling_client_phone', cleanPhone);
-
-  renderClientPortal(client);
 }
 
 function handleClientLogout() {
@@ -89,23 +90,21 @@ function handleClientLogout() {
 // ============================================
 // RENDERIZAR DATOS DEL CLIENTE
 // ============================================
-function renderClientPortal(client) {
+function renderClientPortal(client, history = null) {
   document.getElementById('portalLoginView').style.display = 'none';
   document.getElementById('portalMainView').style.display = 'block';
 
   // Saludo y Nombre
   document.getElementById('clientNameHeader').textContent = client.name ? `¡Hola, ${client.name.split(' ')[0]}! ✨` : '¡Bienvenido/a! ✨';
-  document.getElementById('clientAddressSub').textContent = client.address || 'Servicio de limpieza residencial';
+  document.getElementById('clientAddressSub').textContent = client.address || client.zone || 'Servicio de limpieza residencial';
 
   // Plan info
-  document.getElementById('planFreq').textContent = freqLabel(client.frequency);
-  document.getElementById('planPrice').textContent = client.base_price ? `$${client.base_price}` : 'Consultar';
-  document.getElementById('planAddress').textContent = client.address || 'Miami-Dade';
+  document.getElementById('planFreq').textContent = freqLabel(client.plan_freq || client.frequency);
+  document.getElementById('planPrice').textContent = (client.plan_price || client.base_price) ? `$${client.plan_price || client.base_price}` : 'Consultar';
+  document.getElementById('planAddress').textContent = client.address || client.zone || 'Miami-Dade';
 
-  // Obtener citas del cliente
-  const rawAppts = localStorage.getItem('adsparkling_appointments');
-  const appts = rawAppts ? JSON.parse(rawAppts) : [];
-  const clientAppts = appts.filter(a => a.client_id == client.id || (a.clients && a.clients.phone && String(a.clients.phone).replace(/[^0-9]/g, '') === String(client.phone).replace(/[^0-9]/g, '')));
+  // Obtener citas del cliente (desde el parámetro history de la API)
+  const clientAppts = history || window.clientHistory || [];
 
   // Próxima visita
   const todayStr = new Date().toISOString().split('T')[0];

@@ -1,14 +1,9 @@
 /* ============================================
    ADMIN PANEL — Ad Sparkling Cleaning
-   Autenticación, PWA Push, DataStore autónomo
-   y Sincronización con Variables Vercel & Supabase
+   Autenticación Serverless y Sincronización
    ============================================ */
 
-const DEFAULT_PASSWORD = 'Anggie2026';
-
-let SUPABASE_URL = '';
-let SUPABASE_KEY = '';
-let supabase = null;
+let adminToken = sessionStorage.getItem('admin_token') || null;
 
 const PRICING = {
   1200: { 10: 150, 15: 150, 30: 180, deep: 240 },
@@ -20,7 +15,7 @@ const PRICING = {
 };
 
 // ============================================
-// DATASTORE (PERSISTENCIA LOCAL & SUPABASE SYNC)
+// DATASTORE (PERSISTENCIA LOCAL & CLOUD SYNC)
 // ============================================
 const DataStore = {
   KEYS: {
@@ -28,47 +23,56 @@ const DataStore = {
     CLIENTS: 'adsparkling_clients',
     APPTS: 'adsparkling_appointments',
     EXPENSES: 'adsparkling_expenses',
-    REVIEWS: 'adsparkling_reviews',
-    AUTH_PASS: 'adsparkling_admin_password',
-    AUTH_SESSION: 'adsparkling_logged_in'
+    REVIEWS: 'adsparkling_reviews'
   },
 
   async init() {
     this.seedInitialData();
-    await this.loadVercelEnv();
   },
-
-  async loadVercelEnv() {
+  
+  async cloudQuery(table, method, payload = null) {
+    if (!adminToken) return { error: 'No token' };
     try {
-      const res = await fetch('/api/config');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.supabaseUrl && data.supabaseKey && window.supabase) {
-          SUPABASE_URL = data.supabaseUrl;
-          SUPABASE_KEY = data.supabaseKey;
-          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-          console.log('✅ Supabase conectado automáticamente desde Vercel');
-        }
-      }
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'query', token: adminToken, table, method, payload })
+      });
+      return await res.json();
     } catch (e) {
-      // Entorno local o sin endpoint
+      console.error('Cloud Query Error:', e);
+      return { error: e.message };
     }
   },
 
-  getPassword() {
-    return localStorage.getItem(this.KEYS.AUTH_PASS) || DEFAULT_PASSWORD;
-  },
-
-  setPassword(newPass) {
-    localStorage.setItem(this.KEYS.AUTH_PASS, newPass);
+  async hydrateFromCloud() {
+    console.log('Hydrating from cloud...');
+    const tables = ['leads', 'clients', 'appointments', 'expenses', 'reviews'];
+    for (const t of tables) {
+      const res = await this.cloudQuery(t, 'select');
+      if (res && res.data) {
+        let key;
+        if(t === 'leads') key = this.KEYS.LEADS;
+        if(t === 'clients') key = this.KEYS.CLIENTS;
+        if(t === 'appointments') key = this.KEYS.APPTS;
+        if(t === 'expenses') key = this.KEYS.EXPENSES;
+        if(t === 'reviews') key = this.KEYS.REVIEWS;
+        this.setList(key, res.data);
+      }
+    }
   },
 
   isLoggedIn() {
-    return localStorage.getItem(this.KEYS.AUTH_SESSION) === 'true';
+    return !!adminToken;
   },
 
-  setLoggedIn(val) {
-    localStorage.setItem(this.KEYS.AUTH_SESSION, val ? 'true' : 'false');
+  setLoggedIn(token) {
+    adminToken = token;
+    if (token) {
+      sessionStorage.setItem('admin_token', token);
+    } else {
+      sessionStorage.removeItem('admin_token');
+    }
   },
 
   seedInitialData() {
@@ -281,7 +285,7 @@ const DataStore = {
     localStorage.setItem(key, JSON.stringify(items));
   },
 
-  // Leads
+// Leads
   getLeads() { return this.getList(this.KEYS.LEADS); },
   saveLead(lead) {
     lead.id = lead.id || 'l-' + Date.now();
@@ -291,9 +295,7 @@ const DataStore = {
     leads.unshift(lead);
     this.setList(this.KEYS.LEADS, leads);
 
-    if (supabase) {
-      supabase.from('leads').insert([lead]).then(() => {}).catch(() => {});
-    }
+    this.cloudQuery('leads', 'insert', [lead]);
     return lead;
   },
   updateLead(id, updates) {
@@ -302,17 +304,13 @@ const DataStore = {
     if (idx !== -1) {
       leads[idx] = { ...leads[idx], ...updates, updated_at: new Date().toISOString() };
       this.setList(this.KEYS.LEADS, leads);
-      if (supabase) {
-        supabase.from('leads').update(updates).eq('id', id).then(() => {}).catch(() => {});
-      }
+      this.cloudQuery('leads', 'update', { id, data: updates });
     }
   },
   deleteLead(id) {
     const leads = this.getLeads().filter(l => l.id != id);
     this.setList(this.KEYS.LEADS, leads);
-    if (supabase) {
-      supabase.from('leads').delete().eq('id', id).then(() => {}).catch(() => {});
-    }
+    this.cloudQuery('leads', 'delete', { id });
   },
 
   // Clientes
@@ -330,17 +328,13 @@ const DataStore = {
       clients.push(client);
     }
     this.setList(this.KEYS.CLIENTS, clients);
-    if (supabase) {
-      supabase.from('clients').upsert([client]).then(() => {}).catch(() => {});
-    }
+    this.cloudQuery('clients', 'upsert', [client]);
     return client;
   },
   deleteClient(id) {
     const clients = this.getClients().filter(c => c.id != id);
     this.setList(this.KEYS.CLIENTS, clients);
-    if (supabase) {
-      supabase.from('clients').delete().eq('id', id).then(() => {}).catch(() => {});
-    }
+    this.cloudQuery('clients', 'delete', { id });
   },
 
   // Citas
@@ -375,11 +369,9 @@ const DataStore = {
       this.setList(this.KEYS.CLIENTS, clients);
     }
 
-    if (supabase) {
-      const cleanAppt = { ...appt };
-      delete cleanAppt.clients;
-      supabase.from('appointments').upsert([cleanAppt]).then(() => {}).catch(() => {});
-    }
+    const cleanAppt = { ...appt };
+    delete cleanAppt.clients;
+    this.cloudQuery('appointments', 'upsert', [cleanAppt]);
     return appt;
   },
   updateAppointmentStatus(id, newStatus) {
@@ -396,17 +388,13 @@ const DataStore = {
           this.setList(this.KEYS.CLIENTS, clients);
         }
       }
-      if (supabase) {
-        supabase.from('appointments').update({ status: newStatus }).eq('id', id).then(() => {}).catch(() => {});
-      }
+      this.cloudQuery('appointments', 'update', { id, data: { status: newStatus } });
     }
   },
   deleteAppointment(id) {
     const appts = this.getList(this.KEYS.APPTS).filter(a => a.id != id);
     this.setList(this.KEYS.APPTS, appts);
-    if (supabase) {
-      supabase.from('appointments').delete().eq('id', id).then(() => {}).catch(() => {});
-    }
+    this.cloudQuery('appointments', 'delete', { id });
   },
 
   // Gastos
@@ -417,17 +405,13 @@ const DataStore = {
     const exps = this.getExpenses();
     exps.unshift(exp);
     this.setList(this.KEYS.EXPENSES, exps);
-    if (supabase) {
-      supabase.from('expenses').insert([exp]).then(() => {}).catch(() => {});
-    }
+    this.cloudQuery('expenses', 'insert', [exp]);
     return exp;
   },
   deleteExpense(id) {
     const exps = this.getExpenses().filter(e => e.id != id);
     this.setList(this.KEYS.EXPENSES, exps);
-    if (supabase) {
-      supabase.from('expenses').delete().eq('id', id).then(() => {}).catch(() => {});
-    }
+    this.cloudQuery('expenses', 'delete', { id });
   },
 
   // Reseñas
@@ -439,9 +423,7 @@ const DataStore = {
     const reviews = this.getReviews();
     reviews.unshift(review);
     this.setList(this.KEYS.REVIEWS, reviews);
-    if (supabase) {
-      supabase.from('reviews').insert([review]).then(() => {}).catch(() => {});
-    }
+    this.cloudQuery('reviews', 'insert', [review]);
     return review;
   },
   updateReview(id, updates) {
@@ -450,17 +432,13 @@ const DataStore = {
     if (idx !== -1) {
       reviews[idx] = { ...reviews[idx], ...updates };
       this.setList(this.KEYS.REVIEWS, reviews);
-      if (supabase) {
-        supabase.from('reviews').update(updates).eq('id', id).then(() => {}).catch(() => {});
-      }
+      this.cloudQuery('reviews', 'update', { id, data: updates });
     }
   },
   deleteReview(id) {
     const reviews = this.getReviews().filter(r => r.id != id);
     this.setList(this.KEYS.REVIEWS, reviews);
-    if (supabase) {
-      supabase.from('reviews').delete().eq('id', id).then(() => {}).catch(() => {});
-    }
+    this.cloudQuery('reviews', 'delete', { id });
   }
 };
 
@@ -475,11 +453,13 @@ function checkAuth() {
   if (isLogged) {
     if (loginScreen) loginScreen.style.display = 'none';
     if (adminApp) adminApp.style.display = 'block';
-    try {
-      loadDashboard();
-    } catch (err) {
-      console.warn('Dashboard load warning:', err);
-    }
+    DataStore.hydrateFromCloud().then(() => {
+      try {
+        loadDashboard();
+      } catch (err) {
+        console.warn('Dashboard load warning:', err);
+      }
+    });
   } else {
     if (loginScreen) loginScreen.style.display = 'flex';
     if (adminApp) adminApp.style.display = 'none';
@@ -487,28 +467,48 @@ function checkAuth() {
   }
 }
 
-function handleLogin(e) {
+async function handleLogin(e) {
   if (e && e.preventDefault) e.preventDefault();
   const input = document.getElementById('loginPassword');
   const errorMsg = document.getElementById('loginError');
+  const submitBtn = document.querySelector('.btn-login-submit');
   const entered = (input ? input.value : '').trim();
-  const storedPass = (DataStore.getPassword() || DEFAULT_PASSWORD).trim();
 
-  if (entered === storedPass || entered === DEFAULT_PASSWORD || entered.toLowerCase() === DEFAULT_PASSWORD.toLowerCase()) {
-    if (errorMsg) errorMsg.style.display = 'none';
-    DataStore.setLoggedIn(true);
-    if (input) input.value = '';
-    
-    // Transición inmediata garantizada
-    const loginScreen = document.getElementById('loginScreen');
-    const adminApp = document.getElementById('adminApp');
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (adminApp) adminApp.style.display = 'block';
-    
-    checkAuth();
-  } else {
-    if (errorMsg) errorMsg.style.display = 'block';
-    if (input) input.focus();
+  if (!entered) return;
+
+  if (submitBtn) submitBtn.textContent = 'Verificando...';
+
+  try {
+    const res = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', password: entered })
+    });
+    const data = await res.json();
+
+    if (res.ok && data.token) {
+      if (errorMsg) errorMsg.style.display = 'none';
+      DataStore.setLoggedIn(data.token);
+      if (input) input.value = '';
+      
+      const loginScreen = document.getElementById('loginScreen');
+      const adminApp = document.getElementById('adminApp');
+      if (loginScreen) loginScreen.style.display = 'none';
+      if (adminApp) adminApp.style.display = 'block';
+      
+      checkAuth();
+    } else {
+      if (errorMsg) errorMsg.style.display = 'block';
+      if (input) input.focus();
+    }
+  } catch (err) {
+    console.error('Login error:', err);
+    if (errorMsg) {
+      errorMsg.textContent = 'Error de conexión. Intenta de nuevo.';
+      errorMsg.style.display = 'block';
+    }
+  } finally {
+    if (submitBtn) submitBtn.textContent = 'Ingresar a mi Panel';
   }
 }
 

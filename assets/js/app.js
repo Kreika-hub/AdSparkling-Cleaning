@@ -4,17 +4,26 @@
    Animaciones y PWA
    ============================================ */
 
-// Sincronización de Leads con Admin DataStore
-function saveLeadFromLanding(lead) {
+// Sincronización de Leads con la Nube y Respaldo Local
+async function saveLeadFromLanding(lead) {
   try {
-    // Clave estándar compartida con el panel administrativo
+    // 1. Guardar en la nube (Vercel Serverless Function)
+    await fetch('/api/public', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(lead)
+    });
+  } catch (e) {
+    console.error('Error enviando lead a la nube:', e);
+  }
+
+  try {
+    // 2. Respaldo local visual
     const key = 'adsparkling_leads';
     const raw = localStorage.getItem(key);
     const leads = raw ? JSON.parse(raw) : [];
     leads.unshift(lead);
     localStorage.setItem(key, JSON.stringify(leads));
-
-    // Compatibilidad secundaria
     localStorage.setItem('asc_leads', JSON.stringify(leads));
     localStorage.setItem('adsparkling_notify_lead', Date.now().toString());
   } catch (e) {

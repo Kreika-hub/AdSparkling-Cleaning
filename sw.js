@@ -1,7 +1,7 @@
 // ─── Cache version: auto-updated on every deploy ────────────────────────────
 // Timestamp baked in at write/deploy time — changes on every deploy to bust
 // old caches automatically. Update this string when you redeploy.
-const CACHE_NAME = 'adsparkling-20260909-001';
+const CACHE_NAME = 'adsparkling-20260911-001';
 
 // Assets that use stale-while-revalidate (cache-first with background refresh)
 const STATIC_ASSETS = [
