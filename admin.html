@@ -403,9 +403,9 @@
                 <option value="deep">Limpieza profunda</option>
               </select>
               <input type="number" id="pPrice" placeholder="Precio Base $ *" required>
-              <textarea id="pIncluded" placeholder="¿Qué incluye? (Una línea por ítem)" rows="4"></textarea>
-              <textarea id="pExcluded" placeholder="¿Qué NO incluye? (Una línea por ítem)" rows="4"></textarea>
-              <textarea id="pTerms" placeholder="Términos y condiciones específicos de este plan" rows="4" style="grid-column: 1 / -1;"></textarea>
+              <textarea id="pIncluded" placeholder="Ejemplo de lo que incluye:&#10;Polvo general en todas las áreas&#10;Limpieza de espejos&#10;Aspirado y trapeado&#10;Limpieza externa de electrodomésticos" rows="4"></textarea>
+              <textarea id="pExcluded" placeholder="Ejemplo de exclusiones:&#10;Interior de la nevera (tiene costo extra)&#10;Limpieza profunda de persianas&#10;Recogida de desorden extremo" rows="4"></textarea>
+              <textarea id="pTerms" placeholder="Ej. Políticas:&#10;- Cancelación requiere 24h de aviso.&#10;- Si la casa excede 30 días sin limpiar, aplica recargo de $30.&#10;- Las mascotas deben estar aseguradas." rows="4" style="grid-column: 1 / -1;"></textarea>
               <label style="grid-column: 1 / -1; display: flex; align-items: center; gap: 8px;">
                 <input type="checkbox" id="pActive" checked> Plan activo (visible para asociar a clientes)
               </label>
@@ -416,7 +416,11 @@
             </div>
           </div>
 
-          <div id="adminPlansList" class="dash-grid" style="margin-top:20px;">
+          <div class="table-toolbar" style="margin-top:20px;">
+            <input type="text" class="search-input" placeholder="🔍 Buscar planes por nombre o precio..." oninput="filterPlans(this.value)">
+          </div>
+
+          <div id="adminPlansList" class="dash-grid" style="margin-top:15px;">
             <p class="empty">Cargando planes...</p>
           </div>
         </div>

@@ -1621,13 +1621,19 @@ function truncate(str, max) {
 // ============================================
 // PLANES
 // ============================================
+let allPlans = [];
+
 function loadPlans() {
-  const plans = DataStore.getPlans();
+  allPlans = DataStore.getPlans() || [];
+  renderPlansList(allPlans);
+}
+
+function renderPlansList(plans) {
   const list = document.getElementById('adminPlansList');
   if (!list) return;
 
   if (!plans || plans.length === 0) {
-    list.innerHTML = '<p class="empty">No hay planes registrados aún.</p>';
+    list.innerHTML = '<p class="empty">No hay planes para mostrar.</p>';
     return;
   }
 
@@ -1649,6 +1655,19 @@ function loadPlans() {
       </div>
     </div>
   `).join('');
+}
+
+function filterPlans(query) {
+  const q = query.toLowerCase().trim();
+  if (!q) {
+    renderPlansList(allPlans);
+    return;
+  }
+  const filtered = allPlans.filter(p => 
+    (p.name && p.name.toLowerCase().includes(q)) ||
+    (p.price && p.price.toString().includes(q))
+  );
+  renderPlansList(filtered);
 }
 
 function resetPlanForm() {
