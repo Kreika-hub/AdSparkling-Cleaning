@@ -1294,6 +1294,10 @@ function renderAppointmentsTable(appts) {
           <button onclick="startCleaning('${a.id}')" title="Iniciar limpieza" style="background:var(--primary);"><span style="font-size:12px;">▶️ Iniciar</span></button>
           <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Hola! Anggie está en camino/comenzando tu limpieza de hoy 🧹✨')}" target="_blank" title="Avisar por WhatsApp" style="background:#25d366;"><span style="font-size:12px;">📲 Voy</span></a>
         ` : a.status === 'en_progreso' ? `
+          <button onclick="pauseCleaning('${a.id}')" title="Pausar limpieza" style="background:#f57c00;"><span style="font-size:12px;">⏸️ Pausar</span></button>
+          <button onclick="finishCleaning('${a.id}')" title="Finalizar limpieza" style="background:#4caf50;"><span style="font-size:12px;">⏹️ Fin</span></button>
+        ` : a.status === 'pausada' ? `
+          <button onclick="resumeCleaning('${a.id}')" title="Reanudar limpieza" style="background:var(--primary);"><span style="font-size:12px;">▶️ Reanudar</span></button>
           <button onclick="finishCleaning('${a.id}')" title="Finalizar limpieza" style="background:#4caf50;"><span style="font-size:12px;">⏹️ Fin</span></button>
         ` : a.status === 'completada' ? `
           <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Listo! Tu hogar quedó reluciente ✨ Nos vemos en tu próxima visita.')}" target="_blank" title="Avisar por WhatsApp" style="background:#25d366;"><span style="font-size:12px;">📲 Lista</span></a>
@@ -1301,12 +1305,13 @@ function renderAppointmentsTable(appts) {
         <button onclick="editAppt('${a.id}')" title="Editar cita" style="background:#ff9800;">✏️</button>
         <button onclick="deleteAppt('${a.id}')" title="Eliminar cita" style="background:#f44336;">🗑</button>
       </div>
-      <div class="swipe-card" data-actions-count="${a.status === 'pendiente' ? 4 : (a.status === 'en_progreso' ? 3 : (a.status === 'completada' ? 3 : 2))}">
+      <div class="swipe-card" data-actions-count="${a.status === 'pendiente' ? 4 : (a.status === 'en_progreso' ? 4 : (a.status === 'pausada' ? 4 : (a.status === 'completada' ? 3 : 2)))}">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <strong style="font-size:15px; color:var(--text-color);">${a.clients?.name || 'Cliente'}</strong>
           <select class="status-select status-${a.status}" onchange="changeApptStatus('${a.id}', this.value)" onclick="event.stopPropagation()">
             <option value="pendiente" ${a.status === 'pendiente' ? 'selected' : ''}>Pendiente</option>
             <option value="en_progreso" ${a.status === 'en_progreso' ? 'selected' : ''}>En progreso</option>
+            <option value="pausada" ${a.status === 'pausada' ? 'selected' : ''}>Pausada</option>
             <option value="completada" ${a.status === 'completada' ? 'selected' : ''}>Completada</option>
             <option value="cancelada" ${a.status === 'cancelada' ? 'selected' : ''}>Cancelada</option>
           </select>
@@ -1317,6 +1322,7 @@ function renderAppointmentsTable(appts) {
         <div style="color:var(--text-muted); font-size:12px; margin-top:4px; display:flex; justify-content:space-between;">
           <span>${a.clients?.address ? truncate(a.clients.address, 30) : ''}</span>
           ${a.status === 'en_progreso' && a.started_at ? `<span style="color:#f57c00;">🧹 Desde ${new Date(a.started_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>` : ''}
+          ${a.status === 'pausada' ? `<span style="color:#f57c00;">⏸️ En pausa (${formatDuration(a.accumulated_minutes || 0)})</span>` : ''}
           ${a.status === 'completada' && a.duration_minutes ? `<span style="color:var(--success);">✓ Duración: ${formatDuration(a.duration_minutes)}</span>` : ''}
         </div>
       </div>
@@ -1435,14 +1441,41 @@ function startCleaning(id) {
   loadAppointments();
 }
 
-function finishCleaning(id) {
+function pauseCleaning(id) {
   const appt = allAppointments.find(a => a.id == id);
   if (!appt || !appt.started_at) return;
   
-  const duration_minutes = Math.round((Date.now() - new Date(appt.started_at).getTime()) / 60000);
+  const currentSessionMins = Math.round((Date.now() - new Date(appt.started_at).getTime()) / 60000);
+  appt.accumulated_minutes = (appt.accumulated_minutes || 0) + currentSessionMins;
+  appt.started_at = null;
+  appt.status = 'pausada';
+  DataStore.saveAppointment(appt);
+  loadAppointments();
+}
+
+function resumeCleaning(id) {
+  const appt = allAppointments.find(a => a.id == id);
+  if (!appt) return;
+  appt.started_at = new Date().toISOString();
+  appt.status = 'en_progreso';
+  DataStore.saveAppointment(appt);
+  loadAppointments();
+}
+
+function finishCleaning(id) {
+  const appt = allAppointments.find(a => a.id == id);
+  if (!appt) return;
+  
+  let currentSessionMins = 0;
+  if (appt.started_at) {
+    currentSessionMins = Math.round((Date.now() - new Date(appt.started_at).getTime()) / 60000);
+  }
+  
+  const duration_minutes = (appt.accumulated_minutes || 0) + currentSessionMins;
   appt.completed_at = new Date().toISOString();
   appt.duration_minutes = duration_minutes;
   appt.status = 'completada';
+  appt.started_at = null; // Limpiar para el estado final
   
   DataStore.saveAppointment(appt);
   loadAppointments();
