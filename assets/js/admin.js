@@ -26,6 +26,14 @@ const DataStore = {
     REVIEWS: 'adsparkling_reviews'
   },
 
+  generateUUID() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  },
+
   async init() {
     this.seedInitialData();
   },
@@ -288,7 +296,7 @@ const DataStore = {
 // Leads
   getLeads() { return this.getList(this.KEYS.LEADS); },
   saveLead(lead) {
-    lead.id = lead.id || 'l-' + Date.now();
+    lead.id = lead.id || this.generateUUID();
     lead.created_at = lead.created_at || new Date().toISOString();
     lead.status = lead.status || 'nuevo';
     const leads = this.getLeads();
@@ -322,7 +330,7 @@ const DataStore = {
       if (idx !== -1) clients[idx] = { ...clients[idx], ...client };
       else clients.push(client);
     } else {
-      client.id = 'c-' + Date.now();
+      client.id = this.generateUUID();
       client.created_at = new Date().toISOString();
       client.status = client.status || 'activo';
       clients.push(client);
@@ -353,7 +361,7 @@ const DataStore = {
       if (idx !== -1) appts[idx] = { ...appts[idx], ...appt };
       else appts.unshift(appt);
     } else {
-      appt.id = 'a-' + Date.now();
+      appt.id = this.generateUUID();
       appt.created_at = new Date().toISOString();
       appt.status = appt.status || 'pendiente';
       appts.unshift(appt);
@@ -400,7 +408,7 @@ const DataStore = {
   // Gastos
   getExpenses() { return this.getList(this.KEYS.EXPENSES); },
   saveExpense(exp) {
-    exp.id = exp.id || 'e-' + Date.now();
+    exp.id = exp.id || this.generateUUID();
     exp.created_at = new Date().toISOString();
     const exps = this.getExpenses();
     exps.unshift(exp);
@@ -417,7 +425,7 @@ const DataStore = {
   // Reseñas
   getReviews() { return this.getList(this.KEYS.REVIEWS); },
   saveReview(review) {
-    review.id = review.id || 'rev-' + Date.now();
+    review.id = review.id || this.generateUUID();
     review.created_at = review.created_at || new Date().toISOString();
     review.status = review.status || 'pendiente';
     const reviews = this.getReviews();
@@ -997,10 +1005,12 @@ function saveClient() {
     return;
   }
 
+  const cleanPhoneStr = String(phone).replace(/[^0-9]/g, '');
+
   const clientData = {
     id: id || undefined,
     name,
-    phone,
+    phone: cleanPhoneStr,
     address,
     size_sqft: size,
     frequency: freq,

@@ -70,6 +70,13 @@ document.addEventListener('DOMContentLoaded', () => {
 function showPhoneLogin() {
   document.getElementById('portalLoginView').style.display = 'block';
   document.getElementById('portalMainView').style.display = 'none';
+  
+  // Mostrar botón PWA en login
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if (deferredInstallPrompt || isIOS) {
+    const btnInstall = document.getElementById('btnPortalInstallLogin');
+    if (btnInstall) btnInstall.style.display = 'block';
+  }
 }
 
 function handleClientLogin(e) {

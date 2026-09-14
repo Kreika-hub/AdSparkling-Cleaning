@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mi Portal de Cliente — Ad Sparkling Cleaning</title>
-  
+  <meta name="google" content="notranslate">
   <!-- Open Graph / WhatsApp Preview -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://ad-sparkling-cleaning.vercel.app/portal.html">
@@ -45,6 +45,10 @@
         <input type="tel" id="clientPhoneInput" class="portal-login-input" placeholder="(786) 458-2442" required autofocus data-i18n="ph_client_phone">
         <button type="submit" class="btn-submit-review" style="margin-top:4px;" data-i18n="portal_login_btn">Enter Portal ✨</button>
       </form>
+      
+      <button id="btnPortalInstallLogin" onclick="installPortalPWA()" style="display:none; width:100%; margin-top:15px; background:#f0e6f2; color:var(--primary); border:1px solid #d4bad9; border-radius:12px; padding:10px; font-weight:700; cursor:pointer;">
+        📲 Descargar App del Portal
+      </button>
 
       <div class="portal-footer-note">
         <a href="index.html" style="color:var(--text-muted); text-decoration:none;" data-i18n="portal_back_link">← Return to website</a>
