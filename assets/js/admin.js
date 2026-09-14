@@ -740,6 +740,14 @@ function loadDashboard() {
   const activeClients = clients.filter(c => c.status === 'activo');
   const profit = revenue - expenses;
   const margin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
+  
+  // Tiempo promedio
+  const completedApptsWithTime = appts.filter(a => a.status === 'completada' && a.duration_minutes);
+  let avgMins = 0;
+  if (completedApptsWithTime.length > 0) {
+    const totalMins = completedApptsWithTime.reduce((sum, a) => sum + (a.duration_minutes || 0), 0);
+    avgMins = Math.round(totalMins / completedApptsWithTime.length);
+  }
 
   // Actualizar DOM
   document.getElementById('dashRevenue').textContent = '$' + revenue.toLocaleString();
@@ -747,6 +755,9 @@ function loadDashboard() {
   document.getElementById('dashProfit').textContent = '$' + profit.toLocaleString();
   document.getElementById('dashMargin').textContent = margin + '% margen';
   document.getElementById('dashClients').textContent = activeClients.length;
+  
+  const avgTimeEl = document.getElementById('dashAvgTime');
+  if (avgTimeEl) avgTimeEl.textContent = avgMins > 0 ? formatDuration(avgMins) : '0h 0min';
 
   // Próximas citas
   const todayStr = now.toISOString().split('T')[0];
@@ -1066,6 +1077,33 @@ function checkContractState() {
       historyDiv.innerHTML = '';
     }
   }
+
+  // Render Cleaning History
+  const cleaningDiv = document.getElementById('cCleaningHistory');
+  if (cleaningDiv) {
+    const allAppts = DataStore.getAppointments().filter(a => a.client_id === clientId && a.status === 'completada' && a.duration_minutes).sort((a,b) => new Date(b.date) - new Date(a.date));
+    
+    if (allAppts.length > 0) {
+      const totalMins = allAppts.reduce((sum, a) => sum + (a.duration_minutes || 0), 0);
+      const avgMins = Math.round(totalMins / allAppts.length);
+      
+      cleaningDiv.innerHTML = `
+        <div style="font-size:12px; font-weight:bold; color:var(--text-color); margin-bottom:6px; margin-top:12px;">Historial de Tiempos de Limpieza:</div>
+        <table class="data-table" style="font-size:12px;">
+          <thead><tr><th>Fecha</th><th>Duración</th></tr></thead>
+          <tbody>
+            ${allAppts.map(a => `<tr>
+                <td>${formatDate(a.date)}</td>
+                <td>${formatDuration(a.duration_minutes)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        <div style="font-size:12px; font-weight:bold; margin-top:6px; color:var(--primary);">Promedio: ${formatDuration(avgMins)}</div>
+      `;
+    } else {
+      cleaningDiv.innerHTML = '';
+    }
+  }
 }
 
 async function viewContractPdf(path) {
@@ -1246,17 +1284,28 @@ function renderAppointmentsTable(appts) {
       <td><strong>${a.clients?.name || 'Cliente'}</strong></td>
       <td title="${a.clients?.address || ''}">${truncate(a.clients?.address || '-', 25)}</td>
       <td><strong style="color:var(--primary); font-weight:800;">$${a.price}</strong></td>
-      <td>${(a.addons || []).join(', ') || '-'}</td>
       <td>
         <select class="status-select status-${a.status}" onchange="changeApptStatus('${a.id}', this.value)">
           <option value="pendiente" ${a.status === 'pendiente' ? 'selected' : ''}>Pendiente</option>
+          <option value="en_progreso" ${a.status === 'en_progreso' ? 'selected' : ''}>En progreso</option>
           <option value="completada" ${a.status === 'completada' ? 'selected' : ''}>Completada</option>
           <option value="cancelada" ${a.status === 'cancelada' ? 'selected' : ''}>Cancelada</option>
         </select>
       </td>
-      <td title="${a.notes || ''}"><small>${truncate(a.notes || '-', 20)}</small></td>
+      <td>
+        ${a.status === 'pendiente' ? `
+          <button class="btn-table-action" style="background:var(--primary); color:white; font-size:11px;" onclick="startCleaning('${a.id}')">▶️ Iniciar limpieza</button>
+          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Hola! Anggie está en camino/comenzando tu limpieza de hoy 🧹✨')}" target="_blank" class="btn-table-action btn-wa-table" style="font-size:11px;" title="Avisar por WhatsApp">📲 Avisar</a>
+        ` : a.status === 'en_progreso' ? `
+          <div style="font-size:11px; margin-bottom:4px; color:var(--text-sec);">🧹 En progreso desde ${new Date(a.started_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+          <button class="btn-table-action" style="background:#4caf50; color:white; font-size:11px;" onclick="finishCleaning('${a.id}')">⏹️ Finalizar limpieza</button>
+        ` : a.status === 'completada' ? `
+          <div style="font-size:11px; color:var(--success); font-weight:600;">✓ Limpieza lista</div>
+          ${a.duration_minutes ? `<div style="font-size:11px; color:var(--text-sec);">Duración: ${formatDuration(a.duration_minutes)}</div>` : ''}
+          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Listo! Tu hogar quedó reluciente ✨ Nos vemos en tu próxima visita.')}" target="_blank" class="btn-table-action btn-wa-table" style="font-size:11px; margin-top:4px;" title="Avisar por WhatsApp">📲 Avisar lista</a>
+        ` : '-'}
+      </td>
       <td class="action-cell">
-        <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=Hola ${encodeURIComponent(a.clients?.name || '')}, te saluda Anggie de Ad Sparkling Cleaning sobre tu cita del ${formatDate(a.date)} ${a.time ? 'a las ' + a.time : ''}." target="_blank" class="btn-table-action btn-wa-table" title="WhatsApp">📱</a>
         <button class="btn-table-action btn-edit-table" onclick="editAppt('${a.id}')" title="Editar cita">✏️</button>
         <button class="btn-table-action btn-del-table" onclick="deleteAppt('${a.id}')" title="Eliminar cita">🗑</button>
       </td>
@@ -1358,6 +1407,38 @@ function changeApptStatus(id, newStatus) {
   loadDashboard();
 }
 
+function startCleaning(id) {
+  const appt = allAppointments.find(a => a.id == id);
+  if (!appt) return;
+  appt.started_at = new Date().toISOString();
+  appt.status = 'en_progreso';
+  DataStore.saveAppointment(appt);
+  loadAppointments();
+}
+
+function finishCleaning(id) {
+  const appt = allAppointments.find(a => a.id == id);
+  if (!appt || !appt.started_at) return;
+  
+  const duration_minutes = Math.round((Date.now() - new Date(appt.started_at).getTime()) / 60000);
+  appt.completed_at = new Date().toISOString();
+  appt.duration_minutes = duration_minutes;
+  appt.status = 'completada';
+  
+  DataStore.saveAppointment(appt);
+  loadAppointments();
+  loadDashboard();
+  alert(`Limpieza completada en ${formatDuration(duration_minutes)} ✅`);
+}
+
+function formatDuration(mins) {
+  if (!mins) return '0min';
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h > 0) return `${h}h ${m > 0 ? m + 'min' : ''}`;
+  return `${m}min`;
+}
+
 function deleteAppt(id) {
   if (confirm('¿Seguro que deseas eliminar esta cita?')) {
     DataStore.deleteAppointment(id);
@@ -1365,6 +1446,7 @@ function deleteAppt(id) {
     loadDashboard();
   }
 }
+
 
 // ============================================
 // GASTOS

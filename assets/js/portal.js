@@ -104,7 +104,7 @@ async function loginWithPhone(phone) {
       // Guardar en variable global el historial para renderClientPortal
       window.clientHistory = data.history; 
       localStorage.setItem('adsparkling_client_phone', cleanPhone);
-      renderClientPortal(currentClient, data.history, data.contract, data.plan);
+      renderClientPortal(currentClient, data.history, data.contract, data.plan, data.todayCleaningInProgress);
     } else {
       // Cliente no encontrado - mensaje honesto
       document.getElementById('portalLoginView').style.display = 'block';
@@ -138,7 +138,7 @@ function handleClientLogout() {
 let currentContractData = null;
 let currentPlanData = null;
 
-function renderClientPortal(client, history = null, contract = null, plan = null) {
+function renderClientPortal(client, history = null, contract = null, plan = null, todayCleaningInProgress = false) {
   document.getElementById('portalLoginView').style.display = 'none';
   document.getElementById('portalMainView').style.display = 'block';
   
@@ -149,6 +149,24 @@ function renderClientPortal(client, history = null, contract = null, plan = null
   // Saludo y Nombre
   document.getElementById('clientNameHeader').textContent = client.name ? `¡Hola, ${client.name.split(' ')[0]}! ✨` : '¡Bienvenido/a! ✨';
   document.getElementById('clientAddressSub').textContent = client.address || client.zone || 'Servicio de limpieza residencial';
+
+  // Eliminar banner de limpieza en progreso anterior si existe
+  const oldBanner = document.getElementById('cleaningInProgressBanner');
+  if (oldBanner) oldBanner.remove();
+
+  if (todayCleaningInProgress) {
+    const bannerHtml = `
+      <div id="cleaningInProgressBanner" style="background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; padding: 16px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(49,1,63,0.15); display: flex; align-items: center; gap: 12px;">
+        <div style="font-size: 24px; animation: bounce 2s infinite;">🧹</div>
+        <div>
+          <h4 style="margin: 0; font-size: 15px; font-weight: 700;">¡Limpieza en progreso!</h4>
+          <p style="margin: 2px 0 0 0; font-size: 13px; opacity: 0.9;">Anggie está dejando tu hogar reluciente en este momento ✨</p>
+        </div>
+      </div>
+    `;
+    const mainView = document.getElementById('portalMainView');
+    mainView.insertAdjacentHTML('afterbegin', bannerHtml);
+  }
 
   // Mostrar botón PWA
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;

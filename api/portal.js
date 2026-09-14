@@ -58,6 +58,9 @@ export default async function handler(req, res) {
         plan = planData;
       }
 
+      const today = new Date().toISOString().split('T')[0];
+      const todayCleaningInProgress = appointments?.some(a => a.date === today && a.status === 'en_progreso') || false;
+
       return res.status(200).json({
         found: true,
         client: {
@@ -71,7 +74,8 @@ export default async function handler(req, res) {
         },
         history: appointments || [],
         contract: activeContract,
-        plan
+        plan,
+        todayCleaningInProgress
       });
     } catch (err) {
       return res.status(500).json({ error: err.message });

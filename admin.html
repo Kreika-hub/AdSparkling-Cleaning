@@ -235,6 +235,11 @@
               <div class="stat-value" id="dashClients">0</div>
               <div class="stat-sub">Con servicio regular</div>
             </div>
+            <div class="stat-card" style="background:#f4f9f4; border-color:#c8e6c9;">
+              <div class="stat-label" style="color:#2e7d32;">Tiempo promedio de limpieza</div>
+              <div class="stat-value" id="dashAvgTime" style="color:#1b5e20;">0h 0m</div>
+              <div class="stat-sub" style="color:#4caf50;">En limpiezas completadas</div>
+            </div>
           </div>
 
           <div class="dash-section">
@@ -357,6 +362,7 @@
                 <div id="cContractStatus" style="font-size:13px; font-weight:600; margin-top:4px;"></div>
                 <button type="button" id="btnGenContract" onclick="generateContract()" class="btn-action" style="display:none; align-self:flex-start; background:var(--primary); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Generar Contrato</button>
                 <div id="cContractsHistory" style="margin-top:10px;"></div>
+                <div id="cCleaningHistory" style="margin-top:10px;"></div>
               </div>
             </div>
             <div class="form-actions">
