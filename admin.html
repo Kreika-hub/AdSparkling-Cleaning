@@ -375,25 +375,8 @@
             <input type="text" class="search-input" placeholder="🔍 Buscar clientes por nombre, teléfono o dirección..." oninput="filterClients(this.value)">
           </div>
 
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Teléfono</th>
-                  <th>Dirección</th>
-                  <th>Precio Base</th>
-                  <th>Frecuencia</th>
-                  <th>Última Visita</th>
-                  <th>Próxima</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="clientsTable">
-                <tr><td colspan="9" class="empty-cell">Cargando clientes...</td></tr>
-              </tbody>
-            </table>
+          <div id="clientsTable" class="cards-list">
+            <p class="empty">Cargando clientes...</p>
           </div>
         </div>
 
@@ -475,24 +458,8 @@
             </div>
           </div>
 
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Fecha / Hora</th>
-                  <th>Cliente</th>
-                  <th>Dirección</th>
-                  <th>Precio</th>
-                  <th>Adicionales</th>
-                  <th>Estado</th>
-                  <th>Notas</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="appointmentsTable">
-                <tr><td colspan="8" class="empty-cell">Cargando citas...</td></tr>
-              </tbody>
-            </table>
+          <div id="appointmentsTable" class="cards-list">
+            <p class="empty">Cargando citas...</p>
           </div>
         </div>
 
@@ -735,6 +702,7 @@
   </div>
 
   <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/swipe-cards.js"></script>
   <script src="assets/js/admin.js"></script>
   <script src="assets/js/inline-logos.js" defer></script>
 </body>

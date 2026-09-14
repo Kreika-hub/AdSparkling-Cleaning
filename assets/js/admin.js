@@ -954,31 +954,40 @@ function loadClients() {
 }
 
 function renderClientsTable(clients) {
-  const tbody = document.getElementById('clientsTable');
+  const container = document.getElementById('clientsTable');
   if (!clients || clients.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" class="empty-cell">No hay clientes registrados aún.</td></tr>';
+    container.innerHTML = '<p class="empty">No hay clientes registrados aún.</p>';
     return;
   }
 
-  tbody.innerHTML = clients.map(c => `
-    <tr>
-      <td><strong>${c.name}</strong></td>
-      <td><a href="tel:${cleanPhone(c.phone)}" style="color:inherit; font-weight:600;">${c.phone}</a></td>
-      <td title="${c.address}">${truncate(c.address, 28)}</td>
-      <td><strong style="color:var(--primary);">$${c.base_price || '-'}</strong></td>
-      <td>${freqLabel(c.frequency)}</td>
-      <td>${formatDate(c.last_visit)}</td>
-      <td>${formatDate(c.next_visit)}</td>
-      <td><span class="badge badge-${c.status}">${c.status}</span></td>
-      <td class="action-cell">
-        <button class="btn-table-action btn-schedule-table" onclick="sendPortalLink('${c.id}')" title="Enviar enlace de Portal al Cliente por WhatsApp" style="background:#f4ebfa; color:var(--primary); font-weight:700;">📲 Portal</button>
-        <button class="btn-table-action btn-schedule-table" onclick="scheduleForClient('${c.id}')" title="Agendar Cita">📅 Cita</button>
-        <button class="btn-table-action btn-edit-table" onclick="editClient('${c.id}')" title="Editar cliente">✏️</button>
-        <a href="https://wa.me/${cleanPhone(c.phone)}" target="_blank" class="btn-table-action btn-wa-table" title="Enviar WhatsApp">📱</a>
-        <button class="btn-table-action btn-del-table" onclick="deleteClient('${c.id}')" title="Eliminar cliente">🗑</button>
-      </td>
-    </tr>
+  container.innerHTML = clients.map(c => `
+    <div class="swipe-wrap">
+      <div class="swipe-actions" style="background:var(--border);">
+        <button onclick="sendPortalLink('${c.id}')" title="Enviar enlace de Portal al Cliente por WhatsApp" style="background:#f4ebfa; color:var(--primary); font-size: 14px;">Portal</button>
+        <button onclick="scheduleForClient('${c.id}')" title="Agendar Cita" style="background:#2196f3;">📅</button>
+        <button onclick="editClient('${c.id}')" title="Editar cliente" style="background:#ff9800;">✏️</button>
+        <a href="https://wa.me/${cleanPhone(c.phone)}" target="_blank" title="Enviar WhatsApp" style="background:#25d366;">📱</a>
+        <button onclick="deleteClient('${c.id}')" title="Eliminar cliente" style="background:#f44336;">🗑</button>
+      </div>
+      <div class="swipe-card" data-actions-count="5">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong style="font-size:15px; color:var(--text-color);">${c.name}</strong>
+          <span class="badge badge-${c.status}">${c.status}</span>
+        </div>
+        <div style="color:var(--text-sec); font-size:13px; margin-top:4px;">
+          📞 ${c.phone} &nbsp;·&nbsp; 📅 Próxima: ${formatDate(c.next_visit)} &nbsp;·&nbsp; $${c.base_price || '-'}
+        </div>
+      </div>
+    </div>
   `).join('');
+
+  // Inicializar swipe cards
+  if (typeof initSwipeCard === 'function') {
+    container.querySelectorAll('.swipe-card').forEach(el => {
+      const count = parseInt(el.dataset.actionsCount) || 1;
+      initSwipeCard(el, count * 56);
+    });
+  }
 }
 
 function sendPortalLink(clientId) {
@@ -1272,45 +1281,55 @@ function loadAppointments() {
 }
 
 function renderAppointmentsTable(appts) {
-  const tbody = document.getElementById('appointmentsTable');
+  const container = document.getElementById('appointmentsTable');
   if (!appts || appts.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">No hay citas registradas aún.</td></tr>';
+    container.innerHTML = '<p class="empty">No hay citas registradas aún.</p>';
     return;
   }
 
-  tbody.innerHTML = appts.map(a => `
-    <tr>
-      <td><strong>${formatDate(a.date)}</strong><br><small>${a.time || ''}</small></td>
-      <td><strong>${a.clients?.name || 'Cliente'}</strong></td>
-      <td title="${a.clients?.address || ''}">${truncate(a.clients?.address || '-', 25)}</td>
-      <td><strong style="color:var(--primary); font-weight:800;">$${a.price}</strong></td>
-      <td>
-        <select class="status-select status-${a.status}" onchange="changeApptStatus('${a.id}', this.value)">
-          <option value="pendiente" ${a.status === 'pendiente' ? 'selected' : ''}>Pendiente</option>
-          <option value="en_progreso" ${a.status === 'en_progreso' ? 'selected' : ''}>En progreso</option>
-          <option value="completada" ${a.status === 'completada' ? 'selected' : ''}>Completada</option>
-          <option value="cancelada" ${a.status === 'cancelada' ? 'selected' : ''}>Cancelada</option>
-        </select>
-      </td>
-      <td>
+  container.innerHTML = appts.map(a => `
+    <div class="swipe-wrap">
+      <div class="swipe-actions" style="background:var(--border);">
         ${a.status === 'pendiente' ? `
-          <button class="btn-table-action" style="background:var(--primary); color:white; font-size:11px;" onclick="startCleaning('${a.id}')">▶️ Iniciar limpieza</button>
-          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Hola! Anggie está en camino/comenzando tu limpieza de hoy 🧹✨')}" target="_blank" class="btn-table-action btn-wa-table" style="font-size:11px;" title="Avisar por WhatsApp">📲 Avisar</a>
+          <button onclick="startCleaning('${a.id}')" title="Iniciar limpieza" style="background:var(--primary);"><span style="font-size:12px;">▶️ Iniciar</span></button>
+          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Hola! Anggie está en camino/comenzando tu limpieza de hoy 🧹✨')}" target="_blank" title="Avisar por WhatsApp" style="background:#25d366;"><span style="font-size:12px;">📲 Voy</span></a>
         ` : a.status === 'en_progreso' ? `
-          <div style="font-size:11px; margin-bottom:4px; color:var(--text-sec);">🧹 En progreso desde ${new Date(a.started_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-          <button class="btn-table-action" style="background:#4caf50; color:white; font-size:11px;" onclick="finishCleaning('${a.id}')">⏹️ Finalizar limpieza</button>
+          <button onclick="finishCleaning('${a.id}')" title="Finalizar limpieza" style="background:#4caf50;"><span style="font-size:12px;">⏹️ Fin</span></button>
         ` : a.status === 'completada' ? `
-          <div style="font-size:11px; color:var(--success); font-weight:600;">✓ Limpieza lista</div>
-          ${a.duration_minutes ? `<div style="font-size:11px; color:var(--text-sec);">Duración: ${formatDuration(a.duration_minutes)}</div>` : ''}
-          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Listo! Tu hogar quedó reluciente ✨ Nos vemos en tu próxima visita.')}" target="_blank" class="btn-table-action btn-wa-table" style="font-size:11px; margin-top:4px;" title="Avisar por WhatsApp">📲 Avisar lista</a>
-        ` : '-'}
-      </td>
-      <td class="action-cell">
-        <button class="btn-table-action btn-edit-table" onclick="editAppt('${a.id}')" title="Editar cita">✏️</button>
-        <button class="btn-table-action btn-del-table" onclick="deleteAppt('${a.id}')" title="Eliminar cita">🗑</button>
-      </td>
-    </tr>
+          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Listo! Tu hogar quedó reluciente ✨ Nos vemos en tu próxima visita.')}" target="_blank" title="Avisar por WhatsApp" style="background:#25d366;"><span style="font-size:12px;">📲 Lista</span></a>
+        ` : ''}
+        <button onclick="editAppt('${a.id}')" title="Editar cita" style="background:#ff9800;">✏️</button>
+        <button onclick="deleteAppt('${a.id}')" title="Eliminar cita" style="background:#f44336;">🗑</button>
+      </div>
+      <div class="swipe-card" data-actions-count="${a.status === 'pendiente' ? 4 : (a.status === 'en_progreso' ? 3 : (a.status === 'completada' ? 3 : 2))}">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong style="font-size:15px; color:var(--text-color);">${a.clients?.name || 'Cliente'}</strong>
+          <select class="status-select status-${a.status}" onchange="changeApptStatus('${a.id}', this.value)" onclick="event.stopPropagation()">
+            <option value="pendiente" ${a.status === 'pendiente' ? 'selected' : ''}>Pendiente</option>
+            <option value="en_progreso" ${a.status === 'en_progreso' ? 'selected' : ''}>En progreso</option>
+            <option value="completada" ${a.status === 'completada' ? 'selected' : ''}>Completada</option>
+            <option value="cancelada" ${a.status === 'cancelada' ? 'selected' : ''}>Cancelada</option>
+          </select>
+        </div>
+        <div style="color:var(--text-sec); font-size:13px; margin-top:4px;">
+          📅 ${formatDate(a.date)} ${a.time ? '· ⏰ ' + a.time : ''} &nbsp;·&nbsp; <strong style="color:var(--primary);">$${a.price}</strong>
+        </div>
+        <div style="color:var(--text-muted); font-size:12px; margin-top:4px; display:flex; justify-content:space-between;">
+          <span>${a.clients?.address ? truncate(a.clients.address, 30) : ''}</span>
+          ${a.status === 'en_progreso' && a.started_at ? `<span style="color:#f57c00;">🧹 Desde ${new Date(a.started_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>` : ''}
+          ${a.status === 'completada' && a.duration_minutes ? `<span style="color:var(--success);">✓ Duración: ${formatDuration(a.duration_minutes)}</span>` : ''}
+        </div>
+      </div>
+    </div>
   `).join('');
+
+  // Inicializar swipe cards
+  if (typeof initSwipeCard === 'function') {
+    container.querySelectorAll('.swipe-card').forEach(el => {
+      const count = parseInt(el.dataset.actionsCount) || 2;
+      initSwipeCard(el, count * 56);
+    });
+  }
 }
 
 function loadClientsForSelect() {
