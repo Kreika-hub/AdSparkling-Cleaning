@@ -24,7 +24,8 @@ const DataStore = {
     APPTS: 'adsparkling_appointments',
     EXPENSES: 'adsparkling_expenses',
     REVIEWS: 'adsparkling_reviews',
-    PLANS: 'adsparkling_plans'
+    PLANS: 'adsparkling_plans',
+    CONTRACTS: 'adsparkling_contracts'
   },
 
   generateUUID() {
@@ -56,7 +57,7 @@ const DataStore = {
 
   async hydrateFromCloud() {
     console.log('Hydrating from cloud...');
-    const tables = ['leads', 'clients', 'appointments', 'expenses', 'reviews', 'plans'];
+    const tables = ['leads', 'clients', 'appointments', 'expenses', 'reviews', 'plans', 'contracts'];
     for (const t of tables) {
       const res = await this.cloudQuery(t, 'select');
       if (res && res.data) {
@@ -67,6 +68,7 @@ const DataStore = {
         if(t === 'expenses') key = this.KEYS.EXPENSES;
         if(t === 'reviews') key = this.KEYS.REVIEWS;
         if(t === 'plans') key = this.KEYS.PLANS;
+        if(t === 'contracts') key = this.KEYS.CONTRACTS;
         this.setList(key, res.data);
       }
     }
@@ -468,6 +470,31 @@ const DataStore = {
     this.setList(this.KEYS.PLANS, plans);
     this.cloudQuery('plans', 'upsert', [plan]);
     return plan;
+  },
+
+  // Contracts
+  getContracts() { return this.getList(this.KEYS.CONTRACTS); },
+  saveContract(contract) {
+    const contracts = this.getContracts();
+    if (contract.id) {
+      const idx = contracts.findIndex(c => c.id == contract.id);
+      if (idx !== -1) contracts[idx] = { ...contracts[idx], ...contract };
+      else contracts.push(contract);
+    } else {
+      contract.id = this.generateUUID();
+      contract.created_at = new Date().toISOString();
+      contracts.push(contract);
+    }
+    this.setList(this.KEYS.CONTRACTS, contracts);
+    this.cloudQuery('contracts', 'upsert', [contract]);
+    return contract;
+  },
+  getActiveContractForClient(clientId) {
+    const contracts = this.getContracts();
+    const clientContracts = contracts.filter(c => c.client_id === clientId && c.status === 'activo');
+    // Si hay varios 'activo' (no deberia), tomamos el mas reciente por created_at
+    if (clientContracts.length === 0) return null;
+    return clientContracts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
   }
 };
 
@@ -974,6 +1001,71 @@ function filterClients(query) {
   renderClientsTable(filtered);
 }
 
+function populatePlanSelect() {
+  const select = document.getElementById('cPlanId');
+  if (!select) return;
+  const plans = DataStore.getPlans().filter(p => p.active !== false);
+  select.innerHTML = '<option value="">Sin plan asignado</option>' + plans.map(p => `<option value="${p.id}">${p.name} ($${p.price})</option>`).join('');
+}
+
+function checkContractState() {
+  const clientId = document.getElementById('cId').value;
+  const selectedPlanId = document.getElementById('cPlanId').value;
+  const btn = document.getElementById('btnGenContract');
+  const statusDiv = document.getElementById('cContractStatus');
+
+  if (!clientId) {
+    statusDiv.innerHTML = '';
+    btn.style.display = selectedPlanId ? 'block' : 'none';
+    return;
+  }
+
+  const activeContract = DataStore.getActiveContractForClient(clientId);
+  
+  if (!activeContract) {
+    statusDiv.innerHTML = 'Sin contrato activo';
+    statusDiv.style.color = 'var(--text-sec)';
+    btn.style.display = selectedPlanId ? 'block' : 'none';
+  } else {
+    if (activeContract.accepted) {
+      statusDiv.innerHTML = `Aceptado el ${formatDate(activeContract.accepted_at)}`;
+      statusDiv.style.color = 'var(--success)';
+    } else {
+      statusDiv.innerHTML = 'Pendiente de aceptar';
+      statusDiv.style.color = '#f57c00'; // Amber
+    }
+    btn.style.display = (selectedPlanId && selectedPlanId !== activeContract.plan_id) ? 'block' : 'none';
+  }
+}
+
+function generateContract() {
+  const clientId = document.getElementById('cId').value;
+  const planId = document.getElementById('cPlanId').value;
+  
+  if (!clientId) {
+    alert('Por favor guarda el cliente primero antes de generar el contrato.');
+    return;
+  }
+  
+  if (!planId) return;
+
+  const activeContract = DataStore.getActiveContractForClient(clientId);
+  if (activeContract) {
+    DataStore.saveContract({ ...activeContract, status: 'reemplazado' });
+  }
+  
+  DataStore.saveContract({
+    client_id: clientId,
+    plan_id: planId,
+    status: 'activo',
+    accepted: false,
+    start_date: new Date().toISOString().split('T')[0]
+  });
+
+  checkContractState();
+  alert('Contrato generado. El cliente lo verá en su portal para aceptarlo. ✅');
+}
+
 function resetClientForm() {
   document.getElementById('cId').value = '';
   document.getElementById('cName').value = '';
@@ -986,6 +1078,9 @@ function resetClientForm() {
   document.getElementById('cNotes').value = '';
   document.getElementById('cStatus').value = 'activo';
   document.getElementById('cFormTitle').textContent = 'Agregar Cliente';
+  populatePlanSelect();
+  document.getElementById('cPlanId').value = '';
+  checkContractState();
 }
 
 function editClient(id) {
@@ -1006,6 +1101,15 @@ function editClient(id) {
   document.getElementById('cNotes').value = client.notes || '';
   document.getElementById('cStatus').value = client.status || 'activo';
   document.getElementById('cFormTitle').textContent = 'Editar Cliente: ' + client.name;
+  
+  populatePlanSelect();
+  const activeContract = DataStore.getActiveContractForClient(client.id);
+  if (activeContract) {
+    document.getElementById('cPlanId').value = activeContract.plan_id;
+  } else {
+    document.getElementById('cPlanId').value = '';
+  }
+  checkContractState();
 
   form.scrollIntoView({ behavior: 'smooth' });
 }

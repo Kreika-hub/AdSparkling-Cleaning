@@ -348,6 +348,15 @@
                 <option value="inactivo">Estado: Inactivo</option>
               </select>
               <input type="text" id="cNotes" placeholder="Notas (código de portón, mascotas, etc.)">
+              
+              <div style="grid-column: 1 / -1; display:flex; flex-direction:column; gap:8px; margin-top:8px; border-top:1px solid var(--border); padding-top:12px;">
+                <label style="font-size:12px; font-weight:600; color:var(--text-sec);">Plan y Contrato del Cliente</label>
+                <select id="cPlanId" onchange="checkContractState()">
+                  <option value="">Sin plan asignado</option>
+                </select>
+                <div id="cContractStatus" style="font-size:13px; font-weight:600; margin-top:4px;"></div>
+                <button type="button" id="btnGenContract" onclick="generateContract()" class="btn-action" style="display:none; align-self:flex-start; background:var(--primary); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Generar Contrato</button>
+              </div>
             </div>
             <div class="form-actions">
               <button class="btn-save" onclick="saveClient()">Guardar cliente</button>
