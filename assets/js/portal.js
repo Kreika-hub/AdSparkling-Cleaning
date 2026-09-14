@@ -8,10 +8,47 @@ let selectedRating = 5;
 let uploadedPhotos = [];
 
 // ============================================
+// PWA LOGIC
+// ============================================
+let deferredInstallPrompt = null;
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error:', err));
+  });
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  // Solo se mostrará si está en la vista main, pero lo controlamos en renderClientPortal
+});
+
+function installPortalPWA() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if (isIOS) {
+    alert("Para instalar en iPhone/iPad:\n1. Toca el botón de Compartir (cuadrado con flecha hacia arriba).\n2. Selecciona 'Añadir a pantalla de inicio'.");
+    return;
+  }
+  
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted the PWA prompt');
+      }
+      deferredInstallPrompt = null;
+      document.getElementById('btnPortalInstall').style.display = 'none';
+    });
+  } else {
+    alert("Para instalar la aplicación, usa las opciones de tu navegador ('Instalar aplicación' o 'Añadir a pantalla de inicio').");
+  }
+}
+
+// ============================================
 // INICIALIZACIÓN
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Revisar si viene teléfono en la URL (ej. portal.html?phone=3055550192)
   const urlParams = new URLSearchParams(window.location.search);
   const phoneParam = urlParams.get('phone');
   const storedPhone = localStorage.getItem('adsparkling_client_phone');
@@ -24,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
     showPhoneLogin();
   }
 
-  // Configurar estrellas interactivas
   setupStarRating();
 });
 
@@ -99,6 +135,13 @@ function renderClientPortal(client, history = null) {
   // Saludo y Nombre
   document.getElementById('clientNameHeader').textContent = client.name ? `¡Hola, ${client.name.split(' ')[0]}! ✨` : '¡Bienvenido/a! ✨';
   document.getElementById('clientAddressSub').textContent = client.address || client.zone || 'Servicio de limpieza residencial';
+
+  // Mostrar botón PWA
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if (deferredInstallPrompt || isIOS) {
+    const installBtn = document.getElementById('btnPortalInstall');
+    if (installBtn) installBtn.style.display = 'inline-block';
+  }
 
   // Plan info
   document.getElementById('planFreq').textContent = freqLabel(client.plan_freq || client.frequency);

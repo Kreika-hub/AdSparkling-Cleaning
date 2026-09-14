@@ -12,6 +12,7 @@ const STATIC_ASSETS = [
   './manifest.json',
   './assets/css/admin.css',
   './assets/css/style.css',
+  './assets/css/portal.css',
   './assets/js/app.js',
   './assets/js/i18n.js',
   './assets/js/portal.js',
