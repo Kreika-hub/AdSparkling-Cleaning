@@ -6,7 +6,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const images = document.querySelectorAll('img[src$="logo-color.svg"], img[src$="logo-white.svg"], img[src$="logo-color.svg#"]');
 
-  images.forEach(img => {
+  images.forEach((img, index) => {
     const imgID = img.id;
     const imgClass = img.className;
     // Manejar src relativo
@@ -25,6 +25,23 @@ document.addEventListener("DOMContentLoaded", () => {
         const svg = xmlDoc.querySelector('svg');
 
         if (!svg) throw new Error('El archivo obtenido no es un SVG válido');
+
+        // Aislar estilos css para evitar conflictos entre versiones de color
+        const prefix = `logo${index}-`;
+        const styleTag = svg.querySelector('style');
+        if (styleTag) {
+          // Reemplazar .cls-X con .logoN-cls-X en el CSS
+          styleTag.textContent = styleTag.textContent.replace(/\.cls-(\d+)/g, `.${prefix}cls-$1`);
+        }
+
+        // Reemplazar class="cls-X" con class="logoN-cls-X" en los elementos
+        const elements = svg.querySelectorAll('[class*="cls-"]');
+        elements.forEach(el => {
+          if (el.getAttribute('class')) {
+            const newClass = el.getAttribute('class').split(' ').map(c => c.startsWith('cls-') ? `${prefix}${c}` : c).join(' ');
+            el.setAttribute('class', newClass);
+          }
+        });
 
         // Copiar atributos originales de la imagen
         if (imgID) svg.id = imgID;
