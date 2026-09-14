@@ -23,7 +23,8 @@ const DataStore = {
     CLIENTS: 'adsparkling_clients',
     APPTS: 'adsparkling_appointments',
     EXPENSES: 'adsparkling_expenses',
-    REVIEWS: 'adsparkling_reviews'
+    REVIEWS: 'adsparkling_reviews',
+    PLANS: 'adsparkling_plans'
   },
 
   generateUUID() {
@@ -55,7 +56,7 @@ const DataStore = {
 
   async hydrateFromCloud() {
     console.log('Hydrating from cloud...');
-    const tables = ['leads', 'clients', 'appointments', 'expenses', 'reviews'];
+    const tables = ['leads', 'clients', 'appointments', 'expenses', 'reviews', 'plans'];
     for (const t of tables) {
       const res = await this.cloudQuery(t, 'select');
       if (res && res.data) {
@@ -65,6 +66,7 @@ const DataStore = {
         if(t === 'appointments') key = this.KEYS.APPTS;
         if(t === 'expenses') key = this.KEYS.EXPENSES;
         if(t === 'reviews') key = this.KEYS.REVIEWS;
+        if(t === 'plans') key = this.KEYS.PLANS;
         this.setList(key, res.data);
       }
     }
@@ -447,6 +449,25 @@ const DataStore = {
     const reviews = this.getReviews().filter(r => r.id != id);
     this.setList(this.KEYS.REVIEWS, reviews);
     this.cloudQuery('reviews', 'delete', { id });
+  },
+
+  // Planes
+  getPlans() { return this.getList(this.KEYS.PLANS); },
+  savePlan(plan) {
+    const plans = this.getPlans();
+    if (plan.id) {
+      const idx = plans.findIndex(p => p.id == plan.id);
+      if (idx !== -1) plans[idx] = { ...plans[idx], ...plan };
+      else plans.push(plan);
+    } else {
+      plan.id = this.generateUUID();
+      plan.created_at = new Date().toISOString();
+      plan.active = plan.active !== false; // Default to true if undefined
+      plans.push(plan);
+    }
+    this.setList(this.KEYS.PLANS, plans);
+    this.cloudQuery('plans', 'upsert', [plan]);
+    return plan;
   }
 };
 
@@ -640,6 +661,7 @@ function showTab(tabId) {
   if (tabId === 'appointments') { loadClientsForSelect(); loadAppointments(); }
   if (tabId === 'expenses') loadExpenses();
   if (tabId === 'reviews') loadAdminReviews();
+  if (tabId === 'plans') loadPlans();
   if (tabId === 'cotizar') qcCalculate();
 }
 
@@ -1594,6 +1616,118 @@ function cleanPhone(phone) {
 function truncate(str, max) {
   if (!str) return '';
   return str.length > max ? str.substring(0, max) + '...' : str;
+}
+
+// ============================================
+// PLANES
+// ============================================
+function loadPlans() {
+  const plans = DataStore.getPlans();
+  const list = document.getElementById('adminPlansList');
+  if (!list) return;
+
+  if (!plans || plans.length === 0) {
+    list.innerHTML = '<p class="empty">No hay planes registrados aún.</p>';
+    return;
+  }
+
+  list.innerHTML = plans.map(p => `
+    <div class="dash-item" style="opacity: ${p.active !== false ? '1' : '0.6'}; display: flex; flex-direction: column; align-items: stretch; border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+        <div>
+          <h4 style="margin: 0; color: var(--primary); font-size: 16px;">${p.name || 'Sin nombre'}</h4>
+          <span style="font-size: 13px; color: var(--text-sec);">Frecuencia: ${freqLabel(p.frequency)}</span>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-weight: 800; color: var(--success); font-size: 16px;">$${p.price || 0}</div>
+          <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: ${p.active !== false ? '#e8f5e9' : '#ffebee'}; color: ${p.active !== false ? '#2d8a5e' : '#c62828'};">${p.active !== false ? 'Activo' : 'Inactivo'}</span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+        <button class="btn-action" style="background: var(--bg-alt); color: var(--primary); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="editPlan('${p.id}')">✏️ Editar</button>
+        <button class="btn-action" style="background: ${p.active !== false ? '#ffebee' : '#e8f5e9'}; color: ${p.active !== false ? '#c62828' : '#2d8a5e'}; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="togglePlanActive('${p.id}')">${p.active !== false ? 'Desactivar' : 'Activar'}</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function resetPlanForm() {
+  document.getElementById('pId').value = '';
+  document.getElementById('pName').value = '';
+  document.getElementById('pFreq').value = '15';
+  document.getElementById('pPrice').value = '';
+  document.getElementById('pIncluded').value = '';
+  document.getElementById('pExcluded').value = '';
+  document.getElementById('pTerms').value = '';
+  document.getElementById('pActive').checked = true;
+  const title = document.getElementById('pFormTitle');
+  if (title) title.textContent = 'Agregar Plan';
+}
+
+function savePlanForm() {
+  const id = document.getElementById('pId').value;
+  const name = document.getElementById('pName').value.trim();
+  const frequency = document.getElementById('pFreq').value;
+  const price = document.getElementById('pPrice').value;
+  const includedText = document.getElementById('pIncluded').value;
+  const excludedText = document.getElementById('pExcluded').value;
+  const terms = document.getElementById('pTerms').value.trim();
+  const active = document.getElementById('pActive').checked;
+
+  if (!name || !price) {
+    alert('El nombre y el precio son obligatorios.');
+    return;
+  }
+
+  const included = includedText.split('\\n').map(s => s.trim()).filter(Boolean);
+  const excluded = excludedText.split('\\n').map(s => s.trim()).filter(Boolean);
+
+  const planData = {
+    id: id || undefined,
+    name,
+    frequency,
+    price: parseFloat(price) || 0,
+    included,
+    excluded,
+    terms,
+    active
+  };
+
+  DataStore.savePlan(planData);
+  toggleForm('planForm');
+  resetPlanForm();
+  loadPlans();
+  alert('Plan guardado con éxito ✅');
+}
+
+function editPlan(id) {
+  const plan = DataStore.getPlans().find(p => p.id == id);
+  if (!plan) return;
+
+  showTab('plans');
+  const form = document.getElementById('planForm');
+  if (form) form.style.display = 'block';
+
+  document.getElementById('pId').value = plan.id;
+  document.getElementById('pName').value = plan.name || '';
+  document.getElementById('pFreq').value = plan.frequency || '15';
+  document.getElementById('pPrice').value = plan.price || '';
+  document.getElementById('pIncluded').value = Array.isArray(plan.included) ? plan.included.join('\\n') : '';
+  document.getElementById('pExcluded').value = Array.isArray(plan.excluded) ? plan.excluded.join('\\n') : '';
+  document.getElementById('pTerms').value = plan.terms || '';
+  document.getElementById('pActive').checked = plan.active !== false;
+
+  const title = document.getElementById('pFormTitle');
+  if (title) title.textContent = 'Editar Plan';
+  
+  if (form) form.scrollIntoView({ behavior: 'smooth' });
+}
+
+function togglePlanActive(id) {
+  const plan = DataStore.getPlans().find(p => p.id == id);
+  if (!plan) return;
+  DataStore.savePlan({ ...plan, active: plan.active === false ? true : false });
+  loadPlans();
 }
 
 // ============================================
