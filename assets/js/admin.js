@@ -1036,8 +1036,56 @@ function checkContractState() {
     }
     btn.style.display = (selectedPlanId && selectedPlanId !== activeContract.plan_id) ? 'block' : 'none';
   }
+
+  // Render Contracts History
+  const historyDiv = document.getElementById('cContractsHistory');
+  if (historyDiv) {
+    const allContracts = DataStore.getContracts().filter(c => c.client_id === clientId).sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+    if (allContracts.length > 0) {
+      historyDiv.innerHTML = `
+        <div style="font-size:12px; font-weight:bold; color:var(--text-color); margin-bottom:6px;">Historial de Contratos:</div>
+        <table class="data-table" style="font-size:12px;">
+          <thead><tr><th>Fecha</th><th>Plan</th><th>Estado</th><th>PDF</th></tr></thead>
+          <tbody>
+            ${allContracts.map(c => {
+              const p = DataStore.getPlans().find(pl => pl.id === c.plan_id);
+              const pName = p ? p.name : 'Desconocido';
+              const stateText = c.status === 'activo' ? (c.accepted ? 'Activo (Aceptado)' : 'Activo (Pendiente)') : 'Reemplazado';
+              const btnHtml = (c.accepted && c.pdf_url) ? `<button type="button" onclick="viewContractPdf('${c.pdf_url}')" style="background:var(--primary); color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">Ver PDF</button>` : '-';
+              return `<tr>
+                <td>${formatDate(c.created_at)}</td>
+                <td>${pName}</td>
+                <td>${stateText}</td>
+                <td>${btnHtml}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    } else {
+      historyDiv.innerHTML = '';
+    }
+  }
 }
 
+async function viewContractPdf(path) {
+  if (!adminToken) return;
+  try {
+    const res = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'signedUrl', token: adminToken, path })
+    });
+    const data = await res.json();
+    if (data.url) {
+      window.open(data.url, '_blank');
+    } else {
+      alert('No se pudo obtener el PDF: ' + (data.error || 'Error desconocido'));
+    }
+  } catch(e) {
+    alert('Error de conexión');
+  }
+}
 function generateContract() {
   const clientId = document.getElementById('cId').value;
   const planId = document.getElementById('cPlanId').value;
@@ -1628,6 +1676,17 @@ function loadNotificationsList() {
       title: `⭐ ${pendingReviews.length} Reseña(s) pendiente(s) de aprobación`,
       desc: `De: ${pendingReviews[0].client_name} (${pendingReviews[0].rating} estrellas)`,
       action: "showTab('reviews'); toggleNotificationsModal();"
+    });
+  }
+
+  // Contratos recientes aceptados
+  const recentContracts = DataStore.getContracts().filter(c => c.accepted && c.accepted_at && (Date.now() - new Date(c.accepted_at).getTime()) < 72*3600*1000);
+  if (recentContracts.length > 0) {
+    alerts.push({
+      type: 'contract',
+      title: `📄 ${recentContracts.length} Contrato(s) aceptado(s) recientemente`,
+      desc: `Un cliente ha aceptado sus términos. Revisa la pestaña de clientes para ver los PDF.`,
+      action: "showTab('clients'); toggleNotificationsModal();"
     });
   }
 

@@ -73,5 +73,32 @@ export default async function handler(req, res) {
     }
   }
 
+  if (action === 'signedUrl') {
+    if (!token) return res.status(401).json({ error: 'Token no proporcionado' });
+    
+    const [expires, signature] = token.split('.');
+    if (Date.now() > parseInt(expires, 10)) {
+      return res.status(401).json({ error: 'Token expirado' });
+    }
+    
+    const expectedSig = crypto.createHmac('sha256', ADMIN_SECRET).update(expires).digest('hex');
+    if (signature !== expectedSig) {
+      return res.status(401).json({ error: 'Firma de token inválida' });
+    }
+
+    const { path } = req.body;
+    if (!path) return res.status(400).json({ error: 'Falta path' });
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    
+    try {
+      const { data, error } = await supabase.storage.from('contracts').createSignedUrl(path, 300);
+      if (error) throw error;
+      return res.status(200).json({ url: data.signedUrl });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   return res.status(400).json({ error: 'Acción inválida' });
 }
