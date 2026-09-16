@@ -1,5 +1,5 @@
 -- ============================================
--- AD SPARKLING CLEANING — SQL Schema
+-- AD SPARKLING CLEANING — SQL Schema (Business OS)
 -- Tablas para el funcionamiento completo de la plataforma
 -- ============================================
 
@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS leads (
   frequency TEXT, -- '10', '15', '30', 'deep'
   notes TEXT,
   status TEXT DEFAULT 'nuevo', -- 'nuevo', 'contactado', 'agendado', 'descartado'
+  source TEXT, -- 'facebook', 'google', 'referral', 'website', 'repeat_customer'
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -30,6 +31,10 @@ CREATE TABLE IF NOT EXISTS clients (
   next_visit DATE,
   status TEXT DEFAULT 'activo', -- 'activo', 'pausado', 'inactivo'
   notes TEXT,
+  lifetime_value NUMERIC(10,2) DEFAULT 0,
+  total_visits INTEGER DEFAULT 0,
+  satisfaction_score NUMERIC(3,1),
+  referral_source TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -46,17 +51,38 @@ CREATE TABLE IF NOT EXISTS appointments (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. TABLA DE GASTOS OPERATIVOS
+-- 4. TABLA DE EQUIPO (TEAM MEMBERS)
+CREATE TABLE IF NOT EXISTS team_members (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name TEXT NOT NULL,
+  phone TEXT,
+  role TEXT DEFAULT 'cleaner', -- 'cleaner', 'supervisor', 'admin'
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5. ASIGNACIÓN DE CITAS AL EQUIPO
+CREATE TABLE IF NOT EXISTS appointment_assignments (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  appointment_id TEXT REFERENCES appointments(id) ON DELETE CASCADE,
+  team_member_id TEXT REFERENCES team_members(id) ON DELETE CASCADE,
+  minutes_worked INTEGER,
+  quality_score INTEGER, -- 1 a 5
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 6. TABLA DE GASTOS OPERATIVOS
 CREATE TABLE IF NOT EXISTS expenses (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  category TEXT NOT NULL, -- 'insumos', 'gasolina', 'salario_asistente', 'equipo', 'otro'
+  category TEXT NOT NULL,
   amount NUMERIC(10,2) NOT NULL,
   description TEXT,
   date DATE NOT NULL DEFAULT CURRENT_DATE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. TABLA DE COTIZACIONES (Opcional para historial)
+-- 7. TABLA DE COTIZACIONES (Historial)
 CREATE TABLE IF NOT EXISTS quotes (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   size_sqft INTEGER NOT NULL,
@@ -66,3 +92,16 @@ CREATE TABLE IF NOT EXISTS quotes (
   total_price INTEGER NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ============================================
+-- SCRIPT DE MIGRACIÓN (Ejecutar solo si ya tienes las tablas antiguas)
+-- ============================================
+/*
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS source TEXT;
+
+ALTER TABLE clients 
+ADD COLUMN IF NOT EXISTS lifetime_value NUMERIC(10,2) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS total_visits INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS satisfaction_score NUMERIC(3,1),
+ADD COLUMN IF NOT EXISTS referral_source TEXT;
+*/

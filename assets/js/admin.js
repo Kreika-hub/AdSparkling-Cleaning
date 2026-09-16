@@ -46,7 +46,9 @@ const DataStore = {
     EXPENSES: 'adsparkling_expenses',
     REVIEWS: 'adsparkling_reviews',
     PLANS: 'adsparkling_plans',
-    CONTRACTS: 'adsparkling_contracts'
+    CONTRACTS: 'adsparkling_contracts',
+    TEAM: 'adsparkling_team',
+    ASSIGNMENTS: 'adsparkling_assignments'
   },
 
   generateUUID() {
@@ -470,6 +472,30 @@ const DataStore = {
     this.cloudQuery('appointments', 'delete', { id });
   },
 
+  // Equipo (Team Members)
+  getTeam() { return this.getList(this.KEYS.TEAM); },
+  saveTeamMember(member) {
+    const team = this.getTeam();
+    if (member.id) {
+      const idx = team.findIndex(t => t.id == member.id);
+      if (idx !== -1) team[idx] = { ...team[idx], ...member };
+      else team.push(member);
+    } else {
+      member.id = this.generateUUID();
+      member.created_at = new Date().toISOString();
+      member.active = member.active !== false;
+      team.push(member);
+    }
+    this.setList(this.KEYS.TEAM, team);
+    this.cloudQuery('team_members', 'upsert', [member]);
+    return member;
+  },
+  deleteTeamMember(id) {
+    const team = this.getTeam().filter(t => t.id != id);
+    this.setList(this.KEYS.TEAM, team);
+    this.cloudQuery('team_members', 'delete', { id });
+  },
+
   // Gastos
   getExpenses() { return this.getList(this.KEYS.EXPENSES); },
   saveExpense(exp) {
@@ -746,10 +772,11 @@ function showTab(tabId) {
   if (tabId === 'dashboard') loadDashboard();
   if (tabId === 'leads') loadLeads();
   if (tabId === 'clients') loadClients();
-  if (tabId === 'appointments') { loadClientsForSelect(); loadAppointments(); }
+  if (tabId === 'appointments') { loadClientsForSelect(); loadTeamForSelect(); loadAppointments(); }
   if (tabId === 'expenses') loadExpenses();
   if (tabId === 'reviews') loadAdminReviews();
   if (tabId === 'plans') loadPlans();
+  if (tabId === 'team') loadTeam();
   if (tabId === 'cotizar') qcCalculate();
 }
 
@@ -1507,6 +1534,15 @@ function renderAppointmentsTable(appts) {
   }
 }
 
+function loadTeamForSelect() {
+  const team = DataStore.getTeam().filter(t => t.active !== false);
+  const select = document.getElementById('aTeam');
+  if (!select) return;
+
+  select.innerHTML = '<option value="">Sin asignar a equipo</option>' + 
+    team.map(t => `<option value="${t.id}">${t.name} (${t.role})</option>`).join('');
+}
+
 function loadClientsForSelect() {
   const clients = DataStore.getClients();
   const select = document.getElementById('aClient');
@@ -1536,6 +1572,7 @@ function resetApptForm() {
   document.getElementById('aAddons').value = '';
   document.getElementById('aNotes').value = '';
   document.getElementById('aStatus').value = 'pendiente';
+  document.getElementById('aTeam').value = '';
   document.getElementById('aFormTitle').textContent = 'Agregar Cita';
 }
 
@@ -1554,6 +1591,16 @@ function editAppt(id) {
   document.getElementById('aAddons').value = (appt.addons || []).join(', ');
   document.getElementById('aNotes').value = appt.notes || '';
   document.getElementById('aStatus').value = appt.status || 'pendiente';
+  
+  // Find assignment
+  const assignments = DataStore.getList(DataStore.KEYS.ASSIGNMENTS) || [];
+  const assignment = assignments.find(a => a.appointment_id === id);
+  if (assignment) {
+    document.getElementById('aTeam').value = assignment.team_member_id;
+  } else {
+    document.getElementById('aTeam').value = '';
+  }
+
   document.getElementById('aFormTitle').textContent = 'Editar Cita';
 
   form.scrollIntoView({ behavior: 'smooth' });
@@ -1568,6 +1615,7 @@ function saveAppointment() {
   const addonsRaw = document.getElementById('aAddons').value;
   const notes = document.getElementById('aNotes').value.trim();
   const status = document.getElementById('aStatus').value || 'pendiente';
+  const teamMemberId = document.getElementById('aTeam').value;
 
   if (!clientId || !date) {
     showToast('Por favor selecciona un cliente y la fecha de la cita.');
@@ -1587,7 +1635,27 @@ function saveAppointment() {
     status
   };
 
-  DataStore.saveAppointment(apptData);
+  const savedAppt = DataStore.saveAppointment(apptData);
+
+  // Guardar asignación al equipo si hay una
+  if (teamMemberId) {
+    const assignments = DataStore.getList(DataStore.KEYS.ASSIGNMENTS) || [];
+    let assignment = assignments.find(a => a.appointment_id === savedAppt.id);
+    if (!assignment) {
+      assignment = {
+        id: DataStore.generateUUID(),
+        appointment_id: savedAppt.id,
+        created_at: new Date().toISOString()
+      };
+      assignments.push(assignment);
+    }
+    assignment.team_member_id = teamMemberId;
+    DataStore.setList(DataStore.KEYS.ASSIGNMENTS, assignments);
+    DataStore.cloudQuery('appointment_assignments', 'upsert', [assignment]);
+  } else if (id) {
+    // Si se quitó el asignado, podríamos borrarlo pero por ahora no hay endpoint de borrar asignaciones exacto, lo omitimos para mantener histórico.
+  }
+
   toggleForm('apptForm');
   resetApptForm();
   loadAppointments();
@@ -1647,6 +1715,28 @@ function finishCleaning(id) {
   appt.started_at = null; // Limpiar para el estado final
   
   DataStore.saveAppointment(appt);
+
+  // Aumentar LTV del cliente
+  if (appt.client_id) {
+    const clients = DataStore.getClients();
+    const cIdx = clients.findIndex(c => c.id == appt.client_id);
+    if (cIdx !== -1) {
+      const client = clients[cIdx];
+      client.lifetime_value = (parseFloat(client.lifetime_value) || 0) + (parseFloat(appt.price) || 0);
+      client.total_visits = (parseInt(client.total_visits) || 0) + 1;
+      DataStore.saveClient(client);
+    }
+  }
+
+  // Marcar minutos trabajados en assignment si existe
+  const assignments = DataStore.getList(DataStore.KEYS.ASSIGNMENTS) || [];
+  const assignment = assignments.find(a => a.appointment_id === id);
+  if (assignment) {
+    assignment.minutes_worked = duration_minutes;
+    DataStore.setList(DataStore.KEYS.ASSIGNMENTS, assignments);
+    DataStore.cloudQuery('appointment_assignments', 'update', { id: assignment.id, data: { minutes_worked: duration_minutes } });
+  }
+  
   loadAppointments();
   loadDashboard();
   showToast(`Limpieza completada en ${formatDuration(duration_minutes)} ✅`);
@@ -2222,6 +2312,98 @@ function togglePlanActive(id) {
   if (!plan) return;
   DataStore.savePlan({ ...plan, active: plan.active === false ? true : false });
   loadPlans();
+}
+
+// ============================================
+// EQUIPO (TEAM)
+// ============================================
+let allTeam = [];
+
+function loadTeam() {
+  allTeam = DataStore.getTeam() || [];
+  renderTeamList(allTeam);
+}
+
+function renderTeamList(team) {
+  const container = document.getElementById('teamTable');
+  if (!container) return;
+
+  if (!team || team.length === 0) {
+    container.innerHTML = '<p class="empty">No hay miembros en el equipo aún.</p>';
+    return;
+  }
+
+  container.innerHTML = team.map(t => `
+    <div class="swipe-wrap">
+      <div class="swipe-actions" style="background:var(--border);">
+        <button onclick="editTeamMember('${t.id}')" title="Editar" style="background:#ff9800; color:#fff;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </button>
+        <button onclick="deleteTeamMember('${t.id}')" title="Eliminar" style="background:#f44336; color:#fff;">
+           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+        </button>
+      </div>
+      <div class="swipe-card" data-actions-count="2">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong style="font-size:15px; color:var(--text-color);">${t.name}</strong>
+          <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: ${t.active ? '#e8f5e9' : '#ffebee'}; color: ${t.active ? '#2d8a5e' : '#c62828'};">${t.active ? 'Activo' : 'Inactivo'}</span>
+        </div>
+        <div style="color:var(--text-sec); font-size:13px; margin-top:4px;">
+          📞 ${t.phone || 'Sin teléfono'} &nbsp;·&nbsp; Rol: <strong style="color:var(--primary);">${t.role}</strong>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  
+  if (typeof initSwipeCards === 'function') initSwipeCards();
+}
+
+function saveTeamMember() {
+  const id = document.getElementById('tId').value;
+  const name = document.getElementById('tName').value.trim();
+  const phone = document.getElementById('tPhone').value.trim();
+  const role = document.getElementById('tRole').value;
+  const active = document.getElementById('tActive').value === 'true';
+
+  if (!name) {
+    showToast('El nombre es obligatorio.');
+    return;
+  }
+
+  DataStore.saveTeamMember({ id: id || undefined, name, phone, role, active });
+  toggleForm('teamForm');
+  loadTeam();
+  showToast('Miembro del equipo guardado ✅');
+}
+
+function resetTeamForm() {
+  document.getElementById('tId').value = '';
+  document.getElementById('tName').value = '';
+  document.getElementById('tPhone').value = '';
+  document.getElementById('tRole').value = 'cleaner';
+  document.getElementById('tActive').value = 'true';
+  document.getElementById('tFormTitle').textContent = 'Añadir Miembro del Equipo';
+}
+
+function editTeamMember(id) {
+  const member = allTeam.find(t => t.id == id);
+  if (!member) return;
+
+  document.getElementById('tId').value = member.id;
+  document.getElementById('tName').value = member.name;
+  document.getElementById('tPhone').value = member.phone || '';
+  document.getElementById('tRole').value = member.role || 'cleaner';
+  document.getElementById('tActive').value = member.active ? 'true' : 'false';
+  document.getElementById('tFormTitle').textContent = 'Editar Miembro';
+
+  toggleForm('teamForm');
+}
+
+function deleteTeamMember(id) {
+  if (confirm('¿Eliminar este miembro del equipo?')) {
+    DataStore.deleteTeamMember(id);
+    loadTeam();
+  }
 }
 
 // ============================================

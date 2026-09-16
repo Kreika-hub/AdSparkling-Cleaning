@@ -170,6 +170,10 @@
             <svg class="svg-icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
             Gastos
           </a>
+          <a href="#team" class="nav-item" data-tab="team" onclick="showTab('team')">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            Equipo
+          </a>
           <a href="#reviews" class="nav-item" data-tab="reviews" onclick="showTab('reviews')">
             <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
             Reseñas Web
@@ -458,6 +462,9 @@
                 <option value="completada">Estado: Completada</option>
                 <option value="cancelada">Estado: Cancelada</option>
               </select>
+              <select id="aTeam">
+                <option value="">Sin asignar a equipo</option>
+              </select>
               <input type="text" id="aAddons" placeholder="Adicionales (Horno, Nevera, Persianas...)">
               <input type="text" id="aNotes" placeholder="Notas de la cita">
             </div>
@@ -538,6 +545,43 @@
                 <tr><td colspan="5" class="empty-cell">Cargando gastos...</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- EQUIPO -->
+        <div id="tab-team" class="tab-panel" style="display:none;">
+          <div class="panel-header">
+            <div>
+              <h1>Gestión de Equipo</h1>
+              <p class="tab-desc">Administra a tus limpiadores y asístentes.</p>
+            </div>
+            <button class="btn-add" onclick="toggleForm('teamForm'); resetTeamForm();">+ Añadir Miembro</button>
+          </div>
+
+          <div id="teamForm" class="form-panel" style="display:none;">
+            <h3 id="tFormTitle">Añadir Miembro del Equipo</h3>
+            <input type="hidden" id="tId">
+            <div class="form-grid">
+              <input type="text" id="tName" placeholder="Nombre completo *" required>
+              <input type="tel" id="tPhone" placeholder="Teléfono">
+              <select id="tRole">
+                <option value="cleaner">Limpiador/a</option>
+                <option value="supervisor">Supervisor/a</option>
+                <option value="admin">Administrador/a</option>
+              </select>
+              <select id="tActive">
+                <option value="true">Activo (Trabajando)</option>
+                <option value="false">Inactivo (No disponible)</option>
+              </select>
+            </div>
+            <div class="form-actions">
+              <button class="btn-save" onclick="saveTeamMember()">Guardar Miembro</button>
+              <button class="btn-cancel" onclick="toggleForm('teamForm')">Cancelar</button>
+            </div>
+          </div>
+
+          <div id="teamTable" class="cards-list">
+            <p class="empty">Cargando equipo...</p>
           </div>
         </div>
 

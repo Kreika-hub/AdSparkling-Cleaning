@@ -128,6 +128,9 @@ function handleRequest(e) {
     extras.push(el.dataset.name || el.value);
   });
 
+  const sourceEl = document.getElementById('reqSource');
+  const source = sourceEl ? sourceEl.value : 'website';
+
   const lead = {
     id: 'l-' + Date.now(),
     name,
@@ -137,6 +140,7 @@ function handleRequest(e) {
     frequency: freq || null,
     notes: (extras.length ? `Extras: ${extras.join(', ')}. ` : '') + (notes || ''),
     status: 'nuevo',
+    source: source,
     created_at: new Date().toISOString()
   };
 
