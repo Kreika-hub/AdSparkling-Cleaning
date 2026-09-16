@@ -129,7 +129,14 @@ function handleRequest(e) {
   });
 
   const sourceEl = document.getElementById('reqSource');
-  const source = sourceEl ? sourceEl.value : 'website';
+  let source = sourceEl ? sourceEl.value : 'website';
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const referralCode = urlParams.get('ref');
+  
+  if (referralCode && source === 'website') {
+    source = 'referral';
+  }
 
   const lead = {
     id: 'l-' + Date.now(),
@@ -141,6 +148,7 @@ function handleRequest(e) {
     notes: (extras.length ? `Extras: ${extras.join(', ')}. ` : '') + (notes || ''),
     status: 'nuevo',
     source: source,
+    referral_code: referralCode || null,
     created_at: new Date().toISOString()
   };
 

@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS leads (
   notes TEXT,
   status TEXT DEFAULT 'nuevo', -- 'nuevo', 'contactado', 'agendado', 'descartado'
   source TEXT, -- 'facebook', 'google', 'referral', 'website', 'repeat_customer'
+  referral_code TEXT, -- Código del cliente que lo invitó
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -35,6 +36,8 @@ CREATE TABLE IF NOT EXISTS clients (
   total_visits INTEGER DEFAULT 0,
   satisfaction_score NUMERIC(3,1),
   referral_source TEXT,
+  referral_code TEXT UNIQUE, -- El código propio de este cliente para invitar
+  referred_by TEXT, -- Quién lo invitó (código)
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -98,10 +101,13 @@ CREATE TABLE IF NOT EXISTS quotes (
 -- ============================================
 /*
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS source TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS referral_code TEXT;
 
 ALTER TABLE clients 
 ADD COLUMN IF NOT EXISTS lifetime_value NUMERIC(10,2) DEFAULT 0,
 ADD COLUMN IF NOT EXISTS total_visits INTEGER DEFAULT 0,
 ADD COLUMN IF NOT EXISTS satisfaction_score NUMERIC(3,1),
-ADD COLUMN IF NOT EXISTS referral_source TEXT;
+ADD COLUMN IF NOT EXISTS referral_source TEXT,
+ADD COLUMN IF NOT EXISTS referral_code TEXT,
+ADD COLUMN IF NOT EXISTS referred_by TEXT;
 */
