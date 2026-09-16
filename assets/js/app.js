@@ -40,18 +40,17 @@ function getConfig() {
     phone: '13050000000',
     address: 'Miami-Dade & Broward, FL',
     extras: [
-      { id: 'oven', name: 'Horno por dentro', price: 40, active: true },
-      { id: 'fridge', name: 'Nevera por dentro', price: 50, active: true },
-      { id: 'blinds', name: 'Persianas', price: 10, active: true, perUnit: true },
-      { id: 'cabinets', name: 'Gabinetes + ventanas interior', price: 50, active: true },
-      { id: 'distance', name: 'Recargo por distancia', price: 50, active: true },
-      { id: 'overdue', name: 'Recargo +30 días sin limpiar', price: 30, active: true }
+      { id: 'oven', name: 'Horno por dentro', i18n: 'ext_oven', price: 40, active: true },
+      { id: 'fridge', name: 'Nevera por dentro', i18n: 'ext_fridge', price: 50, active: true },
+      { id: 'blinds', name: 'Persianas', i18n: 'ext_blinds', price: 10, active: true, perUnit: true },
+      { id: 'cabinets', name: 'Gabinetes + ventanas interior', i18n: 'ext_cabinets', price: 50, active: true },
+      { id: 'distance', name: 'Recargo por distancia', i18n: 'ext_dist', price: 50, active: true }
     ],
     notIncluded: [
-      { id: 'laundry', name: 'Laundry', active: true },
-      { id: 'dishes', name: 'Lavar platos', active: true },
-      { id: 'patio', name: 'Patio exterior', active: true },
-      { id: 'pets', name: 'Excremento de mascotas', active: true }
+      { id: 'laundry', name: 'Laundry', i18n: 'not_laundry', active: true },
+      { id: 'dishes', name: 'Lavar platos', i18n: 'not_dishes', active: true },
+      { id: 'patio', name: 'Patio exterior', i18n: 'not_patio', active: true },
+      { id: 'pets', name: 'Excremento de mascotas', i18n: 'not_pets', active: true }
     ]
   };
 }
@@ -64,7 +63,7 @@ function renderExtras() {
   if (container) {
     const active = cfg.extras.filter(e => e.active);
     container.innerHTML = active.length ? active.map(e => 
-      `<span class="extra-bubble">${e.name}${e.perUnit ? ' (c/u)' : ''}</span>`
+      `<span class="extra-bubble" ${e.i18n ? `data-i18n="${e.i18n}"` : ''}>${e.name}${e.perUnit ? ' (c/u)' : ''}</span>`
     ).join('') : '<span class="extra-bubble">Consultar adicionales</span>';
   }
 
@@ -73,7 +72,7 @@ function renderExtras() {
     requestContainer.innerHTML = active.length ? active.map(e => `
       <label class="request-extra-item">
         <input type="checkbox" value="${e.id}" data-name="${e.name}">
-        <span>${e.name}${e.perUnit ? ' (c/u)' : ''}</span>
+        <span ${e.i18n ? `data-i18n="${e.i18n}"` : ''}>${e.name}${e.perUnit ? ' (c/u)' : ''}</span>
       </label>
     `).join('') : '<p class="empty-extras">No hay adicionales configurados</p>';
   }
@@ -86,7 +85,7 @@ function renderNotIncluded() {
 
   const active = cfg.notIncluded.filter(n => n.active);
   container.innerHTML = active.length ? active.map(n => 
-    `<span class="not-tag">${n.name}</span>`
+    `<span class="not-tag" ${n.i18n ? `data-i18n="${n.i18n}"` : ''}><span style="color:#d32f2f; font-weight:bold; margin-right:4px;">✕</span> ${n.name}</span>`
   ).join('') : '<span class="not-tag">Consultar con Anggie</span>';
 }
 

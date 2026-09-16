@@ -43,7 +43,7 @@ function moveSlider(pageX, container, beforeImg, slider) {
   
   const percentage = (xOffset / containerWidth) * 100;
   
-  beforeImg.style.width = `${percentage}%`;
+  beforeImg.style.clipPath = `polygon(0 0, ${percentage}% 0, ${percentage}% 100%, 0 100%)`;
   slider.style.left = `${percentage}%`;
 }
 

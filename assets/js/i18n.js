@@ -161,6 +161,17 @@ const translations = {
     "admin_stat_clients": "Active Clients",
     "admin_upcoming": "Upcoming Appointments",
     "admin_inactive": "Inactive Clients (+30 days)",
+    
+    // Extras & Not Included
+    "ext_oven": "Oven inside",
+    "ext_fridge": "Fridge inside",
+    "ext_blinds": "Blinds",
+    "ext_cabinets": "Cabinets + interior windows",
+    "ext_dist": "Distance surcharge",
+    "not_laundry": "Laundry",
+    "not_dishes": "Dish washing",
+    "not_patio": "Outdoor patio",
+    "not_pets": "Pet waste",
 
     // Hero Cards
     "hero_card1_strong": "Houses, apartments & townhouses",
@@ -500,6 +511,17 @@ const translations = {
     "admin_stat_clients": "Clientes activos",
     "admin_upcoming": "Próximas citas",
     "admin_inactive": "Clientes inactivos (+30 días)",
+    
+    // Extras & Not Included
+    "ext_oven": "Horno por dentro",
+    "ext_fridge": "Nevera por dentro",
+    "ext_blinds": "Persianas",
+    "ext_cabinets": "Gabinetes + ventanas interior",
+    "ext_dist": "Recargo por distancia",
+    "not_laundry": "Laundry",
+    "not_dishes": "Lavar platos",
+    "not_patio": "Patio exterior",
+    "not_pets": "Excremento de mascotas",
 
     // Hero Cards
     "hero_card1_strong": "Casas, apartamentos y townhouses",

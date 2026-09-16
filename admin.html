@@ -138,9 +138,9 @@
 
         <div class="sidebar-user-box" style="display:flex; justify-content:space-between; align-items:center;">
           <span class="user-badge-name">Anggie • Admin</span>
-          <div class="lang-switcher" style="background:rgba(255,255,255,0.15); border-color:rgba(255,255,255,0.25);">
-            <button class="lang-btn active" style="color:#fff; padding:2px 6px; font-size:11px;" data-lang="en" onclick="setLanguage('en')">EN</button>
-            <button class="lang-btn" style="color:#fff; padding:2px 6px; font-size:11px;" data-lang="es" onclick="setLanguage('es')">ES</button>
+          <div class="lang-switcher">
+            <button class="lang-btn active" data-lang="en" onclick="setLanguage('en')">EN</button>
+            <button class="lang-btn" data-lang="es" onclick="setLanguage('es')">ES</button>
           </div>
         </div>
 
@@ -239,6 +239,15 @@
               <div class="stat-label" style="color:#2e7d32;">Tiempo promedio de limpieza</div>
               <div class="stat-value" id="dashAvgTime" style="color:#1b5e20;">0h 0m</div>
               <div class="stat-sub" style="color:#4caf50;">En limpiezas completadas</div>
+            </div>
+          </div>
+
+          <div class="dash-section" style="margin-bottom:32px;">
+            <div class="section-title-row">
+              <h2>📈 Rendimiento Financiero</h2>
+            </div>
+            <div style="background:#fff; border:1px solid var(--border); border-radius:12px; padding:20px;">
+              <canvas id="financeChart" height="80"></canvas>
             </div>
           </div>
 
@@ -458,6 +467,14 @@
             </div>
           </div>
 
+          <div class="table-toolbar">
+            <div class="filter-group">
+              <label>Filtrar por fecha:</label>
+              <input type="date" id="filterApptDate" onchange="filterAppointmentsByDate(this.value)">
+              <button class="btn-text-action" onclick="document.getElementById('filterApptDate').value=''; filterAppointmentsByDate('');">Limpiar filtro</button>
+            </div>
+          </div>
+
           <div id="appointmentsTable" class="cards-list">
             <p class="empty">Cargando citas...</p>
           </div>
@@ -479,14 +496,14 @@
           <div id="expenseForm" class="form-panel" style="display:none;">
             <h3>Registrar gasto operativo</h3>
             <div class="form-grid">
-              <select id="eCategory" required>
-                <option value="">Selecciona categoría...</option>
-                <option value="insumos">🧴 Insumos de limpieza</option>
-                <option value="gasolina">⛽ Gasolina / Transporte</option>
-                <option value="salario_asistente">🤝 Salario asistente</option>
-                <option value="equipo">🧹 Equipo / Herramientas</option>
-                <option value="otro">📦 Otro gasto</option>
-              </select>
+              <input type="text" id="eCategory" placeholder="Categoría (escribe o selecciona) *" list="expenseCategoriesList" required>
+              <datalist id="expenseCategoriesList">
+                <option value="Insumos de limpieza">
+                <option value="Gasolina / Transporte">
+                <option value="Salario asistente">
+                <option value="Equipo / Herramientas">
+                <option value="Otro gasto">
+              </datalist>
               <input type="number" id="eAmount" placeholder="Monto en $ *" step="0.01" required>
               <input type="date" id="eDate">
               <input type="text" id="eDesc" placeholder="Descripción (ej. Home Depot, microfibras)">
@@ -500,13 +517,8 @@
           <div class="table-toolbar">
             <div class="filter-group">
               <label>Filtrar por categoría:</label>
-              <select onchange="filterExpenses(this.value)">
+              <select id="expenseFilter" onchange="filterExpenses(this.value)">
                 <option value="todas">Todas las categorías</option>
-                <option value="insumos">Insumos de limpieza</option>
-                <option value="gasolina">Gasolina / Transporte</option>
-                <option value="salario_asistente">Salario asistente</option>
-                <option value="equipo">Equipo</option>
-                <option value="otro">Otro</option>
               </select>
             </div>
           </div>
@@ -701,6 +713,10 @@
     </div>
   </div>
 
+  <!-- TOAST CONTAINER -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="assets/js/i18n.js"></script>
   <script src="assets/js/swipe-cards.js"></script>
   <script src="assets/js/admin.js"></script>

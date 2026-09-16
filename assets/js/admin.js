@@ -15,6 +15,27 @@ const PRICING = {
 };
 
 // ============================================
+// SISTEMA DE TOASTS (Notificaciones Nativas)
+// ============================================
+function showToast(msg, type = 'success') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+
+  const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️';
+  toast.innerHTML = `<span>${icon}</span> <span>${msg}</span>`;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => { toast.remove(); }, 300);
+  }, 3000);
+}
+
+// ============================================
 // DATASTORE (PERSISTENCIA LOCAL & CLOUD SYNC)
 // ============================================
 const DataStore = {
@@ -69,6 +90,18 @@ const DataStore = {
         if(t === 'reviews') key = this.KEYS.REVIEWS;
         if(t === 'plans') key = this.KEYS.PLANS;
         if(t === 'contracts') key = this.KEYS.CONTRACTS;
+        
+        // Sincronizar datos locales que no están en la nube (ej: leads generados sin internet o en local)
+        const localData = this.getList(key);
+        if (localData && localData.length > 0) {
+          const cloudIds = new Set(res.data.map(item => item.id));
+          const unsynced = localData.filter(item => !cloudIds.has(item.id));
+          for (const item of unsynced) {
+            await this.cloudQuery(t, 'upsert', item);
+            res.data.push(item);
+          }
+        }
+        
         this.setList(key, res.data);
       }
     }
@@ -224,6 +257,34 @@ const DataStore = {
         }
       ];
       localStorage.setItem(this.KEYS.EXPENSES, JSON.stringify(initialExpenses));
+      localStorage.setItem(this.KEYS.EXPENSES, JSON.stringify(initialExpenses));
+    }
+
+    // Planes de ejemplo
+    if (!localStorage.getItem(this.KEYS.PLANS)) {
+      const initialPlans = [
+        {
+          id: 'p-1',
+          name: 'Limpieza Regular Quincenal',
+          frequency: '15',
+          price: 180,
+          included: 'Polvo general en todas las áreas\nLimpieza de espejos\nAspirado y trapeado\nLimpieza externa de electrodomésticos\nSanitización de baños',
+          excluded: 'Interior de nevera/horno\nLimpieza profunda de persianas\nOrganización de closets',
+          terms: 'Cancelación requiere 24h de aviso.\nLas mascotas deben estar aseguradas.',
+          active: true
+        },
+        {
+          id: 'p-2',
+          name: 'Limpieza Profunda Mensual',
+          frequency: '30',
+          price: 250,
+          included: 'Todo lo de limpieza regular\nLimpieza de rodapiés\nLimpieza profunda de duchas (sarro)\nLimpieza interior de ventanas accesibles',
+          excluded: 'Interior de nevera/horno\nRecogida de desorden extremo',
+          terms: 'Si la casa excede 45 días sin limpiar, aplica recargo.',
+          active: true
+        }
+      ];
+      localStorage.setItem(this.KEYS.PLANS, JSON.stringify(initialPlans));
     }
 
     // Leads de ejemplo
@@ -589,15 +650,15 @@ function saveNewPassword() {
   const storedPass = DataStore.getPassword();
 
   if (current !== storedPass) {
-    alert('La contraseña actual es incorrecta.');
+    showToast('La contraseña actual es incorrecta.');
     return;
   }
   if (!newPass || newPass.length < 4) {
-    alert('La nueva contraseña debe tener al menos 4 caracteres.');
+    showToast('La nueva contraseña debe tener al menos 4 caracteres.');
     return;
   }
   if (newPass !== confirmPass) {
-    alert('La nueva contraseña y su confirmación no coinciden.');
+    showToast('La nueva contraseña y su confirmación no coinciden.');
     return;
   }
 
@@ -606,7 +667,7 @@ function saveNewPassword() {
   document.getElementById('pwdNew').value = '';
   document.getElementById('pwdConfirm').value = '';
   closeSettingsModal();
-  alert('¡Contraseña actualizada exitosamente! ✅');
+  showToast('¡Contraseña actualizada exitosamente! ✅');
 }
 
 // ============================================
@@ -649,9 +710,9 @@ function installPWA() {
   } else {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     if (isIOS) {
-      alert('Para instalar en iPhone:\n1. Toca el botón Compartir (cuadrado con flecha 📤 en Safari)\n2. Selecciona "Añadir a pantalla de inicio" 📲');
+      showToast('Para instalar en iPhone:\n1. Toca el botón Compartir (cuadrado con flecha 📤 en Safari)\n2. Selecciona "Añadir a pantalla de inicio" 📲');
     } else {
-      alert('Para instalar en tu celular:\n1. Toca el menú de tu navegador (los tres puntos arriba a la derecha)\n2. Toca "Instalar aplicación" o "Añadir a pantalla principal" 📲');
+      showToast('Para instalar en tu celular:\n1. Toca el menú de tu navegador (los tres puntos arriba a la derecha)\n2. Toca "Instalar aplicación" o "Añadir a pantalla principal" 📲');
     }
   }
 }
@@ -809,6 +870,78 @@ function loadDashboard() {
       </div>
     `).join('');
   }
+
+  // Renderizar Gráfico
+  renderFinanceChart(appts, exps);
+}
+
+let financeChartInstance = null;
+function renderFinanceChart(appts, exps) {
+  const ctx = document.getElementById('financeChart');
+  if (!ctx || typeof Chart === 'undefined') return;
+
+  // Agrupar por mes (últimos 6 meses)
+  const months = [];
+  const revData = [];
+  const expData = [];
+  
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthStr = d.toISOString().substring(0, 7); // YYYY-MM
+    months.push(d.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' }));
+    
+    // Revenue for month
+    const rev = appts.filter(a => a.status === 'completada' && a.date.startsWith(monthStr))
+                     .reduce((sum, a) => sum + (parseFloat(a.price) || 0), 0);
+    revData.push(rev);
+    
+    // Expenses for month
+    const exp = exps.filter(e => e.date.startsWith(monthStr))
+                    .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+    expData.push(exp);
+  }
+
+  if (financeChartInstance) {
+    financeChartInstance.destroy();
+  }
+
+  financeChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [
+        {
+          label: 'Ingresos',
+          data: revData,
+          borderColor: '#4caf50',
+          backgroundColor: 'rgba(76, 175, 80, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4
+        },
+        {
+          label: 'Gastos',
+          data: expData,
+          borderColor: '#f44336',
+          backgroundColor: 'rgba(244, 67, 54, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' }
+      },
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
 }
 
 function quickCompleteAppt(id) {
@@ -852,9 +985,15 @@ function renderLeadsTable(leads) {
       </td>
       <td><small>${formatDate(l.created_at)}</small></td>
       <td class="action-cell">
-        <a href="https://wa.me/${cleanPhone(l.phone)}?text=Hola ${encodeURIComponent(l.name)}, te saluda Anggie de Ad Sparkling Cleaning ✨. Recibimos tu solicitud de cotización para ${l.address}. ¿Tienes alguna fecha en mente para comenzar?" target="_blank" class="btn-table-action btn-wa-table" title="Contactar por WhatsApp">📱 Chat</a>
-        <button class="btn-table-action btn-convert-table" onclick="convertLeadToClient('${l.id}')" title="Convertir a Cliente">👥 Convertir</button>
-        <button class="btn-table-action btn-del-table" onclick="deleteLead('${l.id}')" title="Eliminar lead">🗑</button>
+        <a href="https://wa.me/${cleanPhone(l.phone)}?text=Hola ${encodeURIComponent(l.name)}, te saluda Anggie de Ad Sparkling Cleaning ✨. Recibimos tu solicitud de cotización para ${l.address}. ¿Tienes alguna fecha en mente para comenzar?" target="_blank" class="btn-table-action btn-wa-table" style="background:#25d366; color:#fff;" title="Contactar por WhatsApp">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </a>
+        <button class="btn-table-action btn-convert-table" style="background:var(--primary); color:#fff;" onclick="convertLeadToClient('${l.id}')" title="Convertir a Cliente">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        </button>
+        <button class="btn-table-action btn-del-table" style="background:#f44336; color:#fff;" onclick="deleteLead('${l.id}')" title="Eliminar lead">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+        </button>
       </td>
     </tr>
   `).join('');
@@ -898,7 +1037,7 @@ function saveManualLead() {
   const notes = document.getElementById('lNotes').value.trim();
 
   if (!name || !phone) {
-    alert('Por favor ingresa al menos nombre y teléfono del lead.');
+    showToast('Por favor ingresa al menos nombre y teléfono del lead.');
     return;
   }
 
@@ -914,7 +1053,7 @@ function saveManualLead() {
   document.getElementById('lNotes').value = '';
   toggleForm('leadForm');
   loadLeads();
-  alert('Lead guardado exitosamente ✅');
+  showToast('Lead guardado exitosamente ✅');
 }
 
 function convertLeadToClient(leadId) {
@@ -963,11 +1102,21 @@ function renderClientsTable(clients) {
   container.innerHTML = clients.map(c => `
     <div class="swipe-wrap">
       <div class="swipe-actions" style="background:var(--border);">
-        <button onclick="sendPortalLink('${c.id}')" title="Enviar enlace de Portal al Cliente por WhatsApp" style="background:#f4ebfa; color:var(--primary); font-size: 14px;">Portal</button>
-        <button onclick="scheduleForClient('${c.id}')" title="Agendar Cita" style="background:#2196f3;">📅</button>
-        <button onclick="editClient('${c.id}')" title="Editar cliente" style="background:#ff9800;">✏️</button>
-        <a href="https://wa.me/${cleanPhone(c.phone)}" target="_blank" title="Enviar WhatsApp" style="background:#25d366;">📱</a>
-        <button onclick="deleteClient('${c.id}')" title="Eliminar cliente" style="background:#f44336;">🗑</button>
+        <button onclick="sendPortalLink('${c.id}')" title="Portal al Cliente" style="background:#f4ebfa; color:var(--primary); font-size: 14px;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </button>
+        <button onclick="scheduleForClient('${c.id}')" title="Agendar Cita" style="background:#2196f3; color:#fff;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </button>
+        <button onclick="editClient('${c.id}')" title="Editar cliente" style="background:#ff9800; color:#fff;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </button>
+        <a href="https://wa.me/${cleanPhone(c.phone)}" target="_blank" title="Enviar WhatsApp" style="background:#25d366; color:#fff; display:flex; align-items:center; justify-content:center; text-decoration:none;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </a>
+        <button onclick="deleteClient('${c.id}')" title="Eliminar cliente" style="background:#f44336; color:#fff;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+        </button>
       </div>
       <div class="swipe-card" data-actions-count="5">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1001,7 +1150,7 @@ function sendPortalLink(clientId) {
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   } else {
     navigator.clipboard.writeText(portalUrl).then(() => {
-      alert(`Enlace al portal copiado al portapapeles:\n\n${portalUrl}`);
+      showToast(`Enlace al portal copiado al portapapeles:\n\n${portalUrl}`);
     });
   }
 }
@@ -1127,10 +1276,10 @@ async function viewContractPdf(path) {
     if (data.url) {
       window.open(data.url, '_blank');
     } else {
-      alert('No se pudo obtener el PDF: ' + (data.error || 'Error desconocido'));
+      showToast('No se pudo obtener el PDF: ' + (data.error || 'Error desconocido'));
     }
   } catch(e) {
-    alert('Error de conexión');
+    showToast('Error de conexión');
   }
 }
 function generateContract() {
@@ -1138,7 +1287,7 @@ function generateContract() {
   const planId = document.getElementById('cPlanId').value;
   
   if (!clientId) {
-    alert('Por favor guarda el cliente primero antes de generar el contrato.');
+    showToast('Por favor guarda el cliente primero antes de generar el contrato.');
     return;
   }
   
@@ -1158,7 +1307,7 @@ function generateContract() {
   });
 
   checkContractState();
-  alert('Contrato generado. El cliente lo verá en su portal para aceptarlo. ✅');
+  showToast('Contrato generado. El cliente lo verá en su portal para aceptarlo. ✅');
 }
 
 function resetClientForm() {
@@ -1222,7 +1371,7 @@ function saveClient() {
   const status = document.getElementById('cStatus').value || 'activo';
 
   if (!name || !phone || !address) {
-    alert('Nombre, teléfono y dirección son obligatorios.');
+    showToast('Nombre, teléfono y dirección son obligatorios.');
     return;
   }
 
@@ -1246,7 +1395,7 @@ function saveClient() {
   resetClientForm();
   loadClients();
   loadDashboard();
-  alert('Cliente guardado con éxito ✅');
+  showToast('Cliente guardado con éxito ✅');
 }
 
 function deleteClient(id) {
@@ -1277,7 +1426,23 @@ let allAppointments = [];
 
 function loadAppointments() {
   allAppointments = DataStore.getAppointments();
-  renderAppointmentsTable(allAppointments);
+  
+  // Apply current date filter if any
+  const filterInput = document.getElementById('filterApptDate');
+  if (filterInput && filterInput.value) {
+    filterAppointmentsByDate(filterInput.value);
+  } else {
+    renderAppointmentsTable(allAppointments);
+  }
+}
+
+function filterAppointmentsByDate(dateStr) {
+  if (!dateStr) {
+    renderAppointmentsTable(allAppointments);
+  } else {
+    const filtered = allAppointments.filter(a => a.date === dateStr);
+    renderAppointmentsTable(filtered);
+  }
 }
 
 function renderAppointmentsTable(appts) {
@@ -1291,19 +1456,23 @@ function renderAppointmentsTable(appts) {
     <div class="swipe-wrap">
       <div class="swipe-actions" style="background:var(--border);">
         ${a.status === 'pendiente' ? `
-          <button onclick="startCleaning('${a.id}')" title="Iniciar limpieza" style="background:var(--primary);"><span style="font-size:12px;">▶️ Iniciar</span></button>
-          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Hola! Anggie está en camino/comenzando tu limpieza de hoy 🧹✨')}" target="_blank" title="Avisar por WhatsApp" style="background:#25d366;"><span style="font-size:12px;">📲 Voy</span></a>
+          <button onclick="startCleaning('${a.id}')" title="Iniciar limpieza" style="background:var(--primary); color:#fff;"><span style="font-size:12px; display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Iniciar</span></button>
+          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Hola! Anggie está en camino/comenzando tu limpieza de hoy 🧹✨')}" target="_blank" title="Avisar por WhatsApp" style="background:#25d366; color:#fff; display:flex; align-items:center; justify-content:center; text-decoration:none;"><span style="font-size:12px; display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Voy</span></a>
         ` : a.status === 'en_progreso' ? `
-          <button onclick="pauseCleaning('${a.id}')" title="Pausar limpieza" style="background:#f57c00;"><span style="font-size:12px;">⏸️ Pausar</span></button>
-          <button onclick="finishCleaning('${a.id}')" title="Finalizar limpieza" style="background:#4caf50;"><span style="font-size:12px;">⏹️ Fin</span></button>
+          <button onclick="pauseCleaning('${a.id}')" title="Pausar limpieza" style="background:#f57c00; color:#fff;"><span style="font-size:12px; display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Pausar</span></button>
+          <button onclick="finishCleaning('${a.id}')" title="Finalizar limpieza" style="background:#4caf50; color:#fff;"><span style="font-size:12px; display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg> Fin</span></button>
         ` : a.status === 'pausada' ? `
-          <button onclick="resumeCleaning('${a.id}')" title="Reanudar limpieza" style="background:var(--primary);"><span style="font-size:12px;">▶️ Reanudar</span></button>
-          <button onclick="finishCleaning('${a.id}')" title="Finalizar limpieza" style="background:#4caf50;"><span style="font-size:12px;">⏹️ Fin</span></button>
+          <button onclick="resumeCleaning('${a.id}')" title="Reanudar limpieza" style="background:var(--primary); color:#fff;"><span style="font-size:12px; display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Reanudar</span></button>
+          <button onclick="finishCleaning('${a.id}')" title="Finalizar limpieza" style="background:#4caf50; color:#fff;"><span style="font-size:12px; display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg> Fin</span></button>
         ` : a.status === 'completada' ? `
-          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Listo! Tu hogar quedó reluciente ✨ Nos vemos en tu próxima visita.')}" target="_blank" title="Avisar por WhatsApp" style="background:#25d366;"><span style="font-size:12px;">📲 Lista</span></a>
+          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Listo! Tu hogar quedó reluciente ✨ Nos vemos en tu próxima visita.')}" target="_blank" title="Avisar por WhatsApp" style="background:#25d366; color:#fff; display:flex; align-items:center; justify-content:center; text-decoration:none;"><span style="font-size:12px; display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Lista</span></a>
         ` : ''}
-        <button onclick="editAppt('${a.id}')" title="Editar cita" style="background:#ff9800;">✏️</button>
-        <button onclick="deleteAppt('${a.id}')" title="Eliminar cita" style="background:#f44336;">🗑</button>
+        <button onclick="editAppt('${a.id}')" title="Editar cita" style="background:#ff9800; color:#fff;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </button>
+        <button onclick="deleteAppt('${a.id}')" title="Eliminar cita" style="background:#f44336; color:#fff;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+        </button>
       </div>
       <div class="swipe-card" data-actions-count="${a.status === 'pendiente' ? 4 : (a.status === 'en_progreso' ? 4 : (a.status === 'pausada' ? 4 : (a.status === 'completada' ? 3 : 2)))}">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1401,7 +1570,7 @@ function saveAppointment() {
   const status = document.getElementById('aStatus').value || 'pendiente';
 
   if (!clientId || !date) {
-    alert('Por favor selecciona un cliente y la fecha de la cita.');
+    showToast('Por favor selecciona un cliente y la fecha de la cita.');
     return;
   }
 
@@ -1423,7 +1592,7 @@ function saveAppointment() {
   resetApptForm();
   loadAppointments();
   loadDashboard();
-  alert('Cita guardada correctamente ✅');
+  showToast('Cita guardada correctamente ✅');
 }
 
 function changeApptStatus(id, newStatus) {
@@ -1480,7 +1649,7 @@ function finishCleaning(id) {
   DataStore.saveAppointment(appt);
   loadAppointments();
   loadDashboard();
-  alert(`Limpieza completada en ${formatDuration(duration_minutes)} ✅`);
+  showToast(`Limpieza completada en ${formatDuration(duration_minutes)} ✅`);
 }
 
 function formatDuration(mins) {
@@ -1507,6 +1676,20 @@ let allExpenses = [];
 
 function loadExpenses() {
   allExpenses = DataStore.getExpenses();
+  
+  // Actualizar filtro de categorias
+  const filterSelect = document.getElementById('expenseFilter');
+  if (filterSelect) {
+    const currentVal = filterSelect.value;
+    const categories = new Set(allExpenses.map(e => e.category));
+    let options = '<option value="todas">Todas las categorías</option>';
+    categories.forEach(cat => {
+      if(cat) options += `<option value="${cat}">${cat}</option>`;
+    });
+    filterSelect.innerHTML = options;
+    filterSelect.value = currentVal || 'todas';
+  }
+
   renderExpensesTable(allExpenses);
 }
 
@@ -1514,16 +1697,9 @@ function renderExpensesTable(exps) {
   const tbody = document.getElementById('expensesTable');
   if (!exps || exps.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">No hay gastos registrados aún.</td></tr>';
+    document.getElementById('expensesTotalHeader').textContent = 'Total: $0.00';
     return;
   }
-
-  const catLabels = {
-    insumos: 'Insumos de limpieza',
-    gasolina: 'Gasolina / Transporte',
-    salario_asistente: 'Salario asistente',
-    equipo: 'Equipo / Herramientas',
-    otro: 'Otro'
-  };
 
   const total = exps.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
   const totalEl = document.getElementById('expensesTotalHeader');
@@ -1532,11 +1708,13 @@ function renderExpensesTable(exps) {
   tbody.innerHTML = exps.map(e => `
     <tr>
       <td><strong>${formatDate(e.date)}</strong></td>
-      <td><span class="badge badge-cat-${e.category}">${catLabels[e.category] || e.category}</span></td>
+      <td><span class="badge" style="background:#e8eaf6; color:#3f51b5;">${e.category}</span></td>
       <td>${e.description || '-'}</td>
       <td><strong style="color:var(--danger); font-weight:800;">$${parseFloat(e.amount).toFixed(2)}</strong></td>
       <td class="action-cell">
-        <button class="btn-table-action btn-del-table" onclick="deleteExpense('${e.id}')" title="Eliminar gasto">🗑</button>
+        <button class="btn-table-action btn-del-table" style="background:#f44336; color:#fff;" onclick="deleteExpense('${e.id}')" title="Eliminar gasto">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+        </button>
       </td>
     </tr>
   `).join('');
@@ -1552,13 +1730,13 @@ function filterExpenses(category) {
 }
 
 function saveExpense() {
-  const category = document.getElementById('eCategory').value;
+  const category = document.getElementById('eCategory').value.trim();
   const amount = parseFloat(document.getElementById('eAmount').value);
   const date = document.getElementById('eDate').value || new Date().toISOString().split('T')[0];
   const desc = document.getElementById('eDesc').value.trim();
 
   if (!category || isNaN(amount) || amount <= 0) {
-    alert('Por favor selecciona una categoría e ingresa un monto válido.');
+    showToast('Por favor selecciona una categoría e ingresa un monto válido.');
     return;
   }
 
@@ -1574,7 +1752,7 @@ function saveExpense() {
   toggleForm('expenseForm');
   loadExpenses();
   loadDashboard();
-  alert('Gasto guardado ✅');
+  showToast('Gasto guardado ✅');
 }
 
 function deleteExpense(id) {
@@ -1646,9 +1824,9 @@ function qcCopyText() {
   text += `Precio sujeto a confirmación al evaluar la propiedad.`;
 
   navigator.clipboard.writeText(text).then(() => {
-    alert('Cotización copiada al portapapeles ✅');
+    showToast('Cotización copiada al portapapeles ✅');
   }).catch(() => {
-    alert('Texto de cotización:\n\n' + text);
+    showToast('Texto de cotización:\n\n' + text);
   });
 }
 
@@ -1672,7 +1850,7 @@ function qcSaveAsLead() {
     status: 'nuevo'
   });
 
-  alert('Cotización guardada como Lead en el panel ✅');
+  showToast('Cotización guardada como Lead en el panel ✅');
 }
 
 function qcCreateClient() {
@@ -1887,7 +2065,7 @@ function resetDemoData() {
     DataStore.seedInitialData();
     closeSettingsModal();
     loadDashboard();
-    alert('Datos de prueba restaurados exitosamente ✅');
+    showToast('Datos de prueba restaurados exitosamente ✅');
   }
 }
 
@@ -1991,7 +2169,7 @@ function savePlanForm() {
   const active = document.getElementById('pActive').checked;
 
   if (!name || !price) {
-    alert('El nombre y el precio son obligatorios.');
+    showToast('El nombre y el precio son obligatorios.');
     return;
   }
 
@@ -2013,7 +2191,7 @@ function savePlanForm() {
   toggleForm('planForm');
   resetPlanForm();
   loadPlans();
-  alert('Plan guardado con éxito ✅');
+  showToast('Plan guardado con éxito ✅');
 }
 
 function editPlan(id) {
