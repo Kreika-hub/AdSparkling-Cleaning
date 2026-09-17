@@ -68,14 +68,14 @@ document.addEventListener('DOMContentLoaded', () => {
 // AUTENTICACIÓN POR TELÉFONO
 // ============================================
 function showPhoneLogin() {
-  document.getElementById('portalLoginView').style.display = 'block';
+  document.getElementById('portalLoginView').style.display = 'flex';
   document.getElementById('portalMainView').style.display = 'none';
   
   // Mostrar botón PWA en login
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   if (deferredInstallPrompt || isIOS) {
     const btnInstall = document.getElementById('btnPortalInstallLogin');
-    if (btnInstall) btnInstall.style.display = 'block';
+    if (btnInstall) btnInstall.style.display = 'flex';
   }
 }
 

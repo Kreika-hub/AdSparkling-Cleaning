@@ -35,26 +35,27 @@
   <!-- ============================================
        VISTA 1: LOGIN RÁPIDO CON TELÉFONO
        ============================================ -->
-  <div id="portalLoginView" class="portal-container" style="display:none;">
+  <div id="portalLoginView" class="portal-login-screen" style="display:none;">
     <div class="portal-login-card">
-      <img src="assets/images/logo-color.svg" alt="Ad Sparkling Cleaning" style="height: 48px; margin-bottom: 16px;">
-      <h2 style="color:var(--primary); font-size:22px; font-weight:800; margin-bottom:6px;" data-i18n="portal_title">Client Portal — Ad Sparkling</h2>
-      <p style="color:var(--text-sec); font-size:13px;" data-i18n="admin_login_sub">Enter your phone number to access your service details.</p>
+      <img src="assets/images/logo-color.svg" alt="Ad Sparkling Cleaning" class="portal-login-logo">
+      <h2 class="portal-login-title" data-i18n="portal_title">Client Portal</h2>
+      <p class="portal-login-sub" data-i18n="portal_login_sub">Ingresa tu número de teléfono para ver tu plan de limpieza.</p>
 
       <form onsubmit="handleClientLogin(event)">
-        <input type="tel" id="clientPhoneInput" class="portal-login-input" placeholder="(786) 458-2442" required autofocus data-i18n="ph_client_phone">
-        <button type="submit" class="btn-submit-review" style="margin-top:4px;" data-i18n="portal_login_btn">Enter Portal ✨</button>
+        <input type="tel" id="clientPhoneInput" class="portal-login-input" placeholder="(786) 000-0000" required autofocus data-i18n="ph_client_phone">
+        <button type="submit" id="btnPortalLogin" class="portal-login-btn" data-i18n="portal_login_btn">Entrar al Portal ✨</button>
       </form>
       
-      <button id="btnPortalInstallLogin" onclick="installPortalPWA()" style="display:none; width:100%; margin-top:15px; background:#f0e6f2; color:var(--primary); border:1px solid #d4bad9; border-radius:12px; padding:10px; font-weight:700; cursor:pointer;">
-        📲 Descargar App del Portal
+      <button id="btnPortalInstallLogin" class="pwa-install-banner" onclick="installPortalPWA()">
+        📲 Instalar App en mi teléfono
       </button>
-
-      <div class="portal-footer-note">
-        <a href="index.html" style="color:var(--text-muted); text-decoration:none;" data-i18n="portal_back_link">← Return to website</a>
-      </div>
+    </div>
+    
+    <div class="portal-footer-note">
+      <a href="index.html" data-i18n="portal_back_link">← Volver al sitio web</a>
     </div>
   </div>
+
 
   <!-- ============================================
        VISTA 2: PORTAL PRINCIPAL DEL CLIENTE
