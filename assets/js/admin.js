@@ -5,7 +5,9 @@
 
 let adminToken = sessionStorage.getItem('admin_token') || null;
 
-const PRICING = {
+let customPricing = null;
+try { customPricing = JSON.parse(localStorage.getItem('adsparkling_pricing')); } catch(e) {}
+const PRICING = customPricing || {
   1200: { 10: 150, 15: 150, 30: 180, deep: 240 },
   1700: { 10: 165, 15: 170, 30: 200, deep: 270 },
   2200: { 10: 180, 15: 195, 30: 225, deep: 300 },
@@ -777,7 +779,7 @@ function showTab(tabId) {
   if (tabId === 'reviews') loadAdminReviews();
   if (tabId === 'plans') loadPlans();
   if (tabId === 'team') loadTeam();
-  if (tabId === 'cotizar') qcCalculate();
+  if (tabId === 'cotizar') { qcCalculate(); renderPricingTable(); }
 }
 
 function toggleSidebar() {
@@ -999,7 +1001,10 @@ function renderLeadsTable(leads) {
     <tr>
       <td><strong>${l.name}</strong></td>
       <td><a href="tel:${cleanPhone(l.phone)}" style="color:inherit; font-weight:600;">${l.phone}</a></td>
-      <td title="${l.address}">${truncate(l.address, 30)}</td>
+      <td title="${l.address}">
+        ${truncate(l.address, 25)}
+        ${l.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.address)}" target="_blank" style="text-decoration:none; margin-left:4px;" title="Ver ubicación en Google Maps">🗺️</a>` : ''}
+      </td>
       <td>${l.size_sqft ? l.size_sqft + ' sqft' : '-'}</td>
       <td>${l.frequency ? freqLabel(l.frequency) : '-'}</td>
       <td>
@@ -1126,45 +1131,85 @@ function renderClientsTable(clients) {
     return;
   }
 
-  container.innerHTML = clients.map(c => `
-    <div class="swipe-wrap">
-      <div class="swipe-actions" style="background:var(--border);">
-        <button onclick="sendPortalLink('${c.id}')" title="Portal al Cliente" style="background:#f4ebfa; color:var(--primary); font-size: 14px;">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-        </button>
-        <button onclick="scheduleForClient('${c.id}')" title="Agendar Cita" style="background:#2196f3; color:#fff;">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        </button>
-        <button onclick="editClient('${c.id}')" title="Editar cliente" style="background:#ff9800; color:#fff;">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        </button>
-        <a href="https://wa.me/${cleanPhone(c.phone)}" target="_blank" title="Enviar WhatsApp" style="background:#25d366; color:#fff; display:flex; align-items:center; justify-content:center; text-decoration:none;">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-        </a>
-        <button onclick="deleteClient('${c.id}')" title="Eliminar cliente" style="background:#f44336; color:#fff;">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-        </button>
-      </div>
-      <div class="swipe-card" data-actions-count="5">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <strong style="font-size:15px; color:var(--text-color);">${c.name}</strong>
-          <span class="badge badge-${c.status}">${c.status}</span>
-        </div>
-        <div style="color:var(--text-sec); font-size:13px; margin-top:4px;">
-          📞 ${c.phone} &nbsp;·&nbsp; 📅 Próxima: ${formatDate(c.next_visit)} &nbsp;·&nbsp; $${c.base_price || '-'}
-        </div>
-      </div>
-    </div>
-  `).join('');
+  container.innerHTML = clients.map(c => {
+    const statusColor = c.status === 'activo' ? 'var(--success)' : 'var(--text-muted)';
+    const statusBg = c.status === 'activo' ? 'var(--success-bg)' : '#f0ecf4';
+    const mapsUrl = c.address
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address + ', Miami, FL')}`
+      : `https://www.google.com/maps/search/?api=1&query=Miami+FL`;
+    const nextVisit = c.next_visit ? formatDate(c.next_visit) : '—';
+    const lastVisit = c.last_visit ? formatDate(c.last_visit) : '—';
+    const ltv = c.lifetime_value ? `$${c.lifetime_value.toLocaleString()}` : `$${(c.base_price || 0)}`;
 
-  // Inicializar swipe cards
-  if (typeof initSwipeCard === 'function') {
-    container.querySelectorAll('.swipe-card').forEach(el => {
-      const count = parseInt(el.dataset.actionsCount) || 1;
-      initSwipeCard(el, count * 56);
-    });
-  }
+    return `
+    <div style="background:#fff; border-radius:14px; border:1px solid var(--border); padding:16px 18px; margin-bottom:12px; box-shadow:var(--shadow); transition: box-shadow 0.2s;" 
+         onmouseover="this.style.boxShadow='0 6px 20px rgba(49,1,63,0.1)'" onmouseout="this.style.boxShadow='var(--shadow)'">
+      
+      <!-- Fila principal: nombre + badge -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+        <div>
+          <div style="font-size:16px; font-weight:700; color:var(--primary); margin-bottom:2px;">${c.name}</div>
+          <div style="font-size:13px; color:var(--text-sec);">📞 ${c.phone || '—'}</div>
+        </div>
+        <span style="background:${statusBg}; color:${statusColor}; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap; text-transform:uppercase; letter-spacing:0.4px;">${c.status || 'activo'}</span>
+      </div>
+
+      <!-- Info grid: próxima visita, última, precio, LTV -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; background:var(--bg); padding:10px 12px; border-radius:10px;">
+        <div>
+          <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin-bottom:2px;">Próxima cita</div>
+          <div style="font-size:13px; font-weight:600; color:var(--text);">${nextVisit}</div>
+        </div>
+        <div>
+          <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin-bottom:2px;">Última limpieza</div>
+          <div style="font-size:13px; font-weight:600; color:var(--text);">${lastVisit}</div>
+        </div>
+        <div>
+          <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin-bottom:2px;">Precio base</div>
+          <div style="font-size:13px; font-weight:600; color:var(--text);">$${c.base_price || '—'}</div>
+        </div>
+        <div>
+          <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin-bottom:2px;">Valor total</div>
+          <div style="font-size:13px; font-weight:700; color:var(--primary);">${ltv}</div>
+        </div>
+      </div>
+
+      ${c.address ? `
+      <div style="display:flex; align-items:center; gap:6px; margin-bottom:14px; font-size:12px; color:var(--text-sec);">
+        📍 <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.address}</span>
+      </div>` : ''}
+
+      <!-- Acciones -->
+      <div style="display:flex; gap:8px; flex-wrap:wrap; border-top:1px solid var(--border); padding-top:12px;">
+        <a href="${mapsUrl}" target="_blank" title="Ver en Google Maps" 
+           style="display:inline-flex; align-items:center; gap:5px; background:#f0e8f8; color:var(--primary); border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; text-decoration:none;">
+          🗺️ Ver en Mapa
+        </a>
+        <button onclick="scheduleForClient('${c.id}')" title="Agendar Cita" 
+           style="display:inline-flex; align-items:center; gap:5px; background:#e8f3ff; color:#1565c0; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
+          📅 Agendar
+        </button>
+        <button onclick="sendPortalLink('${c.id}')" title="Enviar Portal" 
+           style="display:inline-flex; align-items:center; gap:5px; background:#e8f5e9; color:var(--success); border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
+          🔗 Portal
+        </button>
+        <a href="https://wa.me/${cleanPhone(c.phone)}" target="_blank" title="WhatsApp"
+           style="display:inline-flex; align-items:center; gap:5px; background:#e8faf0; color:#25d366; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; text-decoration:none;">
+          💬 WA
+        </a>
+        <button onclick="editClient('${c.id}')" title="Editar cliente" 
+           style="display:inline-flex; align-items:center; gap:5px; background:#fff8ed; color:#d4a017; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; margin-left:auto;">
+          ✏️
+        </button>
+        <button onclick="deleteClient('${c.id}')" title="Eliminar" 
+           style="display:inline-flex; align-items:center; gap:5px; background:var(--danger-bg); color:var(--danger); border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
+          🗑
+        </button>
+      </div>
+    </div>`;
+  }).join('');
 }
+
 
 function sendPortalLink(clientId) {
   const client = allClients.find(c => c.id == clientId);
@@ -1480,31 +1525,17 @@ function renderAppointmentsTable(appts) {
   }
 
   container.innerHTML = appts.map(a => `
-    <div class="swipe-wrap">
-      <div class="swipe-actions" style="background:var(--border);">
-        ${a.status === 'pendiente' ? `
-          <button onclick="startCleaning('${a.id}')" title="Iniciar limpieza" style="background:var(--primary); color:#fff;"><span style="font-size:12px; display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Iniciar</span></button>
-          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Hola! Anggie está en camino/comenzando tu limpieza de hoy 🧹✨')}" target="_blank" title="Avisar por WhatsApp" style="background:#25d366; color:#fff; display:flex; align-items:center; justify-content:center; text-decoration:none;"><span style="font-size:12px; display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Voy</span></a>
-        ` : a.status === 'en_progreso' ? `
-          <button onclick="pauseCleaning('${a.id}')" title="Pausar limpieza" style="background:#f57c00; color:#fff;"><span style="font-size:12px; display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Pausar</span></button>
-          <button onclick="finishCleaning('${a.id}')" title="Finalizar limpieza" style="background:#4caf50; color:#fff;"><span style="font-size:12px; display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg> Fin</span></button>
-        ` : a.status === 'pausada' ? `
-          <button onclick="resumeCleaning('${a.id}')" title="Reanudar limpieza" style="background:var(--primary); color:#fff;"><span style="font-size:12px; display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Reanudar</span></button>
-          <button onclick="finishCleaning('${a.id}')" title="Finalizar limpieza" style="background:#4caf50; color:#fff;"><span style="font-size:12px; display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg> Fin</span></button>
-        ` : a.status === 'completada' ? `
-          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Listo! Tu hogar quedó reluciente ✨ Nos vemos en tu próxima visita.')}" target="_blank" title="Avisar por WhatsApp" style="background:#25d366; color:#fff; display:flex; align-items:center; justify-content:center; text-decoration:none;"><span style="font-size:12px; display:flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Lista</span></a>
-        ` : ''}
-        <button onclick="editAppt('${a.id}')" title="Editar cita" style="background:#ff9800; color:#fff;">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        </button>
-        <button onclick="deleteAppt('${a.id}')" title="Eliminar cita" style="background:#f44336; color:#fff;">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-        </button>
-      </div>
-      <div class="swipe-card" data-actions-count="${a.status === 'pendiente' ? 4 : (a.status === 'en_progreso' ? 4 : (a.status === 'pausada' ? 4 : (a.status === 'completada' ? 3 : 2)))}">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <strong style="font-size:15px; color:var(--text-color);">${a.clients?.name || 'Cliente'}</strong>
-          <select class="status-select status-${a.status}" onchange="changeApptStatus('${a.id}', this.value)" onclick="event.stopPropagation()">
+    <div class="dash-item" style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.04); flex-direction:column; align-items:stretch;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:8px;">
+        <div>
+          <strong style="font-size:16px; color:var(--primary); display:block;">${a.clients?.name || 'Cliente'}</strong>
+          <div style="font-size:13px; color:var(--text-sec); margin-top:2px;">
+            📅 ${formatDate(a.date)} ${a.time ? '· ⏰ ' + a.time : ''}
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:18px; font-weight:800; color:var(--primary);">$${a.price}</div>
+          <select class="status-select status-${a.status}" onchange="changeApptStatus('${a.id}', this.value)" style="margin-top:4px;">
             <option value="pendiente" ${a.status === 'pendiente' ? 'selected' : ''}>Pendiente</option>
             <option value="en_progreso" ${a.status === 'en_progreso' ? 'selected' : ''}>En progreso</option>
             <option value="pausada" ${a.status === 'pausada' ? 'selected' : ''}>Pausada</option>
@@ -1512,18 +1543,39 @@ function renderAppointmentsTable(appts) {
             <option value="cancelada" ${a.status === 'cancelada' ? 'selected' : ''}>Cancelada</option>
           </select>
         </div>
-        <div style="color:var(--text-sec); font-size:13px; margin-top:4px;">
-          📅 ${formatDate(a.date)} ${a.time ? '· ⏰ ' + a.time : ''} &nbsp;·&nbsp; <strong style="color:var(--primary);">$${a.price}</strong>
+      </div>
+
+      <div style="font-size:13px; color:var(--text-sec); margin-bottom:12px; background:var(--bg-alt); padding:10px 14px; border-radius:8px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <span>📍 <strong>Dirección:</strong> ${a.clients?.address || 'Sin dirección'}</span>
+          ${a.clients?.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.clients.address)}" target="_blank" style="text-decoration:none; font-size:12px; font-weight:700; color:var(--primary);" title="Ver en Google Maps">🗺️ Mapa</a>` : ''}
         </div>
-        <div style="color:var(--text-muted); font-size:12px; margin-top:4px; display:flex; justify-content:space-between;">
-          <span>${a.clients?.address ? truncate(a.clients.address, 30) : ''}</span>
-          ${a.status === 'en_progreso' && a.started_at ? `<span style="color:#f57c00;">🧹 Desde ${new Date(a.started_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>` : ''}
-          ${a.status === 'pausada' ? `<span style="color:#f57c00;">⏸️ En pausa (${formatDuration(a.accumulated_minutes || 0)})</span>` : ''}
-          ${a.status === 'completada' && a.duration_minutes ? `<span style="color:var(--success);">✓ Duración: ${formatDuration(a.duration_minutes)}</span>` : ''}
-        </div>
+        ${a.addons && a.addons.length ? `<div style="margin-top:4px;">✨ <strong>Extras:</strong> ${a.addons.join(', ')}</div>` : ''}
+        ${a.notes ? `<div style="margin-top:4px;">📝 <strong>Notas:</strong> ${a.notes}</div>` : ''}
+        ${a.status === 'en_progreso' && a.started_at ? `<div style="margin-top:4px; color:#f57c00; font-weight:600;">🧹 En progreso desde: ${new Date(a.started_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>` : ''}
+        ${a.status === 'pausada' ? `<div style="margin-top:4px; color:#f57c00; font-weight:600;">⏸️ Pausada (${formatDuration(a.accumulated_minutes || 0)})</div>` : ''}
+        ${a.status === 'completada' && a.duration_minutes ? `<div style="margin-top:4px; color:var(--success); font-weight:600;">✓ Tiempo total: ${formatDuration(a.duration_minutes)}</div>` : ''}
+      </div>
+
+      <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+        ${a.status === 'pendiente' ? `
+          <button class="btn-action-pill" onclick="startCleaning('${a.id}')" style="background:var(--primary); color:#fff;">▶️ Iniciar</button>
+          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Hola! Anggie está en camino/comenzando tu limpieza de hoy 🧹✨')}" target="_blank" class="btn-action-pill" style="background:#25d366; color:#fff; text-decoration:none;">💬 Voy en camino</a>
+        ` : a.status === 'en_progreso' ? `
+          <button class="btn-action-pill" onclick="pauseCleaning('${a.id}')" style="background:#f57c00; color:#fff;">⏸️ Pausar</button>
+          <button class="btn-action-pill" onclick="finishCleaning('${a.id}')" style="background:#4caf50; color:#fff;">✅ Finalizar</button>
+        ` : a.status === 'pausada' ? `
+          <button class="btn-action-pill" onclick="resumeCleaning('${a.id}')" style="background:var(--primary); color:#fff;">▶️ Reanudar</button>
+          <button class="btn-action-pill" onclick="finishCleaning('${a.id}')" style="background:#4caf50; color:#fff;">✅ Finalizar</button>
+        ` : a.status === 'completada' ? `
+          <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Listo! Tu hogar quedó reluciente ✨ Nos vemos en tu próxima visita.')}" target="_blank" class="btn-action-pill" style="background:#25d366; color:#fff; text-decoration:none;">💬 Confirmar WA</a>
+        ` : ''}
+        <button class="btn-action-pill" onclick="editAppt('${a.id}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border);">✏️ Editar</button>
+        <button class="btn-action-pill" onclick="deleteAppt('${a.id}')" style="background:#ffebee; color:#c62828;">🗑️ Eliminar</button>
       </div>
     </div>
   `).join('');
+}
 
   // Inicializar swipe cards
   if (typeof initSwipeCard === 'function') {
@@ -1874,6 +1926,35 @@ function qcCalculate() {
   return total;
 }
 
+function renderPricingTable() {
+  const tbody = document.getElementById('pricingRefTableBody');
+  if (!tbody) return;
+  const sizes = [1200, 1700, 2200, 2800, 3500, 4500];
+  const freqs = ['10', '15', '30', 'deep'];
+  tbody.innerHTML = sizes.map(sz => `
+    <tr>
+      <td><strong>${sz} sqft</strong></td>
+      ${freqs.map(fq => `
+        <td>
+          <input type="number" value="${PRICING[sz][fq] || ''}" style="width:70px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); font-size:13px; text-align:center; font-weight:700;" onchange="updatePricingValue(${sz}, '${fq}', this.value)">
+        </td>
+      `).join('')}
+    </tr>
+  `).join('');
+}
+
+function updatePricingValue(size, freq, val) {
+  const num = parseInt(val) || 0;
+  if (PRICING[size]) {
+    PRICING[size][freq] = num;
+    try {
+      localStorage.setItem('adsparkling_pricing', JSON.stringify(PRICING));
+    } catch(e) {}
+    qcCalculate();
+    showToast('Precio de referencia actualizado ✅');
+  }
+}
+
 function qcSendWhatsApp() {
   const total = qcCalculate();
   const sizeSelect = document.getElementById('qcSize');
@@ -2000,19 +2081,25 @@ function loadAdminReviews() {
       ` : ''}
 
       <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:6px; flex-wrap:wrap;">
-        ${r.status !== 'publicada' ? `
+        ${(!r.status || r.status === 'pendiente' || r.status === 'archivada') ? `
           <button class="btn-table-action" style="background:#e8f8f0; color:#2d8a5e; font-weight:700; padding:6px 14px;" onclick="publishReview('${r.id}')" title="Publicar en la web">
             ✓ Publicar en la Web
           </button>
         ` : `
-          <button class="btn-table-action" style="background:#f0eef3; color:var(--text-sec); padding:6px 14px;" onclick="archiveReview('${r.id}')" title="Ocultar de la web">
-            📦 Ocultar / Archivar
+          <button class="btn-table-action" style="background:#e8f8f0; color:#2d8a5e; font-weight:700; padding:6px 14px; opacity:0.5; cursor:default;" disabled>
+            ✓ Publicada
           </button>
         `}
+        ${r.status === 'publicada' ? `
+          <button class="btn-table-action" style="background:#f0eef3; color:var(--text-sec); padding:6px 14px;" onclick="archiveReview('${r.id}')" title="Ocultar de la web">
+            📦 Archivar
+          </button>
+        ` : ''}
         <button class="btn-table-action btn-del-table" onclick="deleteReview('${r.id}')" title="Eliminar reseña">
           🗑 Eliminar
         </button>
       </div>
+
     </div>
   `).join('');
 }
@@ -2203,20 +2290,32 @@ function renderPlansList(plans) {
   }
 
   list.innerHTML = plans.map(p => `
-    <div class="dash-item" style="opacity: ${p.active !== false ? '1' : '0.6'}; display: flex; flex-direction: column; align-items: stretch; border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+    <div class="dash-item" style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.04); opacity: ${p.active !== false ? '1' : '0.65'}; flex-direction:column; align-items:stretch;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
         <div>
-          <h4 style="margin: 0; color: var(--primary); font-size: 16px;">${p.name || 'Sin nombre'}</h4>
-          <span style="font-size: 13px; color: var(--text-sec);">Frecuencia: ${freqLabel(p.frequency)}</span>
+          <span class="badge" style="background:rgba(49,1,63,0.08); color:var(--primary); font-weight:700; margin-bottom:6px; display:inline-block;">${freqLabel(p.frequency)}</span>
+          <h3 style="margin:4px 0 0 0; color:var(--primary); font-size:18px; font-weight:800;">${p.name || 'Sin nombre'}</h3>
         </div>
-        <div style="text-align: right;">
-          <div style="font-weight: 800; color: var(--success); font-size: 16px;">$${p.price || 0}</div>
-          <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: ${p.active !== false ? '#e8f5e9' : '#ffebee'}; color: ${p.active !== false ? '#2d8a5e' : '#c62828'};">${p.active !== false ? 'Activo' : 'Inactivo'}</span>
+        <div style="text-align:right;">
+          <div style="font-size:22px; font-weight:800; color:var(--success);">$${p.price || 0}</div>
+          <span style="font-size:11px; padding:3px 8px; border-radius:12px; font-weight:600; background:${p.active !== false ? '#e8f5e9' : '#ffebee'}; color:${p.active !== false ? '#2d8a5e' : '#c62828'};">${p.active !== false ? '● Activo' : '○ Inactivo'}</span>
         </div>
       </div>
-      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
-        <button class="btn-action" style="background: var(--bg-alt); color: var(--primary); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="editPlan('${p.id}')">✏️ Editar</button>
-        <button class="btn-action" style="background: ${p.active !== false ? '#ffebee' : '#e8f5e9'}; color: ${p.active !== false ? '#c62828' : '#2d8a5e'}; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;" onclick="togglePlanActive('${p.id}')">${p.active !== false ? 'Desactivar' : 'Activar'}</button>
+
+      ${(p.included && p.included.length) ? `
+        <div style="font-size:13px; color:var(--text); margin-bottom:10px;">
+          <strong style="color:var(--primary);">Incluye:</strong>
+          <ul style="margin:4px 0 0 18px; padding:0; color:var(--text-sec);">
+            ${p.included.map(inc => `<li>${inc}</li>`).join('')}
+          </ul>
+        </div>
+      ` : ''}
+
+      ${p.terms ? `<div style="font-size:12px; color:var(--text-muted); background:var(--bg-alt); padding:8px 12px; border-radius:8px; margin-bottom:12px;">📌 ${p.terms}</div>` : ''}
+
+      <div style="display:flex; gap:8px; justify-content:flex-end; border-top:1px solid var(--border); padding-top:12px;">
+        <button class="btn-action-pill" onclick="editPlan('${p.id}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border);">✏️ Editar Plan</button>
+        <button class="btn-action-pill" onclick="togglePlanActive('${p.id}')" style="background:${p.active !== false ? '#ffebee' : '#e8f5e9'}; color:${p.active !== false ? '#c62828' : '#2d8a5e'};">${p.active !== false ? '🚫 Desactivar' : '✅ Activar'}</button>
       </div>
     </div>
   `).join('');
@@ -2263,8 +2362,8 @@ function savePlanForm() {
     return;
   }
 
-  const included = includedText.split('\\n').map(s => s.trim()).filter(Boolean);
-  const excluded = excludedText.split('\\n').map(s => s.trim()).filter(Boolean);
+  const included = includedText.split('\n').map(s => s.trim()).filter(Boolean);
+  const excluded = excludedText.split('\n').map(s => s.trim()).filter(Boolean);
 
   const planData = {
     id: id || undefined,
@@ -2296,8 +2395,8 @@ function editPlan(id) {
   document.getElementById('pName').value = plan.name || '';
   document.getElementById('pFreq').value = plan.frequency || '15';
   document.getElementById('pPrice').value = plan.price || '';
-  document.getElementById('pIncluded').value = Array.isArray(plan.included) ? plan.included.join('\\n') : '';
-  document.getElementById('pExcluded').value = Array.isArray(plan.excluded) ? plan.excluded.join('\\n') : '';
+  document.getElementById('pIncluded').value = Array.isArray(plan.included) ? plan.included.join('\n') : '';
+  document.getElementById('pExcluded').value = Array.isArray(plan.excluded) ? plan.excluded.join('\n') : '';
   document.getElementById('pTerms').value = plan.terms || '';
   document.getElementById('pActive').checked = plan.active !== false;
 
@@ -2334,28 +2433,35 @@ function renderTeamList(team) {
   }
 
   container.innerHTML = team.map(t => `
-    <div class="swipe-wrap">
-      <div class="swipe-actions" style="background:var(--border);">
-        <button onclick="editTeamMember('${t.id}')" title="Editar" style="background:#ff9800; color:#fff;">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        </button>
-        <button onclick="deleteTeamMember('${t.id}')" title="Eliminar" style="background:#f44336; color:#fff;">
-           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-        </button>
+    <div class="dash-item" style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.04); flex-direction:column; align-items:stretch;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:42px; height:42px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px;">
+            ${t.name ? t.name.charAt(0).toUpperCase() : 'E'}
+          </div>
+          <div>
+            <strong style="font-size:16px; color:var(--primary); display:block;">${t.name}</strong>
+            <div style="font-size:13px; color:var(--text-sec);">
+              Rol: <span style="font-weight:600; text-transform:capitalize;">${t.role}</span>
+            </div>
+          </div>
+        </div>
+        <span style="font-size:11px; padding:3px 8px; border-radius:12px; font-weight:600; background:${t.active ? '#e8f5e9' : '#ffebee'}; color:${t.active ? '#2d8a5e' : '#c62828'};">
+          ${t.active ? '● Disponible' : '○ No disponible'}
+        </span>
       </div>
-      <div class="swipe-card" data-actions-count="2">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <strong style="font-size:15px; color:var(--text-color);">${t.name}</strong>
-          <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: ${t.active ? '#e8f5e9' : '#ffebee'}; color: ${t.active ? '#2d8a5e' : '#c62828'};">${t.active ? 'Activo' : 'Inactivo'}</span>
-        </div>
-        <div style="color:var(--text-sec); font-size:13px; margin-top:4px;">
-          📞 ${t.phone || 'Sin teléfono'} &nbsp;·&nbsp; Rol: <strong style="color:var(--primary);">${t.role}</strong>
-        </div>
+
+      <div style="font-size:13px; color:var(--text-sec); background:var(--bg-alt); padding:8px 12px; border-radius:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+        <span>📞 Teléfono: ${t.phone || 'Sin registrar'}</span>
+        ${t.phone ? `<a href="tel:${cleanPhone(t.phone)}" style="color:var(--primary); text-decoration:none; font-weight:600;">Llamar 📞</a>` : ''}
+      </div>
+
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button class="btn-action-pill" onclick="editTeamMember('${t.id}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border);">✏️ Editar</button>
+        <button class="btn-action-pill" onclick="deleteTeamMember('${t.id}')" style="background:#ffebee; color:#c62828;">🗑️ Eliminar</button>
       </div>
     </div>
   `).join('');
-  
-  if (typeof initSwipeCards === 'function') initSwipeCards();
 }
 
 function saveTeamMember() {

@@ -62,12 +62,20 @@
   fill: none;
 }
 
+/* Scrollbar estilo Apple — sutil, delgada, solo al hacer scroll */
+* { scrollbar-width: thin; scrollbar-color: rgba(49,1,63,0.18) transparent; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(49,1,63,0.18); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(49,1,63,0.35); }
+
 * { 
   margin: 0; 
   padding: 0; 
   box-sizing: border-box; 
   -webkit-tap-highlight-color: transparent;
 }
+
 
 html, body {
   min-height: 100%;
@@ -552,35 +560,35 @@ html, body {
 }
 .sidebar-link-web:hover { color: #fff; }
 
-/* Language Switcher Sidebar */
+/* Language Switcher — igual que en landing page */
 .lang-switcher {
   display: inline-flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 3px 5px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 3px 4px;
   border-radius: 20px;
   gap: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 .lang-btn {
   background: transparent;
   border: none;
   font-size: 11px;
   font-weight: 700;
-  padding: 4px 8px;
+  padding: 4px 9px;
   border-radius: 16px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.75);
   transition: all 0.2s ease;
+  letter-spacing: 0.3px;
 }
-.lang-btn:hover {
-  color: #fff;
-}
+.lang-btn:hover { color: #fff; }
 .lang-btn.active {
-  background: var(--accent); /* Dorado/Amarillo */
+  background: #fff;
   color: var(--primary);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
+
 
 /* Main Content Area */
 .main {
@@ -1406,3 +1414,22 @@ html, body {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
+
+.btn-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+.btn-action-pill:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.96);
+}
+

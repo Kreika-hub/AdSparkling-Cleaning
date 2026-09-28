@@ -608,7 +608,7 @@
             </div>
           </div>
 
-          <div class="quick-calc-wrapper">
+          <div class="quick-calc-wrapper" style="flex-direction:column; gap:24px;">
             <div class="quick-calc">
               <div class="qc-grid">
                 <div class="qc-field">
@@ -638,7 +638,6 @@
                 <label class="qc-check"><input type="checkbox" id="qcOven" data-price="40"> Horno (+$40)</label>
                 <label class="qc-check"><input type="checkbox" id="qcFridge" data-price="50"> Nevera (+$50)</label>
                 <label class="qc-check"><input type="checkbox" id="qcCabinets" data-price="50"> Gabinetes (+$50)</label>
-                <label class="qc-check"><input type="checkbox" id="qcDistance" data-price="50"> Distancia (+$50)</label>
                 <label class="qc-check"><input type="checkbox" id="qcOverdue" data-price="30"> +30 días sin limpiar (+$30)</label>
               </div>
 
@@ -664,6 +663,33 @@
               <div class="qc-secondary-actions">
                 <button class="btn-qc-sub" onclick="qcSaveAsLead()">📥 Guardar como Lead</button>
                 <button class="btn-qc-sub" onclick="qcCreateClient()">👥 Crear Cliente con este precio</button>
+              </div>
+            </div>
+
+            <!-- TABLA DE PRECIOS DE REFERENCIA EDITABLE -->
+            <div class="dash-section" style="max-width:640px; margin-bottom:0;">
+              <div class="section-title-row" style="margin-bottom:12px;">
+                <h2>📋 Tabla de Precios de Referencia (Editable)</h2>
+                <span class="badge-hint">Guarda automáticamente</span>
+              </div>
+              <p style="font-size:13px; color:var(--text-sec); margin-bottom:14px;">
+                Edita los valores en la tabla para actualizar la calculadora en tiempo real.
+              </p>
+              <div class="table-wrap">
+                <table class="data-table" style="font-size:13px;">
+                  <thead>
+                    <tr>
+                      <th>Sqft</th>
+                      <th>10 Días</th>
+                      <th>Quincenal</th>
+                      <th>Mensual</th>
+                      <th>Profunda</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pricingRefTableBody">
+                    <!-- Cargado por JS -->
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
