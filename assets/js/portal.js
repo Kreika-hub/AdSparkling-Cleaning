@@ -262,6 +262,31 @@ function renderClientPortal(client, history = null, contract = null, plan = null
   const waMsg = encodeURIComponent(`¡Hola Anggie! Soy ${client.name} de ${client.address}. Te escribo desde mi portal de cliente sobre mis citas de limpieza ✨.`);
   waBtn.href = `https://wa.me/17864582442?text=${waMsg}`;
 
+  // Lógica de Referidos
+  const refCount = client.referrals || 0;
+  const slot1 = document.getElementById('refSlot1');
+  const slot2 = document.getElementById('refSlot2');
+  const slot3 = document.getElementById('refSlot3');
+  const fill = document.getElementById('refProgressFill');
+  const statusTxt = document.getElementById('refStatusText');
+  
+  if (slot1 && slot2 && slot3) {
+    if (refCount >= 1) { slot1.style.background = 'var(--primary)'; slot1.style.color = '#fff'; slot1.style.borderColor = 'var(--primary)'; }
+    if (refCount >= 2) { slot2.style.background = 'var(--primary)'; slot2.style.color = '#fff'; slot2.style.borderColor = 'var(--primary)'; }
+    if (refCount >= 3) { 
+      slot3.style.background = 'var(--primary)'; slot3.style.color = '#fff'; slot3.style.borderColor = 'var(--primary)'; 
+      statusTxt.textContent = '¡Felicidades! Has ganado un servicio extra.';
+      fill.style.width = '100%';
+    } else {
+      statusTxt.textContent = `${refCount} de 3 referidos`;
+      fill.style.width = (refCount * 33.33) + '%';
+    }
+
+    const refLinkInput = document.getElementById('refLinkInput');
+    const refCode = client.id ? client.id.substring(0,8).toUpperCase() : 'AMIGO';
+    refLinkInput.value = `https://ad-sparkling-cleaning.vercel.app/?ref=${refCode}`;
+  }
+
   // Plan y Contrato
   const planSection = document.getElementById('planSection');
   if (contract && plan) {
@@ -300,6 +325,26 @@ function renderClientPortal(client, history = null, contract = null, plan = null
     }
   } else {
     planSection.style.display = 'none';
+  }
+}
+
+function copyRefLink() {
+  const input = document.getElementById('refLinkInput');
+  if (input) {
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value);
+    
+    // Cambiar texto de botón momentáneamente
+    const btn = event.target;
+    const oldText = btn.innerHTML;
+    btn.innerHTML = '¡Copiado! ✓';
+    btn.style.background = 'var(--success)';
+    
+    setTimeout(() => {
+      btn.innerHTML = oldText;
+      btn.style.background = 'var(--primary)';
+    }, 2000);
   }
 }
 

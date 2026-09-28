@@ -43,14 +43,13 @@ function getConfig() {
       { id: 'oven', name: 'Horno por dentro', i18n: 'ext_oven', price: 40, active: true },
       { id: 'fridge', name: 'Nevera por dentro', i18n: 'ext_fridge', price: 50, active: true },
       { id: 'blinds', name: 'Persianas', i18n: 'ext_blinds', price: 10, active: true, perUnit: true },
-      { id: 'cabinets', name: 'Gabinetes + ventanas interior', i18n: 'ext_cabinets', price: 50, active: true },
-      { id: 'distance', name: 'Recargo por distancia', i18n: 'ext_dist', price: 50, active: true }
+      { id: 'cabinets', name: 'Gabinetes + ventanas interior', i18n: 'ext_cabinets', price: 50, active: true }
     ],
     notIncluded: [
-      { id: 'laundry', name: 'Laundry', i18n: 'not_laundry', active: true },
-      { id: 'dishes', name: 'Lavar platos', i18n: 'not_dishes', active: true },
-      { id: 'patio', name: 'Patio exterior', i18n: 'not_patio', active: true },
-      { id: 'pets', name: 'Excremento de mascotas', i18n: 'not_pets', active: true }
+      { id: 'laundry', name: 'Laundry y Clósets (Salvo contratado a $30/h)', i18n: 'not_laundry', active: true },
+      { id: 'dishes', name: 'Fregar, lavar o guardar platos', i18n: 'not_dishes', active: true },
+      { id: 'patio', name: 'Patios, terrazas o ventanas por fuera', i18n: 'not_patio', active: true },
+      { id: 'pets', name: 'Recoger excremento de mascotas', i18n: 'not_pets', active: true }
     ]
   };
 }
@@ -100,12 +99,30 @@ function handleRequest(e) {
   const btnLoader = btn?.querySelector('.btn-loader');
 
   // Validaciones
-  const name = (document.getElementById('reqName') || document.getElementById('contactName'))?.value.trim() || '';
+  const fName = document.getElementById('reqFirstName')?.value.trim() || '';
+  const lName = document.getElementById('reqLastName')?.value.trim() || '';
+  const name = (fName && lName) ? `${fName} ${lName}` : ((document.getElementById('contactName'))?.value.trim() || '');
   const phone = (document.getElementById('reqPhone') || document.getElementById('contactPhone'))?.value.trim() || '';
   const address = (document.getElementById('reqAddress') || document.getElementById('contactAddress'))?.value.trim() || '';
+  const countryCode = document.getElementById('reqCountryCode')?.value || '+1';
+  const county = document.getElementById('reqCounty')?.value || '';
+
+  if (countryCode !== '+1') {
+    alert('Actualmente no prestamos servicio fuera de USA.');
+    return;
+  }
+  
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (cleanPhone.length < 10) {
+    alert('Por favor ingresa un número de teléfono válido de 10 dígitos.');
+    return;
+  }
+
+  if (county === 'Palm Beach' || county === 'Otro') {
+    alert('Aviso: Puede que se aplique un cargo adicional por distancia debido a que la propiedad está fuera del área principal (Miami-Dade / Broward).');
+  }
 
   if (name.length < 2) { alert('Por favor ingresa tu nombre completo'); return; }
-  if (phone.length < 7) { alert('Por favor ingresa un teléfono válido'); return; }
   if (address.length < 5) { alert('Por favor ingresa una dirección completa'); return; }
 
   // Loading state

@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADsparking - Graphify Architecture Knowledge Graph</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-card: rgba(30, 41, 59, 0.7);
+      --border-color: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --c0: #38bdf8; /* Public Web - Cyan */
+      --c1: #818cf8; /* Client Portal - Indigo */
+      --c2: #f43f5e; /* Admin - Rose */
+      --c3: #10b981; /* Database - Emerald */
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* Header Bar */
+    header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 100;
+    }
+
+    .logo-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .stats-pills {
+      display: flex;
+      gap: 12px;
+    }
+
+    .pill {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .pill span {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    /* Controls overlay */
+    .controls-overlay {
+      position: absolute;
+      top: 80px;
+      left: 24px;
+      z-index: 90;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 320px;
+    }
+
+    .search-box {
+      width: 100%;
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px 16px;
+      color: var(--text-main);
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .search-box:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    .community-filters {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .filter-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .filter-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: 6px;
+      transition: background 0.15s;
+      font-size: 13px;
+    }
+
+    .filter-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* Node Details Sidebar */
+    .details-sidebar {
+      position: absolute;
+      top: 80px;
+      right: 24px;
+      bottom: 24px;
+      width: 360px;
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      z-index: 90;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transform: translateX(400px);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      overflow-y: auto;
+    }
+
+    .details-sidebar.active {
+      transform: translateX(0);
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .node-header-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      word-break: break-all;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 13px;
+    }
+
+    .meta-label {
+      color: var(--text-muted);
+    }
+
+    .neighbors-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .neighbor-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .neighbor-card:hover {
+      border-color: #6366f1;
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    #svg-container {
+      width: 100%;
+      height: 100%;
+    }
+
+    .node {
+      cursor: pointer;
+      transition: r 0.2s;
+    }
+
+    .link {
+      stroke: rgba(148, 163, 184, 0.25);
+      stroke-width: 1.5px;
+    }
+
+    .node-label {
+      font-size: 11px;
+      fill: #e2e8f0;
+      pointer-events: none;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-group">
+      <div class="logo-badge">GRAPHIFY</div>
+      <div class="title">ADsparking Architecture Knowledge Graph</div>
+    </div>
+    <div class="stats-pills">
+      <div class="pill">Nodes: <span id="stat-nodes">16</span></div>
+      <div class="pill">Edges: <span id="stat-edges">26</span></div>
+      <div class="pill">Communities: <span id="stat-communities">4</span></div>
+    </div>
+  </header>
+
+  <div class="controls-overlay">
+    <input type="text" id="search" class="search-box" placeholder="Search node or file...">
+    <div class="community-filters">
+      <div class="filter-title">Communities</div>
+      <div class="filter-item" onclick="toggleCommunity(0)">
+        <div class="dot" style="background: var(--c0)"></div> Public Web Experience
+      </div>
+      <div class="filter-item" onclick="toggleCommunity(1)">
+        <div class="dot" style="background: var(--c1)"></div> Client Portal Services
+      </div>
+      <div class="filter-item" onclick="toggleCommunity(2)">
+        <div class="dot" style="background: var(--c2)"></div> Admin Management
+      </div>
+      <div class="filter-item" onclick="toggleCommunity(3)">
+        <div class="dot" style="background: var(--c3)"></div> Database Infrastructure
+      </div>
+    </div>
+  </div>
+
+  <div id="details" class="details-sidebar">
+    <button class="close-btn" onclick="closeDetails()">&times;</button>
+    <div>
+      <span id="node-tag" class="tag" style="background: rgba(56, 189, 248, 0.2); color: var(--c0);">Community 0</span>
+      <h2 id="node-name" class="node-header-title" style="margin-top: 8px;">index.html</h2>
+    </div>
+    <p id="node-desc" style="font-size: 13px; color: var(--text-muted); line-height: 1.5;"></p>
+    
+    <div>
+      <div class="meta-row">
+        <span class="meta-label">File Type</span>
+        <span id="node-type">code</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Connections (Degree)</span>
+        <span id="node-degree">5</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Source File</span>
+        <span id="node-file">index.html</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="filter-title" style="margin-bottom: 8px;">Connected Dependencies</div>
+      <div id="neighbors-list" class="neighbors-list"></div>
+    </div>
+  </div>
+
+  <div id="svg-container"></div>
+
+  <script>
+    const colors = {
+      0: '#38bdf8',
+      1: '#818cf8',
+      2: '#f43f5e',
+      3: '#10b981'
+    };
+
+    const communityNames = {
+      0: 'Public Web Experience',
+      1: 'Client Portal Services',
+      2: 'Admin Management',
+      3: 'Database Infrastructure'
+    };
+
+    let graphData = null;
+    let simulation, svg, g, link, node, labels;
+    let activeNode = null;
+
+    fetch('graph.json')
+      .then(res => res.json())
+      .then(data => {
+        graphData = data;
+        initGraph(data);
+      })
+      .catch(err => console.error("Error loading graph.json:", err));
+
+    function initGraph(data) {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      svg = d3.select("#svg-container")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .call(d3.zoom().on("zoom", (event) => {
+          g.attr("transform", event.transform);
+        }));
+
+      g = svg.append("g");
+
+      simulation = d3.forceSimulation(data.nodes)
+        .force("link", d3.forceLink(data.links).id(d => d.id).distance(120))
+        .force("charge", d3.forceManyBody().strength(-350))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide().radius(35));
+
+      link = g.append("g")
+        .selectAll("line")
+        .data(data.links)
+        .enter()
+        .append("line")
+        .attr("class", "link");
+
+      node = g.append("g")
+        .selectAll("circle")
+        .data(data.nodes)
+        .enter()
+        .append("circle")
+        .attr("class", "node")
+        .attr("r", d => 10 + (d.degree || 3) * 2)
+        .attr("fill", d => colors[d.community] || '#94a3b8')
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 2)
+        .call(drag(simulation))
+        .on("click", (event, d) => showDetails(d));
+
+      labels = g.append("g")
+        .selectAll("text")
+        .data(data.nodes)
+        .enter()
+        .append("text")
+        .attr("class", "node-label")
+        .attr("dx", 16)
+        .attr("dy", 4)
+        .text(d => d.id);
+
+      simulation.on("tick", () => {
+        link
+          .attr("x1", d => d.source.x)
+          .attr("y1", d => d.source.y)
+          .attr("x2", d => d.target.x)
+          .attr("y2", d => d.target.y);
+
+        node
+          .attr("cx", d => d.x)
+          .attr("cy", d => d.y);
+
+        labels
+          .attr("x", d => d.x)
+          .attr("y", d => d.y);
+      });
+
+      // Search functionality
+      document.getElementById('search').addEventListener('input', (e) => {
+        const val = e.target.value.toLowerCase();
+        node.style('opacity', d => d.id.toLowerCase().includes(val) ? 1 : 0.15);
+        labels.style('opacity', d => d.id.toLowerCase().includes(val) ? 1 : 0.15);
+        link.style('opacity', 0.1);
+      });
+    }
+
+    function showDetails(d) {
+      activeNode = d;
+      const details = document.getElementById('details');
+      document.getElementById('node-name').textContent = d.id;
+      document.getElementById('node-desc').textContent = d.description || 'Core module component in ADsparking architecture.';
+      document.getElementById('node-type').textContent = d.file_type || 'code';
+      document.getElementById('node-degree').textContent = d.degree || 3;
+      document.getElementById('node-file').textContent = d.source_file || d.id;
+
+      const tag = document.getElementById('node-tag');
+      const commColor = colors[d.community] || '#38bdf8';
+      tag.textContent = communityNames[d.community] || `Community ${d.community}`;
+      tag.style.background = commColor + '25';
+      tag.style.color = commColor;
+
+      // Find neighbors
+      const neighbors = graphData.links
+        .filter(l => (l.source.id === d.id || l.target.id === d.id))
+        .map(l => l.source.id === d.id ? l.target : l.source);
+
+      const list = document.getElementById('neighbors-list');
+      list.innerHTML = '';
+      neighbors.forEach(n => {
+        const card = document.createElement('div');
+        card.className = 'neighbor-card';
+        card.innerHTML = `<strong>${n.id}</strong> <span style="float:right; color: ${colors[n.community]}">${communityNames[n.community]}</span>`;
+        card.onclick = () => showDetails(n);
+        list.appendChild(card);
+      });
+
+      details.classList.add('active');
+
+      // Highlight in graph
+      node.style('opacity', n => n.id === d.id || neighbors.some(nbr => nbr.id === n.id) ? 1 : 0.15);
+      link.style('opacity', l => (l.source.id === d.id || l.target.id === d.id) ? 1 : 0.05);
+    }
+
+    function closeDetails() {
+      document.getElementById('details').classList.remove('active');
+      node.style('opacity', 1);
+      link.style('opacity', 1);
+      labels.style('opacity', 1);
+    }
+
+    function drag(simulation) {
+      function dragstarted(event) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
+      }
+      
+      function dragged(event) {
+        event.subject.fx = event.x;
+        event.subject.fy = event.y;
+      }
+      
+      function dragended(event) {
+        if (!event.active) simulation.alphaTarget(0);
+        event.subject.fx = null;
+        event.subject.fy = null;
+      }
+      
+      return d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended);
+    }
+  </script>
+</body>
+</html>

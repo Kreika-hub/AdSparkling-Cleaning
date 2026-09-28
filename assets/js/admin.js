@@ -612,6 +612,9 @@ function checkAuth() {
       } catch (err) {
         console.warn('Dashboard load warning:', err);
       }
+    }).catch(err => {
+      console.warn('Hydration error, loading dashboard anyway:', err);
+      try { loadDashboard(); } catch (e) { console.error('Local load failed:', e); }
     });
   } else {
     if (loginScreen) loginScreen.style.display = 'flex';
@@ -1035,6 +1038,22 @@ function loadLeads() {
   renderLeadsTable(allLeads);
 }
 
+function getSuggestedPrice(sqft, frequency) {
+  if (!sqft) return null;
+  const s = parseInt(sqft);
+  let q = 150, m = 180, d = 240;
+  if (s >= 1771 && s <= 2200) { q = 170; m = 210; d = 280; }
+  else if (s >= 2201 && s <= 2700) { q = 200; m = 240; d = 330; }
+  else if (s >= 2701 && s <= 3200) { q = 225; m = 270; d = 380; }
+  else if (s >= 3201) { q = 240; m = 290; d = 420; }
+  
+  if (frequency === '15') return q;
+  if (frequency === '30') return m;
+  if (frequency === 'deep' || frequency === 'once') return d;
+  if (frequency === '10') return q;
+  return { biweekly: q, monthly: m, deep: d };
+}
+
 function renderLeadsTable(leads) {
   const tbody = document.getElementById('leadsTable');
   if (!leads || leads.length === 0) {
@@ -1042,15 +1061,34 @@ function renderLeadsTable(leads) {
     return;
   }
 
-  tbody.innerHTML = leads.map(l => `
+  tbody.innerHTML = leads.map(l => {
+    let suggestedHtml = '-';
+    let suggestedPriceText = '';
+    if (l.size_sqft) {
+      const price = getSuggestedPrice(l.size_sqft, l.frequency);
+      if (typeof price === 'number') {
+        suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft</div><strong style="color:var(--primary); font-size:14px;">$${price} sug.</strong>`;
+        suggestedPriceText = ` Tu cotización estimada es de $${price}.`;
+      } else if (price) {
+        suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft</div><span style="font-size:11px; color:var(--primary); font-weight:700;">Q:$${price.biweekly} | M:$${price.monthly}</span>`;
+        suggestedPriceText = ` El estimado es Quincenal: $${price.biweekly} o Mensual: $${price.monthly}.`;
+      }
+    }
+
+    let extrasList = '';
+    if (l.notes && l.notes.includes('Extras:')) {
+       extrasList = '<div style="font-size:10px; color:#c0392b; font-weight:bold; margin-top:4px;">Tiene extras solicitados</div>';
+    }
+
+    return `
     <tr>
-      <td><strong>${l.name}</strong></td>
+      <td><strong>${l.name}</strong><br><span style="font-size:11px; color:var(--text-muted);">${l.source === 'referral' ? '⭐ Referido' : l.source}</span></td>
       <td><a href="tel:${cleanPhone(l.phone)}" style="color:inherit; font-weight:600;">${l.phone}</a></td>
       <td title="${l.address}">
         ${truncate(l.address, 25)}
         ${l.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.address)}" target="_blank" style="text-decoration:none; margin-left:4px;" title="Ver ubicación en Google Maps">🗺️</a>` : ''}
       </td>
-      <td>${l.size_sqft ? l.size_sqft + ' sqft' : '-'}</td>
+      <td>${suggestedHtml}${extrasList}</td>
       <td>${l.frequency ? freqLabel(l.frequency) : '-'}</td>
       <td>
         <select class="status-select status-${l.status}" onchange="changeLeadStatus('${l.id}', this.value)">
@@ -1062,7 +1100,7 @@ function renderLeadsTable(leads) {
       </td>
       <td><small>${formatDate(l.created_at)}</small></td>
       <td class="action-cell">
-        <a href="https://wa.me/${cleanPhone(l.phone)}?text=Hola ${encodeURIComponent(l.name)}, te saluda Anggie de Ad Sparkling Cleaning ✨. Recibimos tu solicitud de cotización para ${l.address}. ¿Tienes alguna fecha en mente para comenzar?" target="_blank" class="btn-table-action btn-wa-table" style="background:#25d366; color:#fff;" title="Contactar por WhatsApp">
+        <a href="https://wa.me/${cleanPhone(l.phone)}?text=Hola ${encodeURIComponent(l.name)}, te saluda Anggie de Ad Sparkling Cleaning ✨. Recibimos tu solicitud de cotización para tu hogar en ${l.address}.${encodeURIComponent(suggestedPriceText)} ¿Tienes alguna fecha en mente para agendar?" target="_blank" class="btn-table-action btn-wa-table" style="background:#25d366; color:#fff;" title="Contactar por WhatsApp">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         </a>
         <button class="btn-table-action btn-convert-table" style="background:var(--primary); color:#fff;" onclick="convertLeadToClient('${l.id}')" title="Convertir a Cliente">
@@ -1073,7 +1111,8 @@ function renderLeadsTable(leads) {
         </button>
       </td>
     </tr>
-  `).join('');
+    `;
+  }).join('');
 }
 
 function filterLeads(query) {
@@ -1142,6 +1181,7 @@ function convertLeadToClient(leadId) {
   form.style.display = 'block';
 
   document.getElementById('cId').value = '';
+  document.getElementById('cReferralCode').value = lead.referral_code || '';
   document.getElementById('cName').value = lead.name || '';
   document.getElementById('cPhone').value = lead.phone || '';
   document.getElementById('cAddress').value = lead.address || '';
@@ -1187,8 +1227,7 @@ function renderClientsTable(clients) {
     const ltv = c.lifetime_value ? `$${c.lifetime_value.toLocaleString()}` : `$${(c.base_price || 0)}`;
 
     return `
-    <div style="background:#fff; border-radius:14px; border:1px solid var(--border); padding:16px 18px; margin-bottom:12px; box-shadow:var(--shadow); transition: box-shadow 0.2s;" 
-         onmouseover="this.style.boxShadow='0 6px 20px rgba(49,1,63,0.1)'" onmouseout="this.style.boxShadow='var(--shadow)'">
+    <div class="dash-item dash-item--card">
       
       <!-- Fila principal: nombre + badge -->
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
@@ -1200,7 +1239,7 @@ function renderClientsTable(clients) {
       </div>
 
       <!-- Info grid: próxima visita, última, precio, LTV -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; background:var(--bg); padding:10px 12px; border-radius:10px;">
+      <div class="card-info-grid" style="background:var(--bg); padding:10px 12px; border-radius:10px;">
         <div>
           <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin-bottom:2px;">Próxima cita</div>
           <div style="font-size:13px; font-weight:600; color:var(--text);">${nextVisit}</div>
@@ -1219,13 +1258,29 @@ function renderClientsTable(clients) {
         </div>
       </div>
 
+      ${(() => {
+        const refCount = c.referrals || 0;
+        if (refCount === 0) return '';
+        const slots = [1, 2, '🎁'].map((txt, i) => {
+          const filled = refCount > i;
+          const bg = filled ? 'var(--primary)' : '#fff';
+          const color = filled ? '#fff' : 'var(--text-muted)';
+          return `<div style="width:20px; height:20px; border-radius:50%; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:10px; background:${bg}; color:${color}; font-weight:bold;">${txt}</div>`;
+        }).join('');
+        return `
+        <div style="margin-top:10px; background:#f4ebf8; padding:8px 12px; border-radius:8px; display:flex; align-items:center; justify-content:space-between; border:1px dashed var(--primary);">
+          <div style="font-size:12px; font-weight:600; color:var(--primary);">Referidos: ${refCount}/3 ${refCount >= 3 ? '⭐ ¡Premio Extra!' : ''}</div>
+          <div style="display:flex; gap:4px;">${slots}</div>
+        </div>`;
+      })()}
+
       ${c.address ? `
-      <div style="display:flex; align-items:center; gap:6px; margin-bottom:14px; font-size:12px; color:var(--text-sec);">
+      <div class="card-address-row">
         📍 <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.address}</span>
       </div>` : ''}
 
       <!-- Acciones -->
-      <div style="display:flex; gap:8px; flex-wrap:wrap; border-top:1px solid var(--border); padding-top:12px;">
+      <div class="card-actions-row" style="flex-wrap:wrap;">
         <a href="${mapsUrl}" target="_blank" title="Ver en Google Maps" 
            style="display:inline-flex; align-items:center; gap:5px; background:#f0e8f8; color:var(--primary); border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; text-decoration:none;">
           🗺️ Ver en Mapa
@@ -1477,6 +1532,7 @@ function editClient(id) {
 
 function saveClient() {
   const id = document.getElementById('cId').value;
+  const refCode = document.getElementById('cReferralCode').value;
   const name = document.getElementById('cName').value.trim();
   const phone = document.getElementById('cPhone').value.trim();
   const address = document.getElementById('cAddress').value.trim();
@@ -1506,6 +1562,15 @@ function saveClient() {
     notes,
     status
   };
+
+  if (!id && refCode) {
+    const referrer = allClients.find(c => c.id && c.id.toUpperCase().startsWith(refCode.toUpperCase()));
+    if (referrer) {
+      referrer.referrals = (referrer.referrals || 0) + 1;
+      DataStore.updateClient(referrer.id, { referrals: referrer.referrals });
+      showToast(`¡Referido sumado a ${referrer.name}! 🎁`);
+    }
+  }
 
   DataStore.saveClient(clientData);
   toggleForm('clientForm');
@@ -1570,7 +1635,7 @@ function renderAppointmentsTable(appts) {
   }
 
   container.innerHTML = appts.map(a => `
-    <div class="dash-item" style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.04); flex-direction:column; align-items:stretch;">
+    <div class="dash-item dash-item--card">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:8px;">
         <div>
           <strong style="font-size:16px; color:var(--primary); display:block;">${a.clients?.name || 'Cliente'}</strong>
@@ -1590,7 +1655,7 @@ function renderAppointmentsTable(appts) {
         </div>
       </div>
 
-      <div style="font-size:13px; color:var(--text-sec); margin-bottom:12px; background:var(--bg-alt); padding:10px 14px; border-radius:8px;">
+      <div style="font-size:13px; color:var(--text-sec); margin-bottom:12px; background:#fff; border:1px solid var(--border); padding:10px 14px; border-radius:8px;">
         <div style="display:flex; align-items:center; justify-content:space-between;">
           <span>📍 <strong>Dirección:</strong> ${a.clients?.address || 'Sin dirección'}</span>
           ${a.clients?.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.clients.address)}" target="_blank" style="text-decoration:none; font-size:12px; font-weight:700; color:var(--primary);" title="Ver en Google Maps">🗺️ Mapa</a>` : ''}
@@ -1602,7 +1667,7 @@ function renderAppointmentsTable(appts) {
         ${a.status === 'completada' && a.duration_minutes ? `<div style="margin-top:4px; color:var(--success); font-weight:600;">✓ Tiempo total: ${formatDuration(a.duration_minutes)}</div>` : ''}
       </div>
 
-      <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+      <div class="card-actions-row" style="flex-wrap:wrap; justify-content:flex-end;">
         ${a.status === 'pendiente' ? `
           <button class="btn-action-pill" onclick="startCleaning('${a.id}')" style="background:var(--primary); color:#fff;">▶️ Iniciar</button>
           <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Hola! Anggie está en camino/comenzando tu limpieza de hoy 🧹✨')}" target="_blank" class="btn-action-pill" style="background:#25d366; color:#fff; text-decoration:none;">💬 Voy en camino</a>
@@ -1821,6 +1886,7 @@ function finishCleaning(id) {
       const client = clients[cIdx];
       client.lifetime_value = (parseFloat(client.lifetime_value) || 0) + (parseFloat(appt.price) || 0);
       client.total_visits = (parseInt(client.total_visits) || 0) + 1;
+      client.last_visit = appt.completed_at;
       DataStore.saveClient(client);
     }
   }
@@ -2335,7 +2401,7 @@ function renderPlansList(plans) {
   }
 
   list.innerHTML = plans.map(p => `
-    <div class="dash-item" style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.04); opacity: ${p.active !== false ? '1' : '0.65'}; flex-direction:column; align-items:stretch;">
+    <div class="dash-item dash-item--card" style="opacity: ${p.active !== false ? '1' : '0.65'};">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
         <div>
           <span class="badge" style="background:rgba(49,1,63,0.08); color:var(--primary); font-weight:700; margin-bottom:6px; display:inline-block;">${freqLabel(p.frequency)}</span>
@@ -2358,7 +2424,7 @@ function renderPlansList(plans) {
 
       ${p.terms ? `<div style="font-size:12px; color:var(--text-muted); background:var(--bg-alt); padding:8px 12px; border-radius:8px; margin-bottom:12px;">📌 ${p.terms}</div>` : ''}
 
-      <div style="display:flex; gap:8px; justify-content:flex-end; border-top:1px solid var(--border); padding-top:12px;">
+      <div class="card-actions-row" style="justify-content:flex-end;">
         <button class="btn-action-pill" onclick="editPlan('${p.id}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border);">✏️ Editar Plan</button>
         <button class="btn-action-pill" onclick="togglePlanActive('${p.id}')" style="background:${p.active !== false ? '#ffebee' : '#e8f5e9'}; color:${p.active !== false ? '#c62828' : '#2d8a5e'};">${p.active !== false ? '🚫 Desactivar' : '✅ Activar'}</button>
       </div>
@@ -2478,7 +2544,7 @@ function renderTeamList(team) {
   }
 
   container.innerHTML = team.map(t => `
-    <div class="dash-item" style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.04); flex-direction:column; align-items:stretch;">
+    <div class="dash-item dash-item--card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <div style="display:flex; align-items:center; gap:12px;">
           <div style="width:42px; height:42px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px;">
@@ -2496,12 +2562,12 @@ function renderTeamList(team) {
         </span>
       </div>
 
-      <div style="font-size:13px; color:var(--text-sec); background:var(--bg-alt); padding:8px 12px; border-radius:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+      <div style="font-size:13px; color:var(--text-sec); background:#fff; border:1px solid var(--border); padding:8px 12px; border-radius:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
         <span>📞 Teléfono: ${t.phone || 'Sin registrar'}</span>
         ${t.phone ? `<a href="tel:${cleanPhone(t.phone)}" style="color:var(--primary); text-decoration:none; font-weight:600;">Llamar 📞</a>` : ''}
       </div>
 
-      <div style="display:flex; gap:8px; justify-content:flex-end;">
+      <div class="card-actions-row" style="justify-content:flex-end; border-top:none; padding-top:0;">
         <button class="btn-action-pill" onclick="editTeamMember('${t.id}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border);">✏️ Editar</button>
         <button class="btn-action-pill" onclick="deleteTeamMember('${t.id}')" style="background:#ffebee; color:#c62828;">🗑️ Eliminar</button>
       </div>

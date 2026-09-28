@@ -348,18 +348,41 @@
         <form id="requestForm" onsubmit="handleRequest(event)">
           <div class="form-row">
             <div class="form-field">
-              <label data-i18n="lbl_fullname">Nombre completo *</label>
-              <input type="text" id="reqName" required placeholder="Tu nombre" data-i18n="ph_name">
+              <label>Nombre *</label>
+              <input type="text" id="reqFirstName" required placeholder="Nombre">
             </div>
             <div class="form-field">
+              <label>Apellido *</label>
+              <input type="text" id="reqLastName" required placeholder="Apellido">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
               <label data-i18n="lbl_tel">Teléfono *</label>
-              <input type="tel" id="reqPhone" required placeholder="(305) 000-0000" pattern="[0-9\s\-\(\)\+]{10,}">
+              <div style="display:flex; gap:10px;">
+                <select id="reqCountryCode" style="width:110px; padding:12px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.05); color:#fff; border-radius:8px;">
+                  <option value="+1" style="color:#000;">🇺🇸 +1 (USA)</option>
+                  <option value="other" style="color:#000;">🌍 Otro</option>
+                </select>
+                <input type="tel" id="reqPhone" required placeholder="(305) 000-0000" style="flex:1;">
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Condado de Servicio *</label>
+              <select id="reqCounty" required style="width:100%; padding:12px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.05); color:#fff; border-radius:8px;">
+                <option value="" style="color:#000;">Selecciona...</option>
+                <option value="Miami-Dade" style="color:#000;">Miami-Dade (Regular)</option>
+                <option value="Broward" style="color:#000;">Broward (Regular)</option>
+                <option value="Palm Beach" style="color:#000;">Palm Beach (Posible recargo)</option>
+                <option value="Otro" style="color:#000;">Otro en FL (Posible recargo)</option>
+              </select>
             </div>
           </div>
 
           <div class="form-field">
-            <label data-i18n="lbl_fulladdress">Dirección completa *</label>
-            <input type="text" id="reqAddress" required placeholder="123 Calle Principal, Miami, FL 33101" data-i18n="ph_address">
+            <label data-i18n="lbl_fulladdress">Dirección de la Propiedad *</label>
+            <input type="text" id="reqAddress" required placeholder="123 Calle Principal, Apt 4B" data-i18n="ph_address">
           </div>
 
           <div class="form-row">
@@ -414,10 +437,8 @@
           <h4 data-i18n="success_title">¡Solicitud enviada con éxito!</h4>
           <p data-i18n="success_desc">Anggie recibió tu solicitud y te contactará pronto con tu cotización personalizada.</p>
           <div class="success-actions">
-            <a href="https://wa.me/17864582442" class="btn-whatsapp" target="_blank">
-              <span>💬</span> <span data-i18n="success_wa_btn">O escríbele directo por WhatsApp</span>
-            </a>
-            <button class="btn-secondary" onclick="resetForm()" data-i18n="btn_another">Enviar otra solicitud</button>
+            <button type="button" class="btn-primary" onclick="window.location.reload()" style="margin-bottom:10px;">🏠 Volver a la Web</button>
+            <button type="button" class="btn-secondary" onclick="document.getElementById('requestSuccess').style.display='none'; document.getElementById('requestForm').style.display='block'; document.getElementById('requestForm').reset();">Enviar otra solicitud</button>
           </div>
         </div>
       </div>

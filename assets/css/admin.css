@@ -48,6 +48,8 @@
   --info-text: #4e0863;
   --radius: 12px;
   --radius-sm: 8px;
+  --bg-alt: #fbf9fd;
+  --shadow-sm: 0 4px 14px rgba(49, 1, 63, 0.04);
   --shadow: 0 4px 14px rgba(49, 1, 63, 0.06);
   --shadow-lg: 0 12px 36px rgba(49, 1, 63, 0.16);
 }
@@ -740,6 +742,45 @@ html, body {
   flex-wrap: wrap;
 }
 
+.dash-item--card {
+  flex-direction: column;
+  align-items: stretch;
+  background: var(--bg-alt);
+  padding: 20px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.dash-item--card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.card-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.card-actions-row {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.card-address-row {
+  font-size: 13px;
+  color: var(--text-sec);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+}
+
 .dash-item-info {
   display: flex;
   flex-direction: column;
@@ -954,13 +995,19 @@ html, body {
   cursor: pointer;
 }
 
+.status-pendiente { color: #b37402; background: var(--warning-bg); border-color: #d4a017; }
+.status-completada { color: var(--success); background: var(--success-bg); border-color: var(--success); }
+.status-cancelada { color: var(--danger); background: var(--danger-bg); border-color: var(--danger); }
+.status-en_progreso { color: var(--info-text); background: var(--info-bg); border-color: var(--info-text); }
+.status-pausada { color: #b37402; background: var(--warning-bg); border-color: #d4a017; }
+
 /* Buttons */
 .btn-add {
   background: var(--primary);
   color: #fff;
   border: none;
   padding: 10px 18px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -974,7 +1021,7 @@ html, body {
   color: #fff;
   border: none;
   padding: 11px 22px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -986,7 +1033,7 @@ html, body {
   color: var(--text-sec);
   border: 1px solid var(--border);
   padding: 11px 22px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;

@@ -31,13 +31,13 @@
   --text: #201026;
   --text-sec: #5c4e63;
   --text-muted: #8d7f94;
-  --border: #e8e2ec;
+  --border: #e6e0ea;
   --success: #2d8a5e;
   --success-bg: #e8f5e9;
   --warning: #d4a017;
   --warning-bg: #fef9e7;
-  --radius: 16px;
-  --radius-sm: 10px;
+  --radius: 12px;
+  --radius-sm: 8px;
   --shadow: 0 4px 18px rgba(49, 1, 63, 0.07);
   --shadow-lg: 0 12px 36px rgba(49, 1, 63, 0.16);
 }
@@ -468,7 +468,6 @@ body {
 }
 
 .portal-login-title {
-  font-family: 'Montserrat', sans-serif;
   font-size: 20px;
   font-weight: 800;
   color: var(--primary);
@@ -512,7 +511,6 @@ body {
   color: #fff;
   font-size: 15px;
   font-weight: 700;
-  font-family: 'Montserrat', sans-serif;
   cursor: pointer;
   box-shadow: 0 6px 20px rgba(49,1,63,0.35);
   transition: transform 0.15s, box-shadow 0.15s;
@@ -534,7 +532,6 @@ body {
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  font-family: 'Montserrat', sans-serif;
   align-items: center;
   justify-content: center;
   gap: 8px;

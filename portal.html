@@ -140,6 +140,35 @@
         </div>
       </section>
 
+      <!-- REFERIDOS -->
+      <section class="portal-card" id="referralSection">
+        <div class="card-title-row">
+          <div class="card-title">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span data-i18n="portal_ref_title">Programa de Referidos</span>
+          </div>
+        </div>
+        <div style="font-size:13px; color:var(--text-sec); margin-bottom:15px; line-height:1.4;">
+          Refiere a 3 amigos y cuando agenden su primera limpieza, <strong style="color:var(--primary);">¡recibes un servicio extra (Horno o Nevera) completamente gratis!</strong>
+        </div>
+        <div class="referral-ticket" style="background:#f4ebf8; padding:15px; border-radius:12px; border:1px dashed var(--primary); text-align:center;">
+           <div class="ticket-slots" style="display:flex; justify-content:space-between; max-width:200px; margin:0 auto 10px;">
+             <div class="ticket-slot" id="refSlot1" style="width:40px; height:40px; border-radius:50%; background:#fff; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-weight:bold; color:var(--text-muted); transition:all 0.3s;">1</div>
+             <div class="ticket-slot" id="refSlot2" style="width:40px; height:40px; border-radius:50%; background:#fff; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-weight:bold; color:var(--text-muted); transition:all 0.3s;">2</div>
+             <div class="ticket-slot" id="refSlot3" style="width:40px; height:40px; border-radius:50%; background:#fff; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:18px; transition:all 0.3s;">🎁</div>
+           </div>
+           <div class="ticket-progress-bar" style="height:6px; background:#fff; border-radius:3px; max-width:200px; margin:0 auto; position:relative; overflow:hidden;">
+             <div class="ticket-progress-fill" id="refProgressFill" style="height:100%; width:0%; background:var(--primary); transition:width 0.5s ease-in-out;"></div>
+           </div>
+           <div style="text-align:center; margin-top:8px; font-weight:bold; color:var(--primary); font-size:13px;" id="refStatusText">0 de 3 referidos</div>
+        </div>
+        <div style="margin-top:15px; text-align:center;">
+           <p style="font-size:12px; margin-bottom:6px;">Tu link único para compartir:</p>
+           <input type="text" id="refLinkInput" readonly style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:12px; margin-bottom:10px; text-align:center; background:#fff; color:var(--text-color); font-weight:600;">
+           <button class="btn-secondary" onclick="copyRefLink()" style="width:100%; background:var(--primary); color:#fff; border:none; padding:10px; border-radius:8px; font-weight:600;" data-i18n="portal_ref_btn">Copiar Link y Enviar</button>
+        </div>
+      </section>
+
       <!-- 3. DEJAR RESEÑA Y CALIFICACIÓN -->
       <section class="portal-card">
         <div class="card-title-row">

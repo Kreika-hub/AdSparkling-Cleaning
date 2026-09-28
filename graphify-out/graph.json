@@ -1,0 +1,201 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {
+    "name": "ADsparking Knowledge Graph",
+    "scan_root": "C:\\Users\\HP\\Desktop\\ANGGIE\\ADsparking",
+    "total_nodes": 16,
+    "total_edges": 24,
+    "total_communities": 4
+  },
+  "nodes": [
+    {
+      "id": "index.html",
+      "label": "index.html",
+      "type": "file",
+      "file_type": "code",
+      "community": 0,
+      "degree": 5,
+      "source_file": "index.html",
+      "description": "Main landing page showcasing cleaning services, quote generator, and client testimonials."
+    },
+    {
+      "id": "galeria.html",
+      "label": "galeria.html",
+      "type": "file",
+      "file_type": "code",
+      "community": 0,
+      "degree": 3,
+      "source_file": "galeria.html",
+      "description": "Interactive gallery showcasing before/after cleaning transformation photos."
+    },
+    {
+      "id": "assets/js/app.js",
+      "label": "assets/js/app.js",
+      "type": "file",
+      "file_type": "code",
+      "community": 0,
+      "degree": 4,
+      "source_file": "assets/js/app.js",
+      "description": "Core frontend logic for public landing page UI, modal triggers, and form submissions."
+    },
+    {
+      "id": "assets/js/i18n.js",
+      "label": "assets/js/i18n.js",
+      "type": "file",
+      "file_type": "code",
+      "community": 0,
+      "degree": 6,
+      "source_file": "assets/js/i18n.js",
+      "description": "Bi-lingual internationalization engine (English & Spanish) powering all user-facing views."
+    },
+    {
+      "id": "assets/js/before-after.js",
+      "label": "assets/js/before-after.js",
+      "type": "file",
+      "file_type": "code",
+      "community": 0,
+      "degree": 2,
+      "source_file": "assets/js/before-after.js",
+      "description": "Interactive image comparison slider component for cleaning work."
+    },
+    {
+      "id": "assets/js/swipe-cards.js",
+      "label": "assets/js/swipe-cards.js",
+      "type": "file",
+      "file_type": "code",
+      "community": 0,
+      "degree": 2,
+      "source_file": "assets/js/swipe-cards.js",
+      "description": "Mobile swipe card UI component for service selection and reviews."
+    },
+    {
+      "id": "sw.js",
+      "label": "sw.js",
+      "type": "file",
+      "file_type": "code",
+      "community": 0,
+      "degree": 3,
+      "source_file": "sw.js",
+      "description": "Service worker for offline caching, asset prefetching, and PWA capabilities."
+    },
+    {
+      "id": "portal.html",
+      "label": "portal.html",
+      "type": "file",
+      "file_type": "code",
+      "community": 1,
+      "degree": 4,
+      "source_file": "portal.html",
+      "description": "Client portal interface for managing bookings, appointments, and service invoices."
+    },
+    {
+      "id": "assets/js/portal.js",
+      "label": "assets/js/portal.js",
+      "type": "file",
+      "file_type": "code",
+      "community": 1,
+      "degree": 4,
+      "source_file": "assets/js/portal.js",
+      "description": "Client-side portal logic for appointment scheduling, authentication, and user history."
+    },
+    {
+      "id": "api/portal.js",
+      "label": "api/portal.js",
+      "type": "file",
+      "file_type": "code",
+      "community": 1,
+      "degree": 3,
+      "source_file": "api/portal.js",
+      "description": "Backend API endpoints for client account actions, booking queries, and profile updates."
+    },
+    {
+      "id": "api/public.js",
+      "label": "api/public.js",
+      "type": "file",
+      "file_type": "code",
+      "community": 1,
+      "degree": 3,
+      "source_file": "api/public.js",
+      "description": "Public API handler for quote requests, contact messages, and lead capture."
+    },
+    {
+      "id": "admin.html",
+      "label": "admin.html",
+      "type": "file",
+      "file_type": "code",
+      "community": 2,
+      "degree": 4,
+      "source_file": "admin.html",
+      "description": "Admin management dashboard for dispatch, booking control, staff, and analytics."
+    },
+    {
+      "id": "assets/js/admin.js",
+      "label": "assets/js/admin.js",
+      "type": "file",
+      "file_type": "code",
+      "community": 2,
+      "degree": 4,
+      "source_file": "assets/js/admin.js",
+      "description": "Admin panel logic managing data tables, job statuses, staff assignments, and reporting."
+    },
+    {
+      "id": "api/admin.js",
+      "label": "api/admin.js",
+      "type": "file",
+      "file_type": "code",
+      "community": 2,
+      "degree": 4,
+      "source_file": "api/admin.js",
+      "description": "Protected backend API routes handling admin CRUD operations and role authorization."
+    },
+    {
+      "id": "supabase-schema.sql",
+      "label": "supabase-schema.sql",
+      "type": "file",
+      "file_type": "code",
+      "community": 3,
+      "degree": 5,
+      "source_file": "supabase-schema.sql",
+      "description": "PostgreSQL relational database schema definition, RLS security policies, and triggers."
+    },
+    {
+      "id": "api/config.js",
+      "label": "api/config.js",
+      "type": "file",
+      "file_type": "code",
+      "community": 3,
+      "degree": 5,
+      "source_file": "api/config.js",
+      "description": "Central environment configuration, Supabase client initialization, and secret key provider."
+    }
+  ],
+  "links": [
+    { "source": "index.html", "target": "assets/js/app.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "index.html", "target": "assets/js/i18n.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "index.html", "target": "assets/js/before-after.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "index.html", "target": "assets/js/swipe-cards.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "index.html", "target": "sw.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "galeria.html", "target": "assets/js/i18n.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "galeria.html", "target": "assets/js/before-after.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "galeria.html", "target": "sw.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "assets/js/app.js", "target": "assets/js/i18n.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "assets/js/app.js", "target": "api/public.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "portal.html", "target": "assets/js/portal.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "portal.html", "target": "assets/js/i18n.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "portal.html", "target": "api/portal.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "portal.html", "target": "sw.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "assets/js/portal.js", "target": "api/portal.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "assets/js/portal.js", "target": "assets/js/i18n.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "admin.html", "target": "assets/js/admin.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "admin.html", "target": "assets/js/i18n.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "admin.html", "target": "api/admin.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "assets/js/admin.js", "target": "api/admin.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "api/portal.js", "target": "api/config.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "api/public.js", "target": "api/config.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "api/admin.js", "target": "api/config.js", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "api/config.js", "target": "supabase-schema.sql", "relation": "EXTRACTED", "weight": 1.0 },
+    { "source": "api/admin.js", "target": "supabase-schema.sql", "relation": "INFERRED", "weight": 1.0 },
+    { "source": "api/portal.js", "target": "supabase-schema.sql", "relation": "INFERRED", "weight": 1.0 }
+  ]
+}
