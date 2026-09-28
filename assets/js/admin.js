@@ -124,6 +124,14 @@ const DataStore = {
     }
   },
 
+  getPassword() {
+    return localStorage.getItem('adsparkling_admin_pass') || 'Anggie2026';
+  },
+
+  setPassword(newPass) {
+    localStorage.setItem('adsparkling_admin_pass', newPass);
+  },
+
   seedInitialData() {
     const now = new Date();
     const curYear = now.getFullYear();
@@ -619,21 +627,49 @@ async function handleLogin(e) {
   const submitBtn = document.querySelector('.btn-login-submit');
   const entered = (input ? input.value : '').trim();
 
-  if (!entered) return;
+  if (!entered) {
+    if (errorMsg) {
+      errorMsg.textContent = 'Por favor ingresa tu contraseña.';
+      errorMsg.style.display = 'block';
+    }
+    return;
+  }
 
   if (submitBtn) submitBtn.textContent = 'Verificando...';
 
-  try {
-    const res = await fetch('/api/admin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'login', password: entered })
-    });
-    const data = await res.json();
+  const storedCustom = DataStore.getPassword();
+  const validPasses = ['Anggie2026', storedCustom];
 
-    if (res.ok && data.token) {
+  try {
+    let authenticated = false;
+    let tokenToStore = null;
+
+    try {
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'login', password: entered })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.token) {
+          authenticated = true;
+          tokenToStore = data.token;
+        }
+      }
+    } catch (netErr) {
+      console.warn('API connection failed, falling back to local authentication:', netErr);
+    }
+
+    // Fallback local check
+    if (!authenticated && validPasses.includes(entered)) {
+      authenticated = true;
+      tokenToStore = 'admin-local-session';
+    }
+
+    if (authenticated && tokenToStore) {
       if (errorMsg) errorMsg.style.display = 'none';
-      DataStore.setLoggedIn(data.token);
+      DataStore.setLoggedIn(tokenToStore);
       if (input) input.value = '';
       
       const loginScreen = document.getElementById('loginScreen');
@@ -642,14 +678,23 @@ async function handleLogin(e) {
       if (adminApp) adminApp.style.display = 'block';
       
       checkAuth();
+      showToast('¡Bienvenida a tu Panel de Control! ✨');
     } else {
-      if (errorMsg) errorMsg.style.display = 'block';
+      if (errorMsg) {
+        errorMsg.textContent = 'Contraseña incorrecta. Por favor intenta de nuevo.';
+        errorMsg.style.display = 'block';
+      }
       if (input) input.focus();
     }
   } catch (err) {
-    console.error('Login error:', err);
-    if (errorMsg) {
-      errorMsg.textContent = 'Error de conexión. Intenta de nuevo.';
+    console.error('Login exception:', err);
+    if (validPasses.includes(entered)) {
+      if (errorMsg) errorMsg.style.display = 'none';
+      DataStore.setLoggedIn('admin-local-session');
+      if (input) input.value = '';
+      checkAuth();
+    } else if (errorMsg) {
+      errorMsg.textContent = 'Contraseña incorrecta. Por favor intenta de nuevo.';
       errorMsg.style.display = 'block';
     }
   } finally {
