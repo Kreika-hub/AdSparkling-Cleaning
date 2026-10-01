@@ -1685,7 +1685,6 @@ function renderAppointmentsTable(appts) {
       </div>
     </div>
   `).join('');
-}
 
   // Inicializar swipe cards
   if (typeof initSwipeCard === 'function') {

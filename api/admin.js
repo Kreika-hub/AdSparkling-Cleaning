@@ -18,6 +18,8 @@ export default async function handler(req, res) {
   const { action, password, token, table, method, payload } = req.body;
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Anggie2026';
   const ADMIN_SECRET = process.env.ADMIN_SECRET || 'adsparkling-secret-key-2026';
+  const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (action === 'login') {
     if (password === ADMIN_PASSWORD || password === 'Anggie2026') {
