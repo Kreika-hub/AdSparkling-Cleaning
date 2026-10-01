@@ -409,7 +409,7 @@
         </div>
 
         <!-- PLANES -->
-        <div id="tab-plans" class="tab-panel" style="display:none;">
+        <div id="tab-plans" class="tab-panel">
           <div class="panel-header">
             <div>
               <h1>Planes y Membresías</h1>
@@ -452,14 +452,20 @@
           </div>
         </div>
 
-        <!-- CITAS -->
+        <!-- CITAS CON CALENDARIO VIOLETA & RESUMEN -->
         <div id="tab-appointments" class="tab-panel">
           <div class="panel-header">
             <div>
-              <h1>Citas y Visitas</h1>
-              <p class="tab-desc">Control y registro de visitas programadas y completadas.</p>
+              <h1>Citas y Calendario</h1>
+              <p class="tab-desc">Agenda visual con diseño violeta, control de tiempos y rutas de limpieza.</p>
             </div>
-            <button class="btn-add" onclick="resetApptForm(); toggleForm('apptForm');">+ Nueva cita</button>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <div class="view-toggle-group">
+                <button id="btnViewCal" class="btn-view-toggle active" onclick="setApptView('calendar')">📅 Calendario</button>
+                <button id="btnViewList" class="btn-view-toggle" onclick="setApptView('list')">📋 Lista</button>
+              </div>
+              <button class="btn-add" onclick="resetApptForm(); toggleForm('apptForm');">+ Nueva cita</button>
+            </div>
           </div>
 
           <div id="apptForm" class="form-panel" style="display:none;">
@@ -474,6 +480,8 @@
               <input type="number" id="aPrice" placeholder="Precio a cobrar $ *" required>
               <select id="aStatus">
                 <option value="pendiente">Estado: Pendiente</option>
+                <option value="en_progreso">Estado: En progreso</option>
+                <option value="pausada">Estado: Pausada</option>
                 <option value="completada">Estado: Completada</option>
                 <option value="cancelada">Estado: Cancelada</option>
               </select>
@@ -489,16 +497,63 @@
             </div>
           </div>
 
-          <div class="table-toolbar">
-            <div class="filter-group">
-              <label>Filtrar por fecha:</label>
-              <input type="date" id="filterApptDate" onchange="filterAppointmentsByDate(this.value)">
-              <button class="btn-text-action" onclick="document.getElementById('filterApptDate').value=''; filterAppointmentsByDate('');">Limpiar filtro</button>
+          <!-- VISTA 1: CALENDARIO VIOLETA & TIMELINE -->
+          <div id="apptCalendarView" class="calendar-experience-wrapper">
+            <!-- CALENDARIO CARD VIOLETA -->
+            <div class="cal-purple-card">
+              <div class="cal-purple-header">
+                <button class="cal-nav-btn" onclick="navCalendar(-1)">‹</button>
+                <div class="cal-month-title" id="calMonthYearTitle">OCTUBRE 2026</div>
+                <button class="cal-nav-btn" onclick="navCalendar(1)">›</button>
+                <button class="cal-today-badge" onclick="goCalendarToday()">Hoy</button>
+              </div>
+
+              <!-- Días de la semana -->
+              <div class="cal-weekdays-row">
+                <span>DOM</span>
+                <span>LUN</span>
+                <span>MAR</span>
+                <span>MIÉ</span>
+                <span>JUE</span>
+                <span>VIE</span>
+                <span>SÁB</span>
+              </div>
+
+              <!-- Grilla de días -->
+              <div class="cal-days-grid" id="calDaysGrid">
+                <!-- Generado dinámicamente -->
+              </div>
+            </div>
+
+            <!-- RESUMEN / ACTIVIDADES DEL DÍA SELECCIONADO -->
+            <div class="cal-activities-section">
+              <div class="cal-activities-header">
+                <div>
+                  <h3 id="calSelectedDayTitle" style="color:var(--primary); font-size:18px; font-weight:800;">Citas del Día</h3>
+                  <div id="calSelectedDaySubtitle" style="font-size:13px; color:var(--text-sec);">Resumen de actividades programadas</div>
+                </div>
+                <button class="btn-add-sm" onclick="quickAddApptForSelectedDate()">+ Agendar en este día</button>
+              </div>
+
+              <div id="calDayActivitiesList" class="cal-activities-list">
+                <!-- Citas del día -->
+              </div>
             </div>
           </div>
 
-          <div id="appointmentsTable" class="cards-list">
-            <p class="empty">Cargando citas...</p>
+          <!-- VISTA 2: LISTA TRADICIONAL CON FILTRO -->
+          <div id="apptListView" style="display:none;">
+            <div class="table-toolbar">
+              <div class="filter-group">
+                <label>Filtrar por fecha:</label>
+                <input type="date" id="filterApptDate" onchange="filterAppointmentsByDate(this.value)">
+                <button class="btn-text-action" onclick="document.getElementById('filterApptDate').value=''; filterAppointmentsByDate('');">Limpiar filtro</button>
+              </div>
+            </div>
+
+            <div id="appointmentsTable" class="cards-list">
+              <p class="empty">Cargando citas...</p>
+            </div>
           </div>
         </div>
 
@@ -507,28 +562,43 @@
           <div class="panel-header">
             <div>
               <h1>Control de Gastos</h1>
-              <p class="tab-desc">Registra todos los costos operativos de tu negocio.</p>
+              <p class="tab-desc">Registra, edita y categoriza todos los costos operativos de tu negocio.</p>
             </div>
             <div class="header-actions-desktop">
               <span id="expensesTotalHeader" class="total-badge-header">Total: $0.00</span>
-              <button class="btn-add" onclick="toggleForm('expenseForm')">+ Registrar gasto</button>
+              <button class="btn-add" onclick="resetExpenseForm(); toggleForm('expenseForm');">+ Registrar gasto</button>
             </div>
           </div>
 
           <div id="expenseForm" class="form-panel" style="display:none;">
-            <h3>Registrar gasto operativo</h3>
+            <h3 id="eFormTitle">Registrar gasto operativo</h3>
+            <input type="hidden" id="eId">
             <div class="form-grid">
-              <input type="text" id="eCategory" placeholder="Categoría (escribe o selecciona) *" list="expenseCategoriesList" required>
-              <datalist id="expenseCategoriesList">
-                <option value="Insumos de limpieza">
-                <option value="Gasolina / Transporte">
-                <option value="Salario asistente">
-                <option value="Equipo / Herramientas">
-                <option value="Otro gasto">
-              </datalist>
-              <input type="number" id="eAmount" placeholder="Monto en $ *" step="0.01" required>
-              <input type="date" id="eDate">
-              <input type="text" id="eDesc" placeholder="Descripción (ej. Home Depot, microfibras)">
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <label style="font-size:12px; font-weight:600; color:var(--text-sec);">Categoría del Gasto *</label>
+                <input type="text" id="eCategory" placeholder="Escribe o selecciona categoría" list="expenseCategoriesList" required>
+                <datalist id="expenseCategoriesList">
+                  <option value="Insumos de limpieza">
+                  <option value="Gasolina / Transporte">
+                  <option value="Salario asistente">
+                  <option value="Equipo / Herramientas">
+                  <option value="Marketing & Publicidad">
+                  <option value="Seguros & Licencias">
+                  <option value="Otro gasto">
+                </datalist>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <label style="font-size:12px; font-weight:600; color:var(--text-sec);">Monto en $ *</label>
+                <input type="number" id="eAmount" placeholder="0.00" step="0.01" required>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <label style="font-size:12px; font-weight:600; color:var(--text-sec);">Fecha *</label>
+                <input type="date" id="eDate" required>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px; grid-column:1/-1;">
+                <label style="font-size:12px; font-weight:600; color:var(--text-sec);">Descripción / Proveedor</label>
+                <input type="text" id="eDesc" placeholder="ej. Home Depot (detergentes y toallas microfibra)">
+              </div>
             </div>
             <div class="form-actions">
               <button class="btn-save" onclick="saveExpense()">Guardar gasto</button>
@@ -564,13 +634,13 @@
         </div>
 
         <!-- EQUIPO -->
-        <div id="tab-team" class="tab-panel" style="display:none;">
+        <div id="tab-team" class="tab-panel">
           <div class="panel-header">
             <div>
               <h1>Gestión de Equipo</h1>
-              <p class="tab-desc">Administra a tus limpiadores y asístentes.</p>
+              <p class="tab-desc">Administra a tus limpiadores y asistentes.</p>
             </div>
-            <button class="btn-add" onclick="toggleForm('teamForm'); resetTeamForm();">+ Añadir Miembro</button>
+            <button class="btn-add" onclick="resetTeamForm(); toggleForm('teamForm');">+ Añadir Miembro</button>
           </div>
 
           <div id="teamForm" class="form-panel" style="display:none;">
@@ -793,6 +863,51 @@
       <div class="modal-body">
         <div id="adminNotificationsList" class="dash-list">
           <!-- Dinámico -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       5. MODAL DE ACCESO AL PORTAL DEL CLIENTE & REFERIDOS
+       ============================================ -->
+  <div id="clientPortalModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-card" style="max-width:460px;">
+      <div class="modal-header">
+        <h3 id="cpModalTitle">📱 Portal de Cliente & Referidos</h3>
+        <button class="modal-close" onclick="closeClientPortalModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="font-size:32px; margin-bottom:4px;">✨</div>
+          <h4 id="cpClientName" style="color:var(--primary); font-size:18px; font-weight:800; margin-bottom:2px;">Cliente</h4>
+          <p id="cpClientPhone" style="font-size:13px; color:var(--text-sec);">(305) 000-0000</p>
+        </div>
+
+        <!-- Código de Referido -->
+        <div style="background:var(--bg-alt); border:1px dashed var(--primary); padding:12px 14px; border-radius:10px; margin-bottom:14px; text-align:center;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-sec); text-transform:uppercase; letter-spacing:0.5px;">🎁 Código Único de Referido</div>
+          <div id="cpReferralCode" style="font-size:18px; font-weight:900; color:var(--primary); margin:4px 0; letter-spacing:1px;">AD-0000</div>
+          <div style="font-size:11px; color:var(--text-muted);">Gana un servicio extra gratis al acumular 3 referidos</div>
+        </div>
+
+        <!-- Enlace directo al Portal -->
+        <div style="margin-bottom:14px;">
+          <label style="font-size:12px; font-weight:600; color:var(--text-sec); display:block; margin-bottom:4px;">🔗 Enlace Directo al Portal:</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="cpDirectUrl" readonly style="flex:1; padding:8px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:#fff;">
+            <button class="btn-action-pill" onclick="copyClientPortalUrl()" style="background:var(--primary); color:#fff;">Copiar</button>
+          </div>
+        </div>
+
+        <!-- Acciones directas -->
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">
+          <a id="btnSendWaPortal" href="#" target="_blank" class="btn-save" style="text-align:center; text-decoration:none; background:#25d366; display:flex; align-items:center; justify-content:center; gap:8px; font-size:14px;">
+            💬 Enviar Acceso y App por WhatsApp
+          </a>
+          <a id="btnOpenPortalTab" href="#" target="_blank" class="btn-cancel" style="text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px; font-size:14px;">
+            🌐 Abrir Portal en Nueva Pestaña
+          </a>
         </div>
       </div>
     </div>

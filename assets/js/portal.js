@@ -205,24 +205,42 @@ function renderClientPortal(client, history = null, contract = null, plan = null
   // Última visita
   document.getElementById('lastVisitDate').textContent = client.last_visit ? formatDate(client.last_visit) : 'Reciente';
 
-  // Historial de visitas
-  const pastAppts = clientAppts.filter(a => a.status === 'completada' || a.status === 'cancelada').slice(0, 5);
+  // Historial detallado de visitas y facturas
+  const pastAppts = clientAppts.filter(a => a.status === 'completada' || a.status === 'cancelada').slice(0, 10);
   const historyList = document.getElementById('historyList');
   if (pastAppts.length === 0) {
     historyList.innerHTML = `<div class="history-item"><span class="history-item-date">${client.last_visit ? formatDate(client.last_visit) : 'Servicio reciente'}</span><span class="history-item-badge">Completado ✓</span></div>`;
   } else {
     historyList.innerHTML = pastAppts.map(a => {
       const isCanceled = a.status === 'cancelada';
-      const badgeStyle = isCanceled ? 'background: #ffebee; color: #c62828;' : '';
-      const badgeText = isCanceled ? 'Cancelada ⚠️' : 'Completado ✓';
+      const badgeStyle = isCanceled ? 'background: #ffebee; color: #c62828;' : 'background: #e8f5e9; color: #2e7d32; font-weight:700;';
+      const badgeText = isCanceled ? 'Cancelada ⚠️' : 'Pagada & Completada ✓';
+      const durationText = a.duration_minutes ? ` · ⏱️ ${Math.floor(a.duration_minutes/60)}h ${a.duration_minutes%60}m` : '';
+      const priceText = a.price ? `$${parseFloat(a.price).toFixed(2)}` : '';
+      
       return `
-      <div class="history-item">
-        <div>
-          <span class="history-item-date">📅 ${formatDate(a.date)}</span>
-          ${a.addons && a.addons.length ? `<div style="font-size:11px; color:var(--text-muted);">Extras: ${a.addons.join(', ')}</div>` : ''}
-          ${isCanceled && a.notes ? `<div style="font-size:11px; color:#c62828;">Motivo: ${a.notes}</div>` : ''}
+      <div class="history-item" style="display:flex; flex-direction:column; gap:8px; padding:14px; background:#fff; border:1px solid var(--border); border-radius:10px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div>
+            <strong style="font-size:15px; color:var(--primary); display:block;">📅 ${formatDate(a.date)} ${a.time ? '· ' + a.time : ''}</strong>
+            <div style="font-size:13px; color:var(--text-sec); margin-top:2px;">
+              🧹 ${freqLabel(client.frequency || '15')} ${durationText}
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:16px; font-weight:900; color:var(--primary);">${priceText}</div>
+            <span class="history-item-badge" style="${badgeStyle}; padding:3px 8px; border-radius:12px; font-size:11px;">${badgeText}</span>
+          </div>
         </div>
-        <span class="history-item-badge" style="${badgeStyle}">${badgeText}</span>
+
+        ${a.addons && a.addons.length ? `<div style="font-size:12px; color:var(--text-sec); background:var(--bg-alt); padding:6px 10px; border-radius:6px;">✨ <strong>Extras realizados:</strong> ${Array.isArray(a.addons) ? a.addons.join(', ') : a.addons}</div>` : ''}
+        ${isCanceled && a.notes ? `<div style="font-size:12px; color:#c62828;">Motivo: ${a.notes}</div>` : ''}
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border); padding-top:8px; margin-top:4px;">
+          <button onclick="openReceiptModal('${a.id}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border); padding:6px 12px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">
+            🧾 Ver Recibo / Factura
+          </button>
+        </div>
       </div>
       `;
     }).join('');
@@ -270,6 +288,8 @@ function renderClientPortal(client, history = null, contract = null, plan = null
   const fill = document.getElementById('refProgressFill');
   const statusTxt = document.getElementById('refStatusText');
   
+  const refCode = client.referral_code || ('AD-' + (client.name ? client.name.split(' ')[0].toUpperCase() : 'VIP') + '-' + String(client.id).slice(-4));
+
   if (slot1 && slot2 && slot3) {
     if (refCount >= 1) { slot1.style.background = 'var(--primary)'; slot1.style.color = '#fff'; slot1.style.borderColor = 'var(--primary)'; }
     if (refCount >= 2) { slot2.style.background = 'var(--primary)'; slot2.style.color = '#fff'; slot2.style.borderColor = 'var(--primary)'; }
@@ -283,8 +303,10 @@ function renderClientPortal(client, history = null, contract = null, plan = null
     }
 
     const refLinkInput = document.getElementById('refLinkInput');
-    const refCode = client.id ? client.id.substring(0,8).toUpperCase() : 'AMIGO';
-    refLinkInput.value = `https://ad-sparkling-cleaning.vercel.app/?ref=${refCode}`;
+    const shareUrl = `https://ad-sparkling-cleaning.vercel.app/?ref=${refCode}`;
+    if (refLinkInput) {
+      refLinkInput.value = shareUrl;
+    }
   }
 
   // Plan y Contrato
@@ -606,4 +628,97 @@ function freqLabel(freq) {
 function truncate(str, max) {
   if (!str) return '';
   return str.length > max ? str.substring(0, max) + '...' : str;
+}
+
+function copyRefLink() {
+  const input = document.getElementById('refLinkInput');
+  if (!input) return;
+  navigator.clipboard.writeText(input.value).then(() => {
+    alert('¡Enlace de referido copiado al portapapeles! 🎁✨');
+  }).catch(() => {
+    input.select();
+    document.execCommand('copy');
+    alert('¡Enlace copiado! 🎁✨');
+  });
+}
+
+function openReceiptModal(apptId) {
+  const modal = document.getElementById('receiptModal');
+  const content = document.getElementById('receiptModalContent');
+  if (!modal || !content) return;
+
+  const appt = (window.clientHistory || []).find(a => a.id == apptId) || {
+    id: apptId,
+    date: new Date().toISOString().split('T')[0],
+    price: currentClient?.base_price || 180,
+    status: 'completada'
+  };
+
+  const invoiceNum = 'INV-' + (appt.id ? String(appt.id).replace(/[^0-9]/g, '').slice(-4) : Math.floor(1000 + Math.random()*9000));
+
+  content.innerHTML = `
+    <div style="text-align:center; border-bottom:2px dashed var(--border); padding-bottom:16px; margin-bottom:16px;">
+      <div style="font-family:'Montserrat', sans-serif; font-weight:800; font-size:20px; color:var(--primary); letter-spacing:1px;">AD SPARKLING CLEANING LLC</div>
+      <div style="font-size:12px; color:var(--text-sec); margin-top:2px;">Miami-Dade & Broward County, FL</div>
+      <div style="font-size:12px; color:var(--text-sec);">Tel: +1 (786) 458-2442 · Anggie Fundadora</div>
+      <div style="margin-top:10px; display:inline-block; background:#f0e6f5; color:var(--primary); font-weight:800; padding:4px 12px; border-radius:12px; font-size:12px;">
+        RECIBO OFICIAL / INVOICE #${invoiceNum}
+      </div>
+    </div>
+
+    <div style="font-size:13px; margin-bottom:16px; line-height:1.5;">
+      <div><strong>Cliente:</strong> ${currentClient?.name || 'Cliente'}</div>
+      <div><strong>Dirección:</strong> ${currentClient?.address || 'Miami, FL'}</div>
+      <div><strong>Fecha de Servicio:</strong> ${formatDate(appt.date)}</div>
+      <div><strong>Estado:</strong> <span style="color:#2e7d32; font-weight:700;">PAGADO Y COMPLETADO ✓</span></div>
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:16px;">
+      <thead>
+        <tr style="background:var(--bg-alt); text-align:left; border-bottom:1px solid var(--border);">
+          <th style="padding:8px 6px;">Concepto</th>
+          <th style="padding:8px 6px; text-align:right;">Monto</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px 6px;">
+            <strong>Limpieza Residencial ${freqLabel(currentClient?.frequency)}</strong>
+            ${appt.duration_minutes ? `<div style="font-size:11px; color:var(--text-muted);">Duración: ${formatDuration(appt.duration_minutes)}</div>` : ''}
+          </td>
+          <td style="padding:8px 6px; text-align:right; font-weight:700;">$${parseFloat(appt.price || 0).toFixed(2)}</td>
+        </tr>
+        ${appt.addons && appt.addons.length ? `
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px 6px;">Servicios Adicionales: ${Array.isArray(appt.addons) ? appt.addons.join(', ') : appt.addons}</td>
+          <td style="padding:8px 6px; text-align:right; font-size:12px; color:var(--text-sec);">Incluido</td>
+        </tr>` : ''}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th style="padding:10px 6px; text-align:left; font-size:15px; color:var(--primary);">TOTAL PAGADO:</th>
+          <th style="padding:10px 6px; text-align:right; font-size:18px; color:var(--primary);">$${parseFloat(appt.price || 0).toFixed(2)}</th>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div style="text-align:center; font-size:11px; color:var(--text-muted); border-top:1px solid var(--border); padding-top:12px;">
+      ¡Gracias por tu preferencia! Cuidamos de tu hogar con amor y excelencia ✨
+    </div>
+  `;
+
+  modal.style.display = 'flex';
+}
+
+function closeReceiptModal() {
+  const modal = document.getElementById('receiptModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function formatDuration(mins) {
+  if (!mins) return '0min';
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h > 0) return `${h}h ${m > 0 ? m + 'min' : ''}`;
+  return `${m}min`;
 }

@@ -356,6 +356,34 @@ const DataStore = {
       ];
       localStorage.setItem(this.KEYS.REVIEWS, JSON.stringify(initialReviews));
     }
+
+    // Equipo de ejemplo
+    if (!localStorage.getItem(this.KEYS.TEAM)) {
+      const initialTeam = [
+        {
+          id: 't-1',
+          name: 'Anggie (Líder / Fundadora)',
+          phone: '7864582442',
+          role: 'admin',
+          active: true
+        },
+        {
+          id: 't-2',
+          name: 'Yurimar (Asistente de Limpieza)',
+          phone: '3055551122',
+          role: 'cleaner',
+          active: true
+        },
+        {
+          id: 't-3',
+          name: 'Carmen (Especialista en Mudanzas)',
+          phone: '9545553344',
+          role: 'cleaner',
+          active: true
+        }
+      ];
+      localStorage.setItem(this.KEYS.TEAM, JSON.stringify(initialTeam));
+    }
   },
 
   getList(key) {
@@ -1289,9 +1317,9 @@ function renderClientsTable(clients) {
            style="display:inline-flex; align-items:center; gap:5px; background:#e8f3ff; color:#1565c0; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
           📅 Agendar
         </button>
-        <button onclick="sendPortalLink('${c.id}')" title="Enviar Portal" 
-           style="display:inline-flex; align-items:center; gap:5px; background:#e8f5e9; color:var(--success); border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
-          🔗 Portal
+        <button onclick="openClientPortalModal('${c.id}')" title="Acceso a Portal y Referidos" 
+           style="display:inline-flex; align-items:center; gap:5px; background:#e8f5e9; color:var(--success); border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">
+          📱 Portal & Referidos
         </button>
         <a href="https://wa.me/${cleanPhone(c.phone)}" target="_blank" title="WhatsApp"
            style="display:inline-flex; align-items:center; gap:5px; background:#e8faf0; color:#25d366; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; text-decoration:none;">
@@ -1310,21 +1338,54 @@ function renderClientsTable(clients) {
   }).join('');
 }
 
+let currentSelectedClientForModal = null;
 
-function sendPortalLink(clientId) {
+function openClientPortalModal(clientId) {
   const client = allClients.find(c => c.id == clientId);
   if (!client) return;
+
+  currentSelectedClientForModal = client;
   const phone = cleanPhone(client.phone);
-  const portalUrl = `${window.location.origin}${window.location.pathname.replace('admin.html', '')}portal.html?phone=${phone}`;
-  const msg = `¡Hola ${client.name}! ✨ Te comparto tu acceso exclusivo a tu Portal de Cliente de *Ad Sparkling Cleaning*. Desde aquí puedes consultar tus fechas de limpieza programadas, historial y dejarnos tu calificación:\n\n🔗 ${portalUrl}\n\n¡Gracias por confiar en nosotros! 🏠✨`;
+  const baseUrl = window.location.href.split('admin.html')[0];
+  const portalUrl = `${baseUrl}portal.html?phone=${phone}`;
+  const refCode = client.referral_code || ('AD-' + (client.name ? client.name.split(' ')[0].toUpperCase() : 'VIP') + '-' + String(client.id).slice(-4));
+
+  document.getElementById('cpClientName').textContent = client.name;
+  document.getElementById('cpClientPhone').textContent = client.phone || 'Sin teléfono';
+  document.getElementById('cpReferralCode').textContent = refCode;
+  document.getElementById('cpDirectUrl').value = portalUrl;
+
+  const waMsg = `¡Hola ${client.name}! ✨ Te comparto tu acceso exclusivo al Portal de Clientes de *Ad Sparkling Cleaning*.\n\n📲 Ingresa aquí para ver tus próximas limpiezas, historial, facturas y descargar tu App:\n🔗 ${portalUrl}\n\n🎁 *Tu Código de Referidos:* ${refCode}\n¡Invita a tus amigos y gana un servicio extra gratis al acumular 3 referidos!\n\n¡Gracias por confiar en nosotros! 🏠✨`;
   
-  if (phone) {
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-  } else {
-    navigator.clipboard.writeText(portalUrl).then(() => {
-      showToast(`Enlace al portal copiado al portapapeles:\n\n${portalUrl}`);
-    });
+  const btnWa = document.getElementById('btnSendWaPortal');
+  if (btnWa) {
+    btnWa.href = `https://wa.me/${phone}?text=${encodeURIComponent(waMsg)}`;
   }
+
+  const btnOpen = document.getElementById('btnOpenPortalTab');
+  if (btnOpen) {
+    btnOpen.href = portalUrl;
+  }
+
+  const modal = document.getElementById('clientPortalModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeClientPortalModal() {
+  const modal = document.getElementById('clientPortalModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function copyClientPortalUrl() {
+  const input = document.getElementById('cpDirectUrl');
+  if (!input) return;
+  navigator.clipboard.writeText(input.value).then(() => {
+    showToast('¡Enlace del portal copiado al portapapeles! 📋');
+  }).catch(() => {
+    input.select();
+    document.execCommand('copy');
+    showToast('¡Enlace copiado! 📋');
+  });
 }
 
 function filterClients(query) {
@@ -1604,18 +1665,240 @@ function scheduleForClient(clientId) {
 // ============================================
 // CITAS
 // ============================================
+// ============================================
+// CITAS & CALENDARIO VIOLETA
+// ============================================
 let allAppointments = [];
+let calCurrentYear = new Date().getFullYear();
+let calCurrentMonth = new Date().getMonth(); // 0-11
+let calSelectedDateStr = new Date().toISOString().split('T')[0];
+let currentApptView = 'calendar';
+
+const MONTH_NAMES_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const MONTH_NAMES_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function setApptView(view) {
+  currentApptView = view;
+  const calView = document.getElementById('apptCalendarView');
+  const listView = document.getElementById('apptListView');
+  const btnCal = document.getElementById('btnViewCal');
+  const btnList = document.getElementById('btnViewList');
+
+  if (view === 'calendar') {
+    if (calView) calView.style.display = 'grid';
+    if (listView) listView.style.display = 'none';
+    if (btnCal) btnCal.classList.add('active');
+    if (btnList) btnList.classList.remove('active');
+    renderAppointmentsCalendar();
+    renderCalendarActivities();
+  } else {
+    if (calView) calView.style.display = 'none';
+    if (listView) listView.style.display = 'block';
+    if (btnCal) btnCal.classList.remove('active');
+    if (btnList) btnList.classList.add('active');
+    renderAppointmentsTable(allAppointments);
+  }
+}
 
 function loadAppointments() {
   allAppointments = DataStore.getAppointments();
   
-  // Apply current date filter if any
-  const filterInput = document.getElementById('filterApptDate');
-  if (filterInput && filterInput.value) {
-    filterAppointmentsByDate(filterInput.value);
+  if (currentApptView === 'calendar') {
+    renderAppointmentsCalendar();
+    renderCalendarActivities();
   } else {
-    renderAppointmentsTable(allAppointments);
+    const filterInput = document.getElementById('filterApptDate');
+    if (filterInput && filterInput.value) {
+      filterAppointmentsByDate(filterInput.value);
+    } else {
+      renderAppointmentsTable(allAppointments);
+    }
   }
+}
+
+function navCalendar(delta) {
+  calCurrentMonth += delta;
+  if (calCurrentMonth > 11) {
+    calCurrentMonth = 0;
+    calCurrentYear++;
+  } else if (calCurrentMonth < 0) {
+    calCurrentMonth = 11;
+    calCurrentYear--;
+  }
+  renderAppointmentsCalendar();
+}
+
+function goCalendarToday() {
+  const today = new Date();
+  calCurrentYear = today.getFullYear();
+  calCurrentMonth = today.getMonth();
+  calSelectedDateStr = today.toISOString().split('T')[0];
+  renderAppointmentsCalendar();
+  renderCalendarActivities();
+}
+
+function selectCalendarDate(dateStr) {
+  calSelectedDateStr = dateStr;
+  renderAppointmentsCalendar();
+  renderCalendarActivities();
+}
+
+function quickAddApptForSelectedDate() {
+  resetApptForm();
+  document.getElementById('aDate').value = calSelectedDateStr;
+  const form = document.getElementById('apptForm');
+  if (form) {
+    form.style.display = 'block';
+    form.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+function renderAppointmentsCalendar() {
+  const titleEl = document.getElementById('calMonthYearTitle');
+  const gridEl = document.getElementById('calDaysGrid');
+  if (!gridEl) return;
+
+  const monthName = (currentLang === 'es' ? MONTH_NAMES_ES : MONTH_NAMES_EN)[calCurrentMonth];
+  if (titleEl) {
+    titleEl.textContent = `${monthName.toUpperCase()} ${calCurrentYear}`;
+  }
+
+  const firstDayIndex = new Date(calCurrentYear, calCurrentMonth, 1).getDay(); // 0 = Dom
+  const totalDaysInMonth = new Date(calCurrentYear, calCurrentMonth + 1, 0).getDate();
+  const prevMonthTotalDays = new Date(calCurrentYear, calCurrentMonth, 0).getDate();
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // Agrupar citas por fecha
+  const apptsByDate = {};
+  allAppointments.forEach(a => {
+    if (a.date) {
+      apptsByDate[a.date] = (apptsByDate[a.date] || 0) + 1;
+    }
+  });
+
+  let html = '';
+
+  // Días del mes anterior
+  for (let i = firstDayIndex - 1; i >= 0; i--) {
+    const dayNum = prevMonthTotalDays - i;
+    const prevMonth = calCurrentMonth === 0 ? 11 : calCurrentMonth - 1;
+    const prevYear = calCurrentMonth === 0 ? calCurrentYear - 1 : calCurrentYear;
+    const dateStr = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+    html += `<div class="cal-day-cell other-month" onclick="selectCalendarDate('${dateStr}')">${dayNum}</div>`;
+  }
+
+  // Días del mes actual
+  for (let d = 1; d <= totalDaysInMonth; d++) {
+    const dateStr = `${calCurrentYear}-${String(calCurrentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const isToday = dateStr === todayStr;
+    const isSelected = dateStr === calSelectedDateStr;
+    const count = apptsByDate[dateStr] || 0;
+    const hasAppts = count > 0;
+
+    let classes = ['cal-day-cell'];
+    if (isToday) classes.push('today');
+    if (isSelected) classes.push('selected');
+    if (hasAppts) classes.push('has-appts');
+
+    html += `<div class="${classes.join(' ')}" onclick="selectCalendarDate('${dateStr}')" title="${count ? count + ' cita(s)' : ''}">${d}</div>`;
+  }
+
+  // Días del mes siguiente para completar la cuadrícula (hasta múltiplo de 7)
+  const totalCells = firstDayIndex + totalDaysInMonth;
+  const nextDays = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+  for (let n = 1; n <= nextDays; n++) {
+    const nextMonth = calCurrentMonth === 11 ? 0 : calCurrentMonth + 1;
+    const nextYear = calCurrentMonth === 11 ? calCurrentYear + 1 : calCurrentYear;
+    const dateStr = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-${String(n).padStart(2, '0')}`;
+    html += `<div class="cal-day-cell other-month" onclick="selectCalendarDate('${dateStr}')">${n}</div>`;
+  }
+
+  gridEl.innerHTML = html;
+}
+
+function renderCalendarActivities() {
+  const container = document.getElementById('calDayActivitiesList');
+  const titleEl = document.getElementById('calSelectedDayTitle');
+  const subEl = document.getElementById('calSelectedDaySubtitle');
+  if (!container) return;
+
+  const dayAppts = allAppointments.filter(a => a.date === calSelectedDateStr);
+  const formattedDate = formatDate(calSelectedDateStr);
+
+  if (titleEl) {
+    titleEl.textContent = `📅 ${formattedDate}`;
+  }
+  if (subEl) {
+    subEl.textContent = `${dayAppts.length} ${dayAppts.length === 1 ? 'actividad programada' : 'actividades programadas'}`;
+  }
+
+  if (dayAppts.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:32px 16px; background:var(--bg-alt); border-radius:12px; border:1px dashed var(--border);">
+        <div style="font-size:32px; margin-bottom:8px;">☕</div>
+        <strong style="font-size:15px; color:var(--text-sec); display:block;">No hay citas agendadas para este día</strong>
+        <p style="font-size:13px; color:var(--text-muted); margin:4px 0 16px;">Puedes programar un nuevo servicio o asignar un cliente a esta fecha.</p>
+        <button class="btn-action-pill" onclick="quickAddApptForSelectedDate()" style="background:var(--primary); color:#fff; padding:8px 18px;">+ Agendar Cita Aquí</button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = dayAppts.map(a => `
+    <div class="cal-activity-card status-${a.status}">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; gap:8px;">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span class="cal-activity-time-badge">⏰ ${a.time || '09:00 AM'}</span>
+          <strong style="font-size:16px; color:var(--primary);">${a.clients?.name || 'Cliente'}</strong>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:18px; font-weight:900; color:var(--primary);">$${parseFloat(a.price || 0).toFixed(2)}</div>
+        </div>
+      </div>
+
+      <div style="font-size:13px; color:var(--text-sec); margin-bottom:12px; background:var(--bg-alt); border:1px solid var(--border); padding:10px 12px; border-radius:8px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+          <span>📍 <strong>Dirección:</strong> ${a.clients?.address || 'Sin dirección'}</span>
+          ${a.clients?.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.clients.address)}" target="_blank" style="text-decoration:none; font-size:12px; font-weight:700; color:var(--primary);" title="Ver en Google Maps">🗺️ Mapa y Ruta</a>` : ''}
+        </div>
+        ${a.addons && a.addons.length ? `<div style="margin-top:4px;">✨ <strong>Extras:</strong> ${Array.isArray(a.addons) ? a.addons.join(', ') : a.addons}</div>` : ''}
+        ${a.notes ? `<div style="margin-top:4px;">📝 <strong>Notas:</strong> ${a.notes}</div>` : ''}
+        ${a.status === 'en_progreso' && a.started_at ? `<div style="margin-top:4px; color:#f57c00; font-weight:600;">🧹 En progreso desde: ${new Date(a.started_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>` : ''}
+        ${a.status === 'pausada' ? `<div style="margin-top:4px; color:#f57c00; font-weight:600;">⏸️ Pausada (${formatDuration(a.accumulated_minutes || 0)})</div>` : ''}
+        ${a.status === 'completada' && a.duration_minutes ? `<div style="margin-top:4px; color:var(--success); font-weight:600;">✓ Limpieza completada en: ${formatDuration(a.duration_minutes)}</div>` : ''}
+      </div>
+
+      <div class="card-actions-row" style="flex-wrap:wrap; justify-content:space-between; align-items:center;">
+        <div>
+          <select class="status-select status-${a.status}" onchange="changeApptStatus('${a.id}', this.value)" style="padding:6px 10px; font-size:12px;">
+            <option value="pendiente" ${a.status === 'pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
+            <option value="en_progreso" ${a.status === 'en_progreso' ? 'selected' : ''}>🧹 En progreso</option>
+            <option value="pausada" ${a.status === 'pausada' ? 'selected' : ''}>⏸️ Pausada</option>
+            <option value="completada" ${a.status === 'completada' ? 'selected' : ''}>✅ Completada</option>
+            <option value="cancelada" ${a.status === 'cancelada' ? 'selected' : ''}>❌ Cancelada</option>
+          </select>
+        </div>
+
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          ${a.status === 'pendiente' ? `
+            <button class="btn-action-pill" onclick="startCleaning('${a.id}')" style="background:var(--primary); color:#fff;">▶️ Iniciar</button>
+            <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Hola! Anggie está en camino/comenzando tu limpieza de hoy 🧹✨')}" target="_blank" class="btn-action-pill" style="background:#25d366; color:#fff; text-decoration:none;">💬 Voy en camino</a>
+          ` : a.status === 'en_progreso' ? `
+            <button class="btn-action-pill" onclick="pauseCleaning('${a.id}')" style="background:#f57c00; color:#fff;">⏸️ Pausar</button>
+            <button class="btn-action-pill" onclick="finishCleaning('${a.id}')" style="background:#4caf50; color:#fff;">✅ Finalizar</button>
+          ` : a.status === 'pausada' ? `
+            <button class="btn-action-pill" onclick="resumeCleaning('${a.id}')" style="background:var(--primary); color:#fff;">▶️ Reanudar</button>
+            <button class="btn-action-pill" onclick="finishCleaning('${a.id}')" style="background:#4caf50; color:#fff;">✅ Finalizar</button>
+          ` : a.status === 'completada' ? `
+            <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Listo! Tu hogar quedó reluciente ✨ Nos vemos en tu próxima visita.')}" target="_blank" class="btn-action-pill" style="background:#25d366; color:#fff; text-decoration:none;">💬 Confirmar WA</a>
+          ` : ''}
+          <button class="btn-action-pill" onclick="editAppt('${a.id}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border);">✏️</button>
+          <button class="btn-action-pill" onclick="deleteAppt('${a.id}')" style="background:#ffebee; color:#c62828;">🗑️</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
 }
 
 function filterAppointmentsByDate(dateStr) {
@@ -1660,7 +1943,7 @@ function renderAppointmentsTable(appts) {
           <span>📍 <strong>Dirección:</strong> ${a.clients?.address || 'Sin dirección'}</span>
           ${a.clients?.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.clients.address)}" target="_blank" style="text-decoration:none; font-size:12px; font-weight:700; color:var(--primary);" title="Ver en Google Maps">🗺️ Mapa</a>` : ''}
         </div>
-        ${a.addons && a.addons.length ? `<div style="margin-top:4px;">✨ <strong>Extras:</strong> ${a.addons.join(', ')}</div>` : ''}
+        ${a.addons && a.addons.length ? `<div style="margin-top:4px;">✨ <strong>Extras:</strong> ${Array.isArray(a.addons) ? a.addons.join(', ') : a.addons}</div>` : ''}
         ${a.notes ? `<div style="margin-top:4px;">📝 <strong>Notas:</strong> ${a.notes}</div>` : ''}
         ${a.status === 'en_progreso' && a.started_at ? `<div style="margin-top:4px; color:#f57c00; font-weight:600;">🧹 En progreso desde: ${new Date(a.started_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>` : ''}
         ${a.status === 'pausada' ? `<div style="margin-top:4px; color:#f57c00; font-weight:600;">⏸️ Pausada (${formatDuration(a.accumulated_minutes || 0)})</div>` : ''}
@@ -1945,6 +2228,37 @@ function loadExpenses() {
   renderExpensesTable(allExpenses);
 }
 
+function resetExpenseForm() {
+  const eId = document.getElementById('eId');
+  if (eId) eId.value = '';
+  document.getElementById('eCategory').value = '';
+  document.getElementById('eAmount').value = '';
+  document.getElementById('eDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('eDesc').value = '';
+  const title = document.getElementById('eFormTitle');
+  if (title) title.textContent = 'Registrar gasto operativo';
+}
+
+function editExpense(id) {
+  const exp = allExpenses.find(e => e.id == id);
+  if (!exp) return;
+
+  const form = document.getElementById('expenseForm');
+  if (form) form.style.display = 'block';
+
+  const eId = document.getElementById('eId');
+  if (eId) eId.value = exp.id;
+  document.getElementById('eCategory').value = exp.category || '';
+  document.getElementById('eAmount').value = exp.amount || '';
+  document.getElementById('eDate').value = exp.date || new Date().toISOString().split('T')[0];
+  document.getElementById('eDesc').value = exp.description || '';
+
+  const title = document.getElementById('eFormTitle');
+  if (title) title.textContent = 'Editar gasto operativo';
+
+  if (form) form.scrollIntoView({ behavior: 'smooth' });
+}
+
 function renderExpensesTable(exps) {
   const tbody = document.getElementById('expensesTable');
   if (!exps || exps.length === 0) {
@@ -1960,10 +2274,13 @@ function renderExpensesTable(exps) {
   tbody.innerHTML = exps.map(e => `
     <tr>
       <td><strong>${formatDate(e.date)}</strong></td>
-      <td><span class="badge" style="background:#e8eaf6; color:#3f51b5;">${e.category}</span></td>
+      <td><span class="badge" style="background:#f0e6f5; color:var(--primary); font-weight:700;">${e.category}</span></td>
       <td>${e.description || '-'}</td>
       <td><strong style="color:var(--danger); font-weight:800;">$${parseFloat(e.amount).toFixed(2)}</strong></td>
-      <td class="action-cell">
+      <td class="action-cell" style="display:flex; gap:6px; justify-content:flex-end;">
+        <button class="btn-table-action" style="background:#fff8ed; color:#d4a017; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;" onclick="editExpense('${e.id}')" title="Editar gasto">
+          ✏️
+        </button>
         <button class="btn-table-action btn-del-table" style="background:#f44336; color:#fff;" onclick="deleteExpense('${e.id}')" title="Eliminar gasto">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
         </button>
@@ -1982,6 +2299,7 @@ function filterExpenses(category) {
 }
 
 function saveExpense() {
+  const eId = document.getElementById('eId') ? document.getElementById('eId').value : '';
   const category = document.getElementById('eCategory').value.trim();
   const amount = parseFloat(document.getElementById('eAmount').value);
   const date = document.getElementById('eDate').value || new Date().toISOString().split('T')[0];
@@ -1992,19 +2310,21 @@ function saveExpense() {
     return;
   }
 
-  DataStore.saveExpense({
+  const expData = {
+    id: eId || undefined,
     category,
     amount,
     date,
     description: desc
-  });
+  };
 
-  document.getElementById('eAmount').value = '';
-  document.getElementById('eDesc').value = '';
+  DataStore.saveExpense(expData);
+
+  resetExpenseForm();
   toggleForm('expenseForm');
   loadExpenses();
   loadDashboard();
-  showToast('Gasto guardado ✅');
+  showToast(eId ? 'Gasto actualizado con éxito ✅' : 'Gasto guardado ✅');
 }
 
 function deleteExpense(id) {

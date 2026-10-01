@@ -1480,3 +1480,242 @@ html, body {
   filter: brightness(0.96);
 }
 
+/* ============================================
+   VIOLET & WHITE LUXURY CALENDAR EXPERIENCE
+   ============================================ */
+.view-toggle-group {
+  display: inline-flex;
+  background: var(--bg-alt);
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  gap: 4px;
+}
+.btn-view-toggle {
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
+  color: var(--text-sec);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-view-toggle.active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(49, 1, 63, 0.25);
+}
+
+.calendar-experience-wrapper {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 24px;
+  align-items: flex-start;
+  margin-top: 10px;
+}
+
+@media (max-width: 900px) {
+  .calendar-experience-wrapper {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Violet Card Header */
+.cal-purple-card {
+  background: linear-gradient(135deg, #31013F 0%, #4e0863 100%);
+  border-radius: 20px;
+  padding: 24px;
+  color: #ffffff;
+  box-shadow: 0 12px 32px rgba(49, 1, 63, 0.28);
+}
+
+.cal-purple-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.cal-month-title {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.cal-nav-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.cal-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.cal-today-badge {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  border-radius: 14px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cal-today-badge:hover {
+  background: #fff;
+  color: var(--primary);
+}
+
+.cal-weekdays-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+
+.cal-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.cal-day-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.cal-day-cell:hover:not(.empty) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.cal-day-cell.other-month {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.cal-day-cell.today {
+  border: 2px solid var(--accent);
+}
+
+.cal-day-cell.selected {
+  background: #ffffff !important;
+  color: #31013F !important;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.cal-day-cell.has-appts::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.cal-day-cell.selected.has-appts::after {
+  background: #31013F;
+}
+
+/* Activities List */
+.cal-activities-section {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.cal-activities-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn-add-sm {
+  background: var(--bg-alt);
+  color: var(--primary);
+  border: 1px solid var(--border);
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-add-sm:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.cal-activity-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--primary);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.cal-activity-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+.cal-activity-card.status-completada {
+  border-left-color: var(--success);
+}
+.cal-activity-card.status-en_progreso {
+  border-left-color: #f57c00;
+}
+.cal-activity-card.status-cancelada {
+  border-left-color: var(--danger);
+  opacity: 0.75;
+}
+
+.cal-activity-time-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-alt);
+  color: var(--primary);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+}
+
+

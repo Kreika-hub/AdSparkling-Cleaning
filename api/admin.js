@@ -45,7 +45,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Firma de token inválida' });
     }
 
-    const allowedTables = ['leads', 'clients', 'appointments', 'expenses', 'quotes', 'plans', 'contracts', 'surcharges', 'gallery'];
+    const allowedTables = ['leads', 'clients', 'appointments', 'expenses', 'quotes', 'plans', 'contracts', 'surcharges', 'gallery', 'team_members', 'reviews', 'push_subscriptions'];
     if (!allowedTables.includes(table)) return res.status(403).json({ error: 'Tabla no permitida' });
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
