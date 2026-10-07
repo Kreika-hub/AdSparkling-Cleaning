@@ -16,6 +16,8 @@ const PRICING = customPricing || {
   4500: { 10: 250, 15: 280, 30: 340, deep: 450 }
 };
 
+const PRICING_ADDONS = { oven: 40, fridge: 50, cabinets: 50, overdue: 30 };
+
 // ============================================
 // SISTEMA DE TOASTS (Notificaciones Nativas)
 // ============================================
@@ -850,7 +852,7 @@ function showTab(tabId) {
   if (tabId === 'dashboard') loadDashboard();
   if (tabId === 'leads') loadLeads();
   if (tabId === 'clients') loadClients();
-  if (tabId === 'appointments') { loadClientsForSelect(); loadTeamForSelect(); loadAppointments(); }
+  if (tabId === 'appointments') { loadClientsForSelect(); loadTeamForSelect(); loadAppointments(); setTimeout(() => setApptView(currentApptView), 0); }
   if (tabId === 'expenses') loadExpenses();
   if (tabId === 'reviews') loadAdminReviews();
   if (tabId === 'plans') loadPlans();
@@ -1993,18 +1995,81 @@ function loadClientsForSelect() {
   if (!select) return;
 
   select.innerHTML = '<option value="">Seleccionar cliente...</option>' + 
-    clients.map(c => `<option value="${c.id}" data-price="${c.base_price || 0}">${c.name} (${c.address ? truncate(c.address, 25) : 'Sin dir'})</option>`).join('');
+    clients.map(c => `<option value="${c.id}" data-price="${c.base_price || 0}" data-sqft="${c.size_sqft || 0}" data-freq="${c.frequency || ''}">${c.name} (${c.address ? truncate(c.address, 25) : 'Sin dir'})</option>`).join('');
 }
 
 function onClientSelectChange() {
   const select = document.getElementById('aClient');
   const selected = select.options[select.selectedIndex];
-  if (selected && selected.dataset.price) {
-    const basePrice = parseInt(selected.dataset.price) || 0;
-    if (basePrice > 0) {
-      document.getElementById('aPrice').value = basePrice;
+  if (!selected || !selected.value) return;
+
+  // First try: use client's stored base_price
+  const basePrice = parseInt(selected.dataset.price) || 0;
+
+  // Second try: look up from PRICING table using sqft + freq
+  const sqft = parseInt(selected.dataset.sqft) || 0;
+  const freq = selected.dataset.freq || '';
+
+  let suggestedPrice = basePrice;
+  if (sqft > 0 && freq) {
+    // Find the nearest sqft bracket
+    const brackets = [1200, 1700, 2200, 2800, 3500, 4500];
+    const bracket = brackets.find(b => sqft <= b) || 4500;
+    const lookupFreq = (freq === 'once' || freq === 'deep') ? 'deep' : String(freq);
+    if (PRICING[bracket] && PRICING[bracket][lookupFreq]) {
+      suggestedPrice = PRICING[bracket][lookupFreq];
     }
   }
+
+  if (suggestedPrice > 0) {
+    document.getElementById('aPrice').value = suggestedPrice;
+  }
+
+  // Show hint
+  suggestApptPrice();
+}
+
+function suggestApptPrice() {
+  const hintEl = document.getElementById('aPriceSuggestionHint');
+  if (!hintEl) return;
+
+  const select = document.getElementById('aClient');
+  const selected = select.options[select.selectedIndex];
+  if (!selected || !selected.value) {
+    hintEl.style.display = 'none';
+    return;
+  }
+
+  const sqft = parseInt(selected.dataset.sqft) || 0;
+  const freq = selected.dataset.freq || '';
+  if (!sqft || !freq) {
+    hintEl.style.display = 'none';
+    return;
+  }
+
+  const brackets = [1200, 1700, 2200, 2800, 3500, 4500];
+  const bracket = brackets.find(b => sqft <= b) || 4500;
+  const lookupFreq = (freq === 'once' || freq === 'deep') ? 'deep' : String(freq);
+  const baseFromTable = (PRICING[bracket] && PRICING[bracket][lookupFreq]) ? PRICING[bracket][lookupFreq] : 0;
+
+  // Add-ons from the aAddons text field
+  const addonsText = (document.getElementById('aAddons').value || '').toLowerCase();
+  let extrasTotal = 0;
+  if (addonsText.includes('horno')) extrasTotal += PRICING_ADDONS.oven;
+  if (addonsText.includes('nevera') || addonsText.includes('fridge')) extrasTotal += PRICING_ADDONS.fridge;
+  if (addonsText.includes('gabinete') || addonsText.includes('cabinet')) extrasTotal += PRICING_ADDONS.cabinets;
+
+  const suggestedTotal = baseFromTable + extrasTotal;
+
+  const freqLabels = { '10': 'c/10 días', '15': 'quincenal', '30': 'mensual', 'deep': 'profunda/mudanza', 'once': 'única vez' };
+
+  hintEl.innerHTML = `
+    <span style="font-size:11px; color:var(--text-sec);">💡 Precio sugerido según tabla:</span>
+    <strong style="color:var(--primary); font-size:13px;"> $${suggestedTotal}</strong>
+    <span style="font-size:11px; color:var(--text-muted);">(${sqft} sqft · ${freqLabels[lookupFreq] || lookupFreq}${extrasTotal > 0 ? ' · +$' + extrasTotal + ' extras' : ''})</span>
+    <span style="font-size:11px; color:var(--text-muted); margin-left:4px;">— Anggie tiene la última palabra</span>
+  `;
+  hintEl.style.display = 'flex';
 }
 
 function resetApptForm() {
@@ -2018,6 +2083,8 @@ function resetApptForm() {
   document.getElementById('aStatus').value = 'pendiente';
   document.getElementById('aTeam').value = '';
   document.getElementById('aFormTitle').textContent = 'Agregar Cita';
+  const hint = document.getElementById('aPriceSuggestionHint');
+  if (hint) hint.style.display = 'none';
 }
 
 function editAppt(id) {
@@ -2046,6 +2113,9 @@ function editAppt(id) {
   }
 
   document.getElementById('aFormTitle').textContent = 'Editar Cita';
+
+  // Show suggested price hint
+  setTimeout(() => suggestApptPrice(), 0);
 
   form.scrollIntoView({ behavior: 'smooth' });
 }

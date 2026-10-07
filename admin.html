@@ -472,12 +472,15 @@
             <h3 id="aFormTitle">Agregar cita</h3>
             <input type="hidden" id="aId">
             <div class="form-grid">
-              <select id="aClient" required>
+              <select id="aClient" required onchange="onClientSelectChange()">
                 <option value="">Seleccionar cliente...</option>
               </select>
               <input type="date" id="aDate" required>
               <input type="text" id="aTime" placeholder="Hora (ej. 09:00 AM)">
-              <input type="number" id="aPrice" placeholder="Precio a cobrar $ *" required>
+              <div style="display:flex; flex-direction:column; gap:4px; grid-column:1/-1;">
+                <input type="number" id="aPrice" placeholder="Precio a cobrar $ *" required style="grid-column:auto;">
+                <div id="aPriceSuggestionHint" style="display:none; align-items:center; gap:6px; flex-wrap:wrap; background:#f5eaff; border:1px solid #d8b4f8; border-radius:8px; padding:8px 12px; font-size:12px;"></div>
+              </div>
               <select id="aStatus">
                 <option value="pendiente">Estado: Pendiente</option>
                 <option value="en_progreso">Estado: En progreso</option>
@@ -488,17 +491,18 @@
               <select id="aTeam">
                 <option value="">Sin asignar a equipo</option>
               </select>
-              <input type="text" id="aAddons" placeholder="Adicionales (Horno, Nevera, Persianas...)">
+              <input type="text" id="aAddons" placeholder="Adicionales (Horno, Nevera, Persianas...)" oninput="suggestApptPrice()">
               <input type="text" id="aNotes" placeholder="Notas de la cita">
             </div>
             <div class="form-actions">
               <button class="btn-save" onclick="saveAppointment()">Guardar cita</button>
               <button class="btn-cancel" onclick="toggleForm('apptForm')">Cancelar</button>
             </div>
+
           </div>
 
           <!-- VISTA 1: CALENDARIO VIOLETA & TIMELINE -->
-          <div id="apptCalendarView" class="calendar-experience-wrapper">
+          <div id="apptCalendarView" class="calendar-experience-wrapper" style="display:grid;">
             <!-- CALENDARIO CARD VIOLETA -->
             <div class="cal-purple-card">
               <div class="cal-purple-header">
