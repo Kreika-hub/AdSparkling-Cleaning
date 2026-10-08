@@ -4,6 +4,18 @@
    Animaciones y PWA
    ============================================ */
 
+function updateM2Hint(val) {
+  const hintEl = document.getElementById('reqSizeM2Hint');
+  if (!hintEl) return;
+  const num = parseInt(val);
+  if (!num || isNaN(num) || num <= 0) {
+    hintEl.textContent = '1,800 sqft ≈ 167 m²';
+    return;
+  }
+  const m2 = Math.round(num / 10.7639);
+  hintEl.textContent = `${num.toLocaleString()} sqft ≈ ${m2.toLocaleString()} m²`;
+}
+
 // Sincronización de Leads con la Nube y Respaldo Local
 async function saveLeadFromLanding(lead) {
   try {
@@ -135,10 +147,12 @@ function handleRequest(e) {
   const sizeEl = document.getElementById('reqSize') || document.getElementById('contactSize');
   const freqEl = document.getElementById('reqFreq') || document.getElementById('contactFreq');
   const notesEl = document.getElementById('reqNotes') || document.getElementById('contactNotes');
+  const serviceTypeEl = document.getElementById('reqServiceType');
 
   const size = sizeEl ? sizeEl.value : null;
   const freq = freqEl ? freqEl.value : null;
   const notes = notesEl ? notesEl.value.trim() : '';
+  const serviceType = serviceTypeEl ? serviceTypeEl.value : 'regular';
 
   const extras = [];
   document.querySelectorAll('#requestExtras input:checked').forEach(el => {
@@ -160,6 +174,7 @@ function handleRequest(e) {
     name,
     phone,
     address,
+    service_type: serviceType,
     size_sqft: size ? parseInt(size) : null,
     frequency: freq || null,
     notes: (extras.length ? `Extras: ${extras.join(', ')}. ` : '') + (notes || ''),

@@ -1,1 +1,1 @@
-feat: migracion completa a serverless functions (fase 1)
+feat: multi-category pricing (sqft and m2), modal scrolling fix, and service type cotizador

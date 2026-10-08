@@ -5,18 +5,108 @@
 
 let adminToken = sessionStorage.getItem('admin_token') || null;
 
-let customPricing = null;
-try { customPricing = JSON.parse(localStorage.getItem('adsparkling_pricing')); } catch(e) {}
-const PRICING = customPricing || {
-  1200: { 10: 150, 15: 150, 30: 180, deep: 240 },
-  1700: { 10: 165, 15: 170, 30: 200, deep: 270 },
-  2200: { 10: 180, 15: 195, 30: 225, deep: 300 },
-  2800: { 10: 200, 15: 220, 30: 260, deep: 350 },
-  3500: { 10: 225, 15: 250, 30: 290, deep: 400 },
-  4500: { 10: 250, 15: 280, 30: 340, deep: 450 }
+// ============================================
+// CATÁLOGO DE PRECIOS MULTI-CATEGORÍA (M² y SQFT)
+// ============================================
+const DEFAULT_PRICING_CATALOG = {
+  regular: {
+    id: 'regular',
+    name: 'Limpieza Regular / Residencial',
+    icon: '🧹',
+    desc: 'Mantenimiento recurrente para hogares y apartamentos',
+    columns: [
+      { key: '10', label: '10 Días' },
+      { key: '15', label: 'Quincenal' },
+      { key: '30', label: 'Mensual' },
+      { key: 'deep', label: 'Profunda / Ocasional' }
+    ],
+    pricing: {
+      1200: { 10: 150, 15: 150, 30: 180, deep: 240 },
+      1700: { 10: 165, 15: 170, 30: 200, deep: 270 },
+      2200: { 10: 180, 15: 195, 30: 225, deep: 300 },
+      2800: { 10: 200, 15: 220, 30: 260, deep: 350 },
+      3500: { 10: 225, 15: 250, 30: 290, deep: 400 },
+      4500: { 10: 250, 15: 280, 30: 340, deep: 450 }
+    }
+  },
+  post_construction: {
+    id: 'post_construction',
+    name: 'Limpieza Post-Construcción / Obra',
+    icon: '🏗️',
+    desc: 'Remoción de polvo fino de yeso, restos de pintura, silicón y limpieza profunda',
+    columns: [
+      { key: 'light', label: 'Polvo Leve' },
+      { key: 'standard', label: 'Estándar' },
+      { key: 'heavy', label: 'Polvo Pesado / Pintura' }
+    ],
+    pricing: {
+      1200: { light: 320, standard: 380, heavy: 450 },
+      1700: { light: 420, standard: 490, heavy: 580 },
+      2200: { light: 520, standard: 620, heavy: 740 },
+      2800: { light: 650, standard: 780, heavy: 920 },
+      3500: { light: 800, standard: 960, heavy: 1150 },
+      4500: { light: 980, standard: 1180, heavy: 1400 }
+    }
+  },
+  move: {
+    id: 'move',
+    name: 'Mudanza (Move-in / Move-out)',
+    icon: '📦',
+    desc: 'Limpieza exhaustiva antes de mudarse o al entregar la propiedad',
+    columns: [
+      { key: 'empty', label: 'Casa Vacía' },
+      { key: 'furnished', label: 'Amoblada' },
+      { key: 'deep_move', label: 'Detallada / Con Electrodomésticos' }
+    ],
+    pricing: {
+      1200: { empty: 260, furnished: 310, deep_move: 370 },
+      1700: { empty: 310, furnished: 370, deep_move: 440 },
+      2200: { empty: 370, furnished: 440, deep_move: 520 },
+      2800: { empty: 440, furnished: 520, deep_move: 620 },
+      3500: { empty: 520, furnished: 620, deep_move: 740 },
+      4500: { empty: 620, furnished: 740, deep_move: 880 }
+    }
+  },
+  commercial: {
+    id: 'commercial',
+    name: 'Comercial / Oficinas',
+    icon: '🏢',
+    desc: 'Oficinas corporativas, locales comerciales y consultorios',
+    columns: [
+      { key: 'weekly', label: 'Semanal' },
+      { key: 'biweekly', label: 'Quincenal' },
+      { key: 'monthly', label: 'Mensual' }
+    ],
+    pricing: {
+      1200: { weekly: 150, biweekly: 180, monthly: 220 },
+      1700: { weekly: 190, biweekly: 230, monthly: 270 },
+      2200: { weekly: 230, biweekly: 280, monthly: 330 },
+      2800: { weekly: 280, biweekly: 340, monthly: 400 },
+      3500: { weekly: 340, biweekly: 410, monthly: 480 },
+      4500: { weekly: 410, biweekly: 490, monthly: 580 }
+    }
+  }
 };
 
+let PRICING_CATALOG = DEFAULT_PRICING_CATALOG;
+try {
+  const savedCat = localStorage.getItem('adsparkling_pricing_catalog');
+  if (savedCat) {
+    PRICING_CATALOG = Object.assign({}, DEFAULT_PRICING_CATALOG, JSON.parse(savedCat));
+  }
+} catch(e) {}
+
+// Compatibilidad hacia atrás con código existente
+const PRICING = (PRICING_CATALOG.regular && PRICING_CATALOG.regular.pricing) ? PRICING_CATALOG.regular.pricing : DEFAULT_PRICING_CATALOG.regular.pricing;
 const PRICING_ADDONS = { oven: 40, fridge: 50, cabinets: 50, overdue: 30 };
+let currentPricingCategory = 'regular';
+
+function sqftToM2(sqft) {
+  return Math.round(sqft / 10.7639);
+}
+function m2ToSqft(m2) {
+  return Math.round(m2 * 10.7639);
+}
 
 // ============================================
 // SISTEMA DE TOASTS (Notificaciones Nativas)
@@ -857,7 +947,7 @@ function showTab(tabId) {
   if (tabId === 'reviews') loadAdminReviews();
   if (tabId === 'plans') loadPlans();
   if (tabId === 'team') loadTeam();
-  if (tabId === 'cotizar') { qcCalculate(); renderPricingTable(); }
+  if (tabId === 'cotizar') { renderPricingCategoryTabs(); switchPricingCategory(currentPricingCategory); }
 }
 
 function toggleSidebar() {
@@ -1096,11 +1186,13 @@ function renderLeadsTable(leads) {
     let suggestedPriceText = '';
     if (l.size_sqft) {
       const price = getSuggestedPrice(l.size_sqft, l.frequency);
+      const m2 = sqftToM2(l.size_sqft);
       if (typeof price === 'number') {
-        suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft</div><strong style="color:var(--primary); font-size:14px;">$${price} sug.</strong>`;
+        const rateM2 = (price / m2).toFixed(2);
+        suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft <small style="color:var(--text-muted);">(~${m2}m²)</small></div><strong style="color:var(--primary); font-size:14px;">$${price} sug.</strong><div style="font-size:10px; color:var(--text-muted);">$${rateM2}/m²</div>`;
         suggestedPriceText = ` Tu cotización estimada es de $${price}.`;
       } else if (price) {
-        suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft</div><span style="font-size:11px; color:var(--primary); font-weight:700;">Q:$${price.biweekly} | M:$${price.monthly}</span>`;
+        suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft <small>(~${m2}m²)</small></div><span style="font-size:11px; color:var(--primary); font-weight:700;">Q:$${price.biweekly} | M:$${price.monthly}</span>`;
         suggestedPriceText = ` El estimado es Quincenal: $${price.biweekly} o Mensual: $${price.monthly}.`;
       }
     }
@@ -1110,9 +1202,22 @@ function renderLeadsTable(leads) {
        extrasList = '<div style="font-size:10px; color:#c0392b; font-weight:bold; margin-top:4px;">Tiene extras solicitados</div>';
     }
 
+    const serviceTypeMap = {
+      regular: '🧹 Regular',
+      deep: '✨ Profunda',
+      post_construction: '🏗️ Post-Construcción',
+      move: '📦 Mudanza',
+      commercial: '🏢 Comercial'
+    };
+    const sTypeBadge = serviceTypeMap[l.service_type] || (l.notes && l.notes.toLowerCase().includes('construc') ? '🏗️ Post-Construcción' : null);
+
     return `
     <tr>
-      <td><strong>${l.name}</strong><br><span style="font-size:11px; color:var(--text-muted);">${l.source === 'referral' ? '⭐ Referido' : l.source}</span></td>
+      <td>
+        <strong>${l.name}</strong>
+        ${sTypeBadge ? `<div style="margin-top:2px;"><span class="badge" style="background:#f5eaff; color:var(--primary); font-size:11px; font-weight:700;">${sTypeBadge}</span></div>` : ''}
+        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${l.source === 'referral' ? '⭐ Referido' : (l.source || 'web')}</div>
+      </td>
       <td><a href="tel:${cleanPhone(l.phone)}" style="color:inherit; font-weight:600;">${l.phone}</a></td>
       <td title="${l.address}">
         ${truncate(l.address, 25)}
@@ -1178,7 +1283,7 @@ function deleteLead(id) {
 }
 
 // ============================================
-// MODAL COTIZADOR DE LEAD
+// MODAL COTIZADOR DE LEAD (MULTI-CATEGORÍA & M²)
 // ============================================
 let _lqCurrentLead = null;
 
@@ -1210,6 +1315,26 @@ function openLeadQuoteModal(leadId) {
     notesBox.style.display = 'none';
   }
 
+  // Poblar categorías de limpieza
+  const catSelect = document.getElementById('lqCategory');
+  if (catSelect) {
+    catSelect.innerHTML = Object.keys(PRICING_CATALOG).map(k => {
+      const c = PRICING_CATALOG[k];
+      return `<option value="${k}">${c.icon || '🏷️'} ${c.name}</option>`;
+    }).join('');
+
+    // Pre-seleccionar categoría según el lead
+    let targetCat = 'regular';
+    if (lead.service_type && PRICING_CATALOG[lead.service_type]) {
+      targetCat = lead.service_type;
+    } else if (lead.notes && (lead.notes.toLowerCase().includes('construc') || lead.notes.toLowerCase().includes('obra'))) {
+      targetCat = 'post_construction';
+    } else if (lead.notes && (lead.notes.toLowerCase().includes('mudan') || lead.notes.toLowerCase().includes('move'))) {
+      targetCat = 'move';
+    }
+    catSelect.value = targetCat;
+  }
+
   // Pre-seleccionar tamaño (bracket más cercano)
   const sqft = parseInt(lead.size_sqft) || 0;
   const sizeSelect = document.getElementById('lqSize');
@@ -1221,10 +1346,19 @@ function openLeadQuoteModal(leadId) {
     sizeSelect.value = '2200';
   }
 
-  // Pre-seleccionar frecuencia
+  // Configurar columnas de modalidad según la categoría
+  lqOnCategoryChange(false);
+
+  // Pre-seleccionar frecuencia si aplica
   const freqSelect = document.getElementById('lqFreq');
-  const freq = lead.frequency || '15';
-  freqSelect.value = (freq === 'once') ? 'deep' : String(freq);
+  if (lead.frequency && freqSelect) {
+    const opts = Array.from(freqSelect.options).map(o => o.value);
+    if (opts.includes(lead.frequency)) {
+      freqSelect.value = lead.frequency;
+    } else if (lead.frequency === 'once' && opts.includes('deep')) {
+      freqSelect.value = 'deep';
+    }
+  }
 
   // Pre-marcar extras si están en las notas
   const notes = (lead.notes || '').toLowerCase();
@@ -1248,11 +1382,42 @@ function openLeadQuoteModal(leadId) {
   document.getElementById('leadQuoteModal').style.display = 'flex';
 }
 
-function lqRecalculate() {
-  const size = parseInt(document.getElementById('lqSize').value) || 2200;
-  const freq = document.getElementById('lqFreq').value || '15';
+function lqOnCategoryChange(doRecalc = true) {
+  const catSelect = document.getElementById('lqCategory');
+  const catKey = catSelect ? catSelect.value : 'regular';
+  const cat = PRICING_CATALOG[catKey] || PRICING_CATALOG.regular;
 
-  let base = (PRICING[size] && PRICING[size][freq]) ? PRICING[size][freq] : 0;
+  const freqSelect = document.getElementById('lqFreq');
+  const freqLabel = document.getElementById('lqFreqLabel');
+  if (freqSelect && cat.columns) {
+    if (freqLabel) {
+      freqLabel.textContent = (cat.id === 'post_construction') ? 'Nivel de Polvo / Obra' : ((cat.id === 'move') ? 'Tipo de Mudanza' : 'Frecuencia / Modalidad');
+    }
+    const currentVal = freqSelect.value;
+    freqSelect.innerHTML = cat.columns.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
+    if (cat.columns.some(c => c.key === currentVal)) {
+      freqSelect.value = currentVal;
+    }
+  }
+
+  if (doRecalc) lqRecalculate();
+}
+
+function lqRecalculate() {
+  const catSelect = document.getElementById('lqCategory');
+  const catKey = catSelect ? catSelect.value : 'regular';
+  const cat = PRICING_CATALOG[catKey] || PRICING_CATALOG.regular;
+
+  const size = parseInt(document.getElementById('lqSize').value) || 2200;
+  const freqSelect = document.getElementById('lqFreq');
+  const freq = freqSelect ? freqSelect.value : '15';
+
+  let base = (cat.pricing[size] && cat.pricing[size][freq] !== undefined) ? cat.pricing[size][freq] : 0;
+  if (!base && cat.pricing[size]) {
+    const firstKey = Object.keys(cat.pricing[size])[0];
+    base = cat.pricing[size][firstKey] || 0;
+  }
+
   let extras = 0;
   if (document.getElementById('lqOven').checked) extras += PRICING_ADDONS.oven;
   if (document.getElementById('lqFridge').checked) extras += PRICING_ADDONS.fridge;
@@ -1260,10 +1425,15 @@ function lqRecalculate() {
   if (document.getElementById('lqOverdue').checked) extras += PRICING_ADDONS.overdue;
 
   const total = base + extras;
+  const m2 = sqftToM2(size);
+  const rateM2 = (base / m2).toFixed(2);
+  const rateSqft = (base / size).toFixed(2);
 
-  const freqLabels = { '10': 'c/10 días', '15': 'quincenal', '30': 'mensual', 'deep': 'profunda/mudanza' };
-  document.getElementById('lqSuggestedLabel').textContent =
-    `$${base} base (${size} sqft · ${freqLabels[freq] || freq})${extras > 0 ? ' + $' + extras + ' en extras' : ''}`;
+  const freqOption = freqSelect ? freqSelect.options[freqSelect.selectedIndex] : null;
+  const freqText = freqOption ? freqOption.text : freq;
+
+  document.getElementById('lqSuggestedLabel').innerHTML =
+    `<strong>$${base}</strong> base · <span style="color:var(--primary); font-weight:700;">$${rateM2}/m²</span> ($${rateSqft}/sqft) · ${size.toLocaleString()} sqft (~${m2} m²) · ${freqText}${extras > 0 ? ' <span style="color:#d35400;">+$' + extras + ' extras</span>' : ''}`;
 
   document.getElementById('lqFinalInput').value = total;
   document.getElementById('lqFinalPrice').textContent = '$' + total;
@@ -1279,8 +1449,14 @@ function lqSendWhatsApp() {
   const lead = _lqCurrentLead;
   const total = parseInt(document.getElementById('lqFinalInput').value) || 0;
   const size = document.getElementById('lqSize').value;
-  const freq = document.getElementById('lqFreq').value;
-  const freqLabels = { '10': 'cada 10 días', '15': 'quincenal', '30': 'mensual', 'deep': 'profunda / mudanza' };
+  const m2 = sqftToM2(parseInt(size) || 2200);
+
+  const catSelect = document.getElementById('lqCategory');
+  const catKey = catSelect ? catSelect.value : 'regular';
+  const cat = PRICING_CATALOG[catKey] || PRICING_CATALOG.regular;
+
+  const freqSelect = document.getElementById('lqFreq');
+  const freqText = freqSelect ? freqSelect.options[freqSelect.selectedIndex].text : '';
 
   const extras = [];
   if (document.getElementById('lqOven').checked) extras.push('Horno (+$40)');
@@ -1289,20 +1465,22 @@ function lqSendWhatsApp() {
   if (document.getElementById('lqOverdue').checked) extras.push('Recargo +30 días (+$30)');
 
   let msg = `¡Hola ${lead.name}! 👋 Soy Anggie de *Ad Sparkling Cleaning* ✨%0A%0A`;
-  msg += `Recibí tu solicitud y te preparo tu cotización personalizada:%0A%0A`;
+  msg += `Recibí tu solicitud y te preparé tu cotización personalizada:%0A%0A`;
+  msg += `🏷 *Tipo de Servicio:* ${cat.name}%0A`;
   msg += `📍 *Dirección:* ${lead.address || 'Por confirmar'}%0A`;
-  msg += `📐 *Tamaño:* ${size} sqft%0A`;
-  msg += `🗓 *Frecuencia:* ${freqLabels[freq] || freq}%0A`;
+  msg += `📐 *Tamaño:* ${parseInt(size).toLocaleString()} sqft (~${m2} m²)%0A`;
+  msg += `🗓 *Modalidad:* ${freqText}%0A`;
   if (extras.length) msg += `✨ *Adicionales:* ${extras.join(', ')}%0A`;
   msg += `%0A💰 *Total estimado: $${total}*%0A%0A`;
-  msg += `Los insumos profesionales están incluidos. ✅%0A%0A`;
-  msg += `¿Te gustaría confirmar una fecha? ¡Cuéntame cuándo te vendría bien y lo agendamos! 🗓`;
+  msg += `Los insumos y equipos profesionales están 100% incluidos. ✅%0A%0A`;
+  msg += `¿Te gustaría confirmar una fecha en la agenda? ¡Cuéntame cuándo te vendría mejor! 🗓`;
 
   window.open('https://wa.me/' + cleanPhone(lead.phone || '') + '?text=' + msg, '_blank');
 
   // Cambiar estado del lead a "contactado"
   DataStore.updateLead(lead.id, { status: 'contactado' });
   if (lead) lead.status = 'contactado';
+  loadLeads();
 }
 
 function closeLeadQuoteModal() {
@@ -2572,8 +2750,201 @@ function deleteExpense(id) {
 }
 
 // ============================================
-// COTIZADOR RÁPIDO
+// COTIZADOR RÁPIDO & TABLAS MULTI-CATEGORÍA
 // ============================================
+function savePricingCatalog() {
+  try {
+    localStorage.setItem('adsparkling_pricing_catalog', JSON.stringify(PRICING_CATALOG));
+  } catch(e) {}
+}
+
+function renderPricingCategoryTabs() {
+  const container = document.getElementById('pricingCatTabs');
+  if (!container) return;
+
+  const cats = Object.keys(PRICING_CATALOG);
+  let html = cats.map(k => {
+    const cat = PRICING_CATALOG[k];
+    const isActive = (k === currentPricingCategory);
+    return `<button class="pricing-cat-tab ${isActive ? 'active' : ''}" onclick="switchPricingCategory('${k}')">
+      ${cat.icon || '🏷️'} ${cat.name}
+    </button>`;
+  }).join('');
+
+  html += `<button class="pricing-cat-tab add-tab" onclick="promptAddNewCategory()">
+    ➕ Nueva Categoría
+  </button>`;
+
+  container.innerHTML = html;
+}
+
+function switchPricingCategory(catKey) {
+  if (!PRICING_CATALOG[catKey]) catKey = 'regular';
+  currentPricingCategory = catKey;
+  renderPricingCategoryTabs();
+  
+  const cat = PRICING_CATALOG[catKey];
+  const titleEl = document.getElementById('pricingTableSectionTitle');
+  if (titleEl) titleEl.textContent = `📋 Tabla de Precios: ${cat.name}`;
+
+  const qcTitle = document.getElementById('qcCategoryTitle');
+  if (qcTitle) qcTitle.textContent = `${cat.icon || '🏷️'} ${cat.name}`;
+
+  // Actualizar opciones de frecuencia / modalidad en el cotizador
+  const freqSelect = document.getElementById('qcFreq');
+  const freqLabel = document.getElementById('qcFreqLabel');
+  if (freqSelect && cat.columns) {
+    if (freqLabel) {
+      freqLabel.textContent = (cat.id === 'post_construction') ? 'Nivel de Obra / Polvo' : ((cat.id === 'move') ? 'Tipo de Mudanza' : 'Frecuencia / Modalidad');
+    }
+    freqSelect.innerHTML = cat.columns.map((c, idx) => `<option value="${c.key}" ${idx === 1 ? 'selected' : ''}>${c.label}</option>`).join('');
+  }
+
+  renderPricingTable();
+  qcCalculate();
+}
+
+function renderPricingTable() {
+  const thead = document.getElementById('pricingRefTableHead');
+  const tbody = document.getElementById('pricingRefTableBody');
+  if (!tbody || !thead) return;
+
+  const cat = PRICING_CATALOG[currentPricingCategory] || PRICING_CATALOG.regular;
+  const cols = cat.columns || [
+    { key: '10', label: '10 Días' },
+    { key: '15', label: 'Quincenal' },
+    { key: '30', label: 'Mensual' },
+    { key: 'deep', label: 'Profunda' }
+  ];
+
+  thead.innerHTML = `
+    <tr>
+      <th style="min-width:140px;">Área (Sqft / m²)</th>
+      ${cols.map(c => `<th>${c.label}</th>`).join('')}
+    </tr>
+  `;
+
+  const sizes = [1200, 1700, 2200, 2800, 3500, 4500];
+  tbody.innerHTML = sizes.map(sz => {
+    const m2 = sqftToM2(sz);
+    return `
+      <tr>
+        <td>
+          <strong style="color:var(--primary); font-size:14px;">${sz.toLocaleString()} sqft</strong>
+          <span class="m2-label">≈ ${m2} m²</span>
+        </td>
+        ${cols.map(col => {
+          const val = (cat.pricing[sz] && cat.pricing[sz][col.key] !== undefined) ? cat.pricing[sz][col.key] : '';
+          const rateM2 = val ? (val / m2).toFixed(2) : '0.00';
+          const rateSqft = val ? (val / sz).toFixed(2) : '0.00';
+          return `
+            <td>
+              <div style="display:flex; flex-direction:column; align-items:center;">
+                <input type="number" value="${val}" style="width:75px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); font-size:13px; text-align:center; font-weight:700;" oninput="updatePricingValue(${sz}, '${col.key}', this.value)">
+                <span class="rate-badge" id="rate-${currentPricingCategory}-${sz}-${col.key}">$${rateM2}/m² · $${rateSqft}/sqft</span>
+              </div>
+            </td>
+          `;
+        }).join('')}
+      </tr>
+    `;
+  }).join('');
+}
+
+function updatePricingValue(size, colKey, val) {
+  const num = parseInt(val) || 0;
+  const cat = PRICING_CATALOG[currentPricingCategory];
+  if (!cat) return;
+
+  if (!cat.pricing[size]) cat.pricing[size] = {};
+  cat.pricing[size][colKey] = num;
+
+  // Actualizar badge de tasa en vivo
+  const m2 = sqftToM2(size);
+  const badge = document.getElementById(`rate-${currentPricingCategory}-${size}-${colKey}`);
+  if (badge) {
+    const rateM2 = num ? (num / m2).toFixed(2) : '0.00';
+    const rateSqft = num ? (num / size).toFixed(2) : '0.00';
+    badge.textContent = `$${rateM2}/m² · $${rateSqft}/sqft`;
+  }
+
+  savePricingCatalog();
+  qcCalculate();
+}
+
+function applyRatePerM2ToCurrentTable() {
+  const input = document.getElementById('quickRatePerM2');
+  if (!input) return;
+  const rate = parseFloat(input.value);
+  if (!rate || isNaN(rate) || rate <= 0) {
+    showToast('Ingresa una tarifa válida por m² (ej. 1.25 o 2.50)', 'error');
+    return;
+  }
+
+  const cat = PRICING_CATALOG[currentPricingCategory];
+  if (!cat) return;
+
+  const sizes = [1200, 1700, 2200, 2800, 3500, 4500];
+  const cols = cat.columns || [];
+
+  sizes.forEach(sz => {
+    const m2 = sqftToM2(sz);
+    if (!cat.pricing[sz]) cat.pricing[sz] = {};
+    
+    cols.forEach((col, idx) => {
+      let colMultiplier = 1.0;
+      if (idx === 0) colMultiplier = 0.90;
+      else if (idx === 1) colMultiplier = 1.0;
+      else if (idx === 2) colMultiplier = 1.15;
+      else if (idx >= 3) colMultiplier = 1.35;
+
+      const calculated = Math.round(m2 * rate * colMultiplier);
+      cat.pricing[sz][col.key] = calculated;
+    });
+  });
+
+  savePricingCatalog();
+  renderPricingTable();
+  qcCalculate();
+  showToast(`¡Tabla de "${cat.name}" calculada con base de $${rate.toFixed(2)}/m²! ✅`);
+}
+
+function promptAddNewCategory() {
+  const name = prompt('Ingresa el nombre de la nueva categoría de limpieza:\n(Ej: Casas Vacacionales / Airbnb, Limpieza de Cristales, etc.)');
+  if (!name || !name.trim()) return;
+
+  const id = 'cat_' + Date.now();
+  const rateStr = prompt(`¿Qué tarifa promedio por m² deseas asignar como base para "${name.trim()}"?\n(Ej: 1.20 para regular, 2.50 para trabajos pesados o post-obra):`, '1.50');
+  const rate = parseFloat(rateStr) || 1.50;
+
+  const sizes = [1200, 1700, 2200, 2800, 3500, 4500];
+  const initialPricing = {};
+
+  sizes.forEach(sz => {
+    const m2 = sqftToM2(sz);
+    initialPricing[sz] = {
+      standard: Math.round(m2 * rate),
+      deep: Math.round(m2 * rate * 1.35)
+    };
+  });
+
+  PRICING_CATALOG[id] = {
+    id,
+    name: name.trim(),
+    icon: '✨',
+    desc: 'Categoría personalizada de limpieza',
+    columns: [
+      { key: 'standard', label: 'Estándar' },
+      { key: 'deep', label: 'Profunda' }
+    ],
+    pricing: initialPricing
+  };
+
+  savePricingCatalog();
+  switchPricingCategory(id);
+  showToast(`Categoría "${name.trim()}" creada con éxito ✅`);
+}
+
 function qcCalculate() {
   const sizeSelect = document.getElementById('qcSize');
   const freqSelect = document.getElementById('qcFreq');
@@ -2581,7 +2952,13 @@ function qcCalculate() {
 
   const size = parseInt(sizeSelect.value) || 2200;
   const freq = freqSelect.value || '15';
-  let total = (PRICING[size] && PRICING[size][freq]) ? PRICING[size][freq] : 195;
+  const cat = PRICING_CATALOG[currentPricingCategory] || PRICING_CATALOG.regular;
+
+  let total = (cat.pricing[size] && cat.pricing[size][freq] !== undefined) ? cat.pricing[size][freq] : 195;
+  if (!total && cat.pricing[size]) {
+    const firstKey = Object.keys(cat.pricing[size])[0];
+    total = cat.pricing[size][firstKey] || 195;
+  }
 
   document.querySelectorAll('.qc-check input:checked').forEach(el => {
     total += parseInt(el.dataset.price) || 0;
@@ -2589,42 +2966,25 @@ function qcCalculate() {
 
   const totalEl = document.getElementById('qcTotal');
   if (totalEl) totalEl.textContent = '$' + total;
-  return total;
-}
 
-function renderPricingTable() {
-  const tbody = document.getElementById('pricingRefTableBody');
-  if (!tbody) return;
-  const sizes = [1200, 1700, 2200, 2800, 3500, 4500];
-  const freqs = ['10', '15', '30', 'deep'];
-  tbody.innerHTML = sizes.map(sz => `
-    <tr>
-      <td><strong>${sz} sqft</strong></td>
-      ${freqs.map(fq => `
-        <td>
-          <input type="number" value="${PRICING[sz][fq] || ''}" style="width:70px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); font-size:13px; text-align:center; font-weight:700;" onchange="updatePricingValue(${sz}, '${fq}', this.value)">
-        </td>
-      `).join('')}
-    </tr>
-  `).join('');
-}
-
-function updatePricingValue(size, freq, val) {
-  const num = parseInt(val) || 0;
-  if (PRICING[size]) {
-    PRICING[size][freq] = num;
-    try {
-      localStorage.setItem('adsparkling_pricing', JSON.stringify(PRICING));
-    } catch(e) {}
-    qcCalculate();
-    showToast('Precio de referencia actualizado ✅');
+  const rateEl = document.getElementById('qcRateIndicator');
+  if (rateEl) {
+    const m2 = sqftToM2(size);
+    const rateM2 = (total / m2).toFixed(2);
+    const rateSqft = (total / size).toFixed(2);
+    rateEl.textContent = `≈ $${rateM2}/m² · $${rateSqft}/sqft (${m2} m² / ${size} sqft)`;
   }
+
+  return total;
 }
 
 function qcSendWhatsApp() {
   const total = qcCalculate();
   const sizeSelect = document.getElementById('qcSize');
   const freqSelect = document.getElementById('qcFreq');
+  const cat = PRICING_CATALOG[currentPricingCategory] || PRICING_CATALOG.regular;
+  const size = parseInt(sizeSelect.value) || 2200;
+  const m2 = sqftToM2(size);
 
   const addonsChecked = [];
   document.querySelectorAll('.qc-check input:checked').forEach(el => {
@@ -2632,12 +2992,14 @@ function qcSendWhatsApp() {
   });
 
   let msg = '¡Hola! Soy Anggie de *Ad Sparkling Cleaning*. Te comparto tu cotización personalizada:%0A%0A';
-  msg += '📍 *Tamaño:* ' + sizeSelect.options[sizeSelect.selectedIndex].text.split('—')[0].trim() + '%0A';
-  msg += '🗓 *Frecuencia:* ' + freqSelect.options[freqSelect.selectedIndex].text + '%0A';
+  msg += '🏷 *Tipo de Servicio:* ' + cat.name + '%0A';
+  msg += '📍 *Tamaño:* ' + sizeSelect.options[sizeSelect.selectedIndex].text.split('·')[0].trim() + ' (~' + m2 + ' m²)%0A';
+  msg += '🗓 *Modalidad:* ' + freqSelect.options[freqSelect.selectedIndex].text + '%0A';
   if (addonsChecked.length) {
     msg += '➕ *Extras incluidos:* ' + addonsChecked.join(', ') + '%0A';
   }
   msg += '%0A💰 *Total estimado: $' + total + '*%0A%0A';
+  msg += 'Insumos y equipos profesionales incluidos. ✅%0A';
   msg += '¿Te gustaría reservar fecha en la agenda? Confírmanos tu dirección. ¡Muchas gracias! ✨';
 
   window.open('https://wa.me/?text=' + msg, '_blank');
@@ -2647,6 +3009,9 @@ function qcCopyText() {
   const total = qcCalculate();
   const sizeSelect = document.getElementById('qcSize');
   const freqSelect = document.getElementById('qcFreq');
+  const cat = PRICING_CATALOG[currentPricingCategory] || PRICING_CATALOG.regular;
+  const size = parseInt(sizeSelect.value) || 2200;
+  const m2 = sqftToM2(size);
 
   const addonsChecked = [];
   document.querySelectorAll('.qc-check input:checked').forEach(el => {
@@ -2654,8 +3019,9 @@ function qcCopyText() {
   });
 
   let text = `Ad Sparkling Cleaning — Cotización\n\n`;
-  text += `Tamaño: ${sizeSelect.options[sizeSelect.selectedIndex].text.split('—')[0].trim()}\n`;
-  text += `Frecuencia: ${freqSelect.options[freqSelect.selectedIndex].text}\n`;
+  text += `Servicio: ${cat.name}\n`;
+  text += `Tamaño: ${sizeSelect.options[sizeSelect.selectedIndex].text.split('·')[0].trim()} (~${m2} m²)\n`;
+  text += `Modalidad: ${freqSelect.options[freqSelect.selectedIndex].text}\n`;
   if (addonsChecked.length) text += `Extras: ${addonsChecked.join(', ')}\n`;
   text += `Total: $${total}\n\n`;
   text += `Precio sujeto a confirmación al evaluar la propiedad.`;

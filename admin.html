@@ -688,52 +688,65 @@
           </div>
         </div>
 
-        <!-- COTIZADOR RÁPIDO -->
+        <!-- COTIZADOR RÁPIDO & TABLAS DE PRECIOS MULTI-CATEGORÍA -->
         <div id="tab-cotizar" class="tab-panel">
           <div class="panel-header">
             <div>
-              <h1>Cotizador Rápido</h1>
-              <p class="tab-desc">Genera cotizaciones al vuelo para WhatsApp o guárdalas como cliente.</p>
+              <h1>Cotizador & Tablas de Precios (m² y sqft)</h1>
+              <p class="tab-desc">Administra precios por metro cuadrado y pie cuadrado para Limpieza Regular, Post-Construcción, Mudanzas y crea nuevas categorías.</p>
             </div>
           </div>
 
+          <!-- Pestañas de Categorías de Limpieza -->
+          <div class="pricing-cat-tabs" id="pricingCatTabs">
+            <!-- Dinámico por JS -->
+          </div>
+
           <div class="quick-calc-wrapper" style="flex-direction:column; gap:24px;">
+
+            <!-- CALCULADORA RÁPIDA -->
             <div class="quick-calc">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+                <h3 id="qcCategoryTitle" style="color:var(--primary); font-size:17px; font-weight:800; margin:0;">🧹 Limpieza Regular</h3>
+                <span id="qcCategoryRateBadge" class="badge-hint" style="background:#f5eaff; color:var(--primary); font-weight:700;">Tarifa calculada en tiempo real</span>
+              </div>
+
               <div class="qc-grid">
                 <div class="qc-field">
-                  <label>Tamaño de la propiedad</label>
-                  <select id="qcSize">
-                    <option value="1200">Hasta 1,200 sqft (~1-2 hab)</option>
-                    <option value="1700">1,201-1,700 sqft (~2-3 hab)</option>
-                    <option value="2200" selected>1,701-2,200 sqft (~3-4 hab)</option>
-                    <option value="2800">2,201-2,800 sqft (~4 hab)</option>
-                    <option value="3500">2,801-3,500 sqft (~4-5 hab)</option>
-                    <option value="4500">3,501-4,500 sqft (Casa grande)</option>
+                  <label>Tamaño de la propiedad (sqft / m²)</label>
+                  <select id="qcSize" onchange="qcCalculate()">
+                    <option value="1200">1,200 sqft (~111 m²) · 1-2 hab</option>
+                    <option value="1700">1,700 sqft (~158 m²) · 2-3 hab</option>
+                    <option value="2200" selected>2,200 sqft (~204 m²) · 3-4 hab</option>
+                    <option value="2800">2,800 sqft (~260 m²) · 4 hab</option>
+                    <option value="3500">3,500 sqft (~325 m²) · 4-5 hab</option>
+                    <option value="4500">4,500 sqft (~418 m²) · Casa grande</option>
                   </select>
                 </div>
                 <div class="qc-field">
-                  <label>Frecuencia de servicio</label>
-                  <select id="qcFreq">
+                  <label id="qcFreqLabel">Frecuencia / Modalidad</label>
+                  <select id="qcFreq" onchange="qcCalculate()">
                     <option value="10">Cada 10 días</option>
                     <option value="15" selected>Quincenal</option>
                     <option value="30">Mensual</option>
-                    <option value="deep">Profunda / Mudanza</option>
+                    <option value="deep">Profunda / Ocasional</option>
                   </select>
                 </div>
               </div>
 
               <div class="qc-addons-label">Adicionales / Extras:</div>
               <div class="qc-addons">
-                <label class="qc-check"><input type="checkbox" id="qcOven" data-price="40"> Horno (+$40)</label>
-                <label class="qc-check"><input type="checkbox" id="qcFridge" data-price="50"> Nevera (+$50)</label>
-                <label class="qc-check"><input type="checkbox" id="qcCabinets" data-price="50"> Gabinetes (+$50)</label>
-                <label class="qc-check"><input type="checkbox" id="qcOverdue" data-price="30"> +30 días sin limpiar (+$30)</label>
+                <label class="qc-check"><input type="checkbox" id="qcOven" data-price="40" onchange="qcCalculate()"> Horno (+$40)</label>
+                <label class="qc-check"><input type="checkbox" id="qcFridge" data-price="50" onchange="qcCalculate()"> Nevera (+$50)</label>
+                <label class="qc-check"><input type="checkbox" id="qcCabinets" data-price="50" onchange="qcCalculate()"> Gabinetes (+$50)</label>
+                <label class="qc-check"><input type="checkbox" id="qcOverdue" data-price="30" onchange="qcCalculate()"> +30 días sin limpiar (+$30)</label>
               </div>
 
               <div class="qc-total">
                 <div>
                   <span style="font-weight:700;">Total Estimado:</span>
-                  <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Insumos profesionales incluidos</p>
+                  <div id="qcRateIndicator" style="font-size:12px; color:var(--text-sec); margin-top:2px;">≈ $0.96/m² · $0.09/sqft</div>
+                  <p style="font-size:11px; color:var(--text-muted); margin-top:2px;">Insumos profesionales incluidos</p>
                 </div>
                 <span id="qcTotal" class="total-amount">$195</span>
               </div>
@@ -755,28 +768,43 @@
               </div>
             </div>
 
-            <!-- TABLA DE PRECIOS DE REFERENCIA EDITABLE -->
-            <div class="dash-section" style="max-width:640px; margin-bottom:0;">
-              <div class="section-title-row" style="margin-bottom:12px;">
-                <h2>📋 Tabla de Precios de Referencia (Editable)</h2>
-                <span class="badge-hint">Guarda automáticamente</span>
+            <!-- TABLA DE PRECIOS EDITABLE CON COSTO X M2 Y SQFT -->
+            <div class="dash-section" style="margin-bottom:0;">
+              <div class="section-title-row" style="margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+                <div>
+                  <h2 id="pricingTableSectionTitle">📋 Tabla de Precios: Limpieza Regular</h2>
+                  <p style="font-size:13px; color:var(--text-sec); margin-top:4px;">
+                    Edita cualquier celda para actualizar la calculadora. Debajo de cada precio verás el costo real por m² y por sqft.
+                  </p>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <button class="btn-action-pill" onclick="promptAddNewCategory()" style="background:#f5eaff; color:var(--primary); border:1px solid #d8b4f8;">
+                    ➕ Nueva Categoría
+                  </button>
+                </div>
               </div>
-              <p style="font-size:13px; color:var(--text-sec); margin-bottom:14px;">
-                Edita los valores en la tabla para actualizar la calculadora en tiempo real.
-              </p>
+
+              <!-- Herramienta de auto-cálculo por tarifa m2 -->
+              <div style="background:#fff8ed; border:1px solid #f0c070; border-radius:10px; padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                <div style="font-size:13px; color:#7a5200;">
+                  ⚡ <strong>Auto-llenar tabla con tarifa base por m²:</strong>
+                  <span style="font-size:12px; opacity:0.85;"> (Calcula el precio de cada tamaño automáticamente)</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:13px; font-weight:700;">$</span>
+                  <input type="number" id="quickRatePerM2" placeholder="ej. 1.25" step="0.05" style="width:85px; padding:6px 10px; border:1px solid #f0c070; border-radius:6px; font-weight:700;">
+                  <span style="font-size:12px; font-weight:600;">/ m²</span>
+                  <button class="btn-action-pill" onclick="applyRatePerM2ToCurrentTable()" style="background:#d35400; color:#fff; padding:6px 14px; font-size:12px;">Aplicar a tabla</button>
+                </div>
+              </div>
+
               <div class="table-wrap">
-                <table class="data-table" style="font-size:13px;">
-                  <thead>
-                    <tr>
-                      <th>Sqft</th>
-                      <th>10 Días</th>
-                      <th>Quincenal</th>
-                      <th>Mensual</th>
-                      <th>Profunda</th>
-                    </tr>
+                <table class="data-table" style="font-size:13px;" id="pricingRefTable">
+                  <thead id="pricingRefTableHead">
+                    <!-- Dinámico por JS según categoría -->
                   </thead>
                   <tbody id="pricingRefTableBody">
-                    <!-- Cargado por JS -->
+                    <!-- Cargado por JS con inputs y badges $/m² -->
                   </tbody>
                 </table>
               </div>
@@ -949,26 +977,34 @@
 
         <div style="padding:20px 24px; display:flex; flex-direction:column; gap:16px;">
 
+          <!-- Tipo de Limpieza / Categoría -->
+          <div>
+            <label style="font-size:12px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:4px;">🏷️ Tipo de Limpieza / Categoría de Precio</label>
+            <select id="lqCategory" onchange="lqOnCategoryChange()" style="width:100%; padding:9px 12px; border:2px solid var(--primary); border-radius:8px; font-size:14px; font-weight:700; color:var(--primary); background:#fff;">
+              <!-- Llenado dinámico por JS -->
+            </select>
+          </div>
+
           <!-- Tamaño y frecuencia -->
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
             <div>
-              <label style="font-size:12px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:4px;">📐 Tamaño (sqft)</label>
+              <label style="font-size:12px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:4px;">📐 Tamaño (sqft / m²)</label>
               <select id="lqSize" onchange="lqRecalculate()" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-weight:600;">
-                <option value="1200">Hasta 1,200 sqft</option>
-                <option value="1700">1,201–1,700 sqft</option>
-                <option value="2200">1,701–2,200 sqft</option>
-                <option value="2800">2,201–2,800 sqft</option>
-                <option value="3500">2,801–3,500 sqft</option>
-                <option value="4500">3,501–4,500 sqft</option>
+                <option value="1200">1,200 sqft (~111 m²)</option>
+                <option value="1700">1,700 sqft (~158 m²)</option>
+                <option value="2200">2,200 sqft (~204 m²)</option>
+                <option value="2800">2,800 sqft (~260 m²)</option>
+                <option value="3500">3,500 sqft (~325 m²)</option>
+                <option value="4500">4,500 sqft (~418 m²)</option>
               </select>
             </div>
             <div>
-              <label style="font-size:12px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:4px;">🗓️ Frecuencia</label>
+              <label id="lqFreqLabel" style="font-size:12px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:4px;">🗓️ Frecuencia / Modalidad</label>
               <select id="lqFreq" onchange="lqRecalculate()" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-weight:600;">
                 <option value="10">Cada 10 días</option>
                 <option value="15">Quincenal</option>
                 <option value="30">Mensual</option>
-                <option value="deep">Profunda / Mudanza</option>
+                <option value="deep">Profunda / Ocasional</option>
               </select>
             </div>
           </div>

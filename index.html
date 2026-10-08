@@ -385,14 +385,26 @@
           </div>
 
           <div class="form-field">
+            <label>Tipo de Limpieza Solicitada *</label>
+            <select id="reqServiceType" required style="width:100%; padding:12px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.05); color:#fff; border-radius:8px; font-weight:600;">
+              <option value="regular" style="color:#000;">🧹 Limpieza Regular / Residencial (Mantenimiento)</option>
+              <option value="deep" style="color:#000;">✨ Limpieza Profunda / Ocasional (Una sola vez)</option>
+              <option value="post_construction" style="color:#000;">🏗️ Limpieza Post-Construcción / Remodelación</option>
+              <option value="move" style="color:#000;">📦 Mudanza (Move-in / Move-out)</option>
+              <option value="commercial" style="color:#000;">🏢 Comercial / Oficinas</option>
+            </select>
+          </div>
+
+          <div class="form-field">
             <label data-i18n="lbl_fulladdress">Dirección de la Propiedad *</label>
             <input type="text" id="reqAddress" required placeholder="123 Calle Principal, Apt 4B" data-i18n="ph_address">
           </div>
 
           <div class="form-row">
             <div class="form-field">
-              <label data-i18n="lbl_size">Tamaño aproximado (sqft)</label>
-              <input type="number" id="reqSize" placeholder="ej. 1800" min="500" max="10000" data-i18n="ph_size">
+              <label data-i18n="lbl_size">Tamaño aproximado (sqft o m²)</label>
+              <input type="number" id="reqSize" placeholder="ej. 1800" min="300" max="15000" data-i18n="ph_size" oninput="updateM2Hint(this.value)">
+              <div id="reqSizeM2Hint" style="font-size:11px; color:#e8a87c; margin-top:4px;">1,800 sqft ≈ 167 m²</div>
             </div>
             <div class="form-field">
               <label data-i18n="lbl_freq">Frecuencia deseada</label>
@@ -401,7 +413,7 @@
                 <option value="10" data-i18n="opt_10days">Cada 10 días</option>
                 <option value="15" data-i18n="opt_biweekly">Quincenal</option>
                 <option value="30" data-i18n="opt_monthly">Mensual</option>
-                <option value="deep" data-i18n="opt_deep">Profunda / Mudanza</option>
+                <option value="deep" data-i18n="opt_deep">Profunda / Ocasional</option>
                 <option value="once" data-i18n="opt_once">Solo una vez</option>
               </select>
             </div>
