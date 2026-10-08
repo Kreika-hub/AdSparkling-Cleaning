@@ -917,6 +917,128 @@
     </div>
   </div>
 
+  <!-- ============================================
+       6. MODAL COTIZADOR DE LEAD
+       ============================================ -->
+  <div id="leadQuoteModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-card" style="max-width:560px;">
+      <div class="modal-header">
+        <h3>📋 Cotización para Lead</h3>
+        <button class="modal-close" onclick="closeLeadQuoteModal()">✕</button>
+      </div>
+      <div class="modal-body" style="padding:0;">
+
+        <!-- Datos del lead -->
+        <div style="background:linear-gradient(135deg,#31013F,#4e0863); color:#fff; padding:20px 24px; border-radius:0;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+            <div>
+              <div id="lqName" style="font-size:20px; font-weight:800; margin-bottom:2px;">—</div>
+              <div id="lqAddress" style="font-size:13px; opacity:0.8; margin-bottom:6px;">—</div>
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <a id="lqPhoneLink" href="#" style="color:#e8a87c; font-weight:700; font-size:14px; text-decoration:none;">📞 —</a>
+                <a id="lqMapsLink" href="#" target="_blank" style="color:rgba(255,255,255,0.7); font-size:13px; text-decoration:none;">🗺️ Ver en Maps</a>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:11px; opacity:0.7; text-transform:uppercase; letter-spacing:0.5px;">Precio Final</div>
+              <div id="lqFinalPrice" style="font-size:32px; font-weight:900; color:#e8a87c;">$—</div>
+              <div style="font-size:11px; opacity:0.7;">Anggie decide el precio final</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:20px 24px; display:flex; flex-direction:column; gap:16px;">
+
+          <!-- Tamaño y frecuencia -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <label style="font-size:12px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:4px;">📐 Tamaño (sqft)</label>
+              <select id="lqSize" onchange="lqRecalculate()" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-weight:600;">
+                <option value="1200">Hasta 1,200 sqft</option>
+                <option value="1700">1,201–1,700 sqft</option>
+                <option value="2200">1,701–2,200 sqft</option>
+                <option value="2800">2,201–2,800 sqft</option>
+                <option value="3500">2,801–3,500 sqft</option>
+                <option value="4500">3,501–4,500 sqft</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:4px;">🗓️ Frecuencia</label>
+              <select id="lqFreq" onchange="lqRecalculate()" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-weight:600;">
+                <option value="10">Cada 10 días</option>
+                <option value="15">Quincenal</option>
+                <option value="30">Mensual</option>
+                <option value="deep">Profunda / Mudanza</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Extras -->
+          <div>
+            <label style="font-size:12px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:8px;">✨ Servicios adicionales</label>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <label style="display:flex; align-items:center; gap:6px; background:var(--bg-alt); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">
+                <input type="checkbox" id="lqOven" data-price="40" onchange="lqRecalculate()"> 🍳 Horno <span style="color:var(--primary); font-weight:700;">+$40</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; background:var(--bg-alt); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">
+                <input type="checkbox" id="lqFridge" data-price="50" onchange="lqRecalculate()"> 🧊 Nevera <span style="color:var(--primary); font-weight:700;">+$50</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; background:var(--bg-alt); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">
+                <input type="checkbox" id="lqCabinets" data-price="50" onchange="lqRecalculate()"> 🗄️ Gabinetes <span style="color:var(--primary); font-weight:700;">+$50</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; background:var(--bg-alt); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">
+                <input type="checkbox" id="lqOverdue" data-price="30" onchange="lqRecalculate()"> ⏰ +30 días sin limpiar <span style="color:var(--primary); font-weight:700;">+$30</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Precio final editable -->
+          <div style="background:#f5eaff; border:1px solid #d8b4f8; border-radius:10px; padding:14px 16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+              <div>
+                <div style="font-size:12px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px;">💡 Precio sugerido por tabla</div>
+                <div id="lqSuggestedLabel" style="font-size:13px; color:var(--text-sec); margin-top:2px;">—</div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:13px; font-weight:700; color:var(--primary);">Precio final ($):</span>
+                <input type="number" id="lqFinalInput" onchange="lqUpdateFinalDisplay()" style="width:90px; padding:8px 10px; border:2px solid var(--primary); border-radius:8px; font-size:16px; font-weight:800; color:var(--primary); text-align:center;">
+              </div>
+            </div>
+          </div>
+
+          <!-- Plan a asignar -->
+          <div>
+            <label style="font-size:12px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:4px;">📦 Plan a asignar (opcional)</label>
+            <select id="lqPlan" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px;">
+              <option value="">— Sin plan —</option>
+            </select>
+          </div>
+
+          <!-- Notas del lead -->
+          <div id="lqNotesBox" style="background:#fff8ed; border:1px solid #f0c070; border-radius:8px; padding:10px 14px; font-size:13px; color:#7a5200; display:none;">
+            <strong>📝 Notas del lead:</strong> <span id="lqNotes"></span>
+          </div>
+
+          <!-- Acciones -->
+          <div style="display:flex; flex-direction:column; gap:10px; padding-top:4px; border-top:1px solid var(--border);">
+            <button id="lqBtnWa" onclick="lqSendWhatsApp()" style="background:#25d366; color:#fff; border:none; padding:12px; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+              💬 Enviar Cotización por WhatsApp
+            </button>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <button onclick="lqConvertToClient()" style="background:var(--primary); color:#fff; border:none; padding:10px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer;">
+                👥 Convertir a Cliente
+              </button>
+              <button onclick="closeLeadQuoteModal()" style="background:var(--bg-alt); color:var(--text-sec); border:1px solid var(--border); padding:10px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer;">
+                Cerrar
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST CONTAINER -->
   <div id="toastContainer" class="toast-container"></div>
 

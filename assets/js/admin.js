@@ -1130,6 +1130,9 @@ function renderLeadsTable(leads) {
       </td>
       <td><small>${formatDate(l.created_at)}</small></td>
       <td class="action-cell">
+        <button class="btn-table-action" style="background:#f5eaff; color:var(--primary); border:1px solid #d8b4f8;" onclick="openLeadQuoteModal('${l.id}')" title="Cotizar este lead">
+          📋
+        </button>
         <a href="https://wa.me/${cleanPhone(l.phone)}?text=Hola ${encodeURIComponent(l.name)}, te saluda Anggie de Ad Sparkling Cleaning ✨. Recibimos tu solicitud de cotización para tu hogar en ${l.address}.${encodeURIComponent(suggestedPriceText)} ¿Tienes alguna fecha en mente para agendar?" target="_blank" class="btn-table-action btn-wa-table" style="background:#25d366; color:#fff;" title="Contactar por WhatsApp">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         </a>
@@ -1172,6 +1175,169 @@ function deleteLead(id) {
     DataStore.deleteLead(id);
     loadLeads();
   }
+}
+
+// ============================================
+// MODAL COTIZADOR DE LEAD
+// ============================================
+let _lqCurrentLead = null;
+
+function openLeadQuoteModal(leadId) {
+  const lead = allLeads.find(l => l.id == leadId);
+  if (!lead) return;
+  _lqCurrentLead = lead;
+
+  // Datos del lead en la cabecera violeta
+  document.getElementById('lqName').textContent = lead.name || '—';
+  document.getElementById('lqAddress').textContent = lead.address || 'Dirección no especificada';
+  const phoneEl = document.getElementById('lqPhoneLink');
+  phoneEl.textContent = '📞 ' + (lead.phone || '—');
+  phoneEl.href = 'tel:' + cleanPhone(lead.phone || '');
+  const mapsEl = document.getElementById('lqMapsLink');
+  if (lead.address) {
+    mapsEl.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(lead.address);
+    mapsEl.style.display = '';
+  } else {
+    mapsEl.style.display = 'none';
+  }
+
+  // Notas
+  const notesBox = document.getElementById('lqNotesBox');
+  if (lead.notes) {
+    document.getElementById('lqNotes').textContent = lead.notes;
+    notesBox.style.display = 'block';
+  } else {
+    notesBox.style.display = 'none';
+  }
+
+  // Pre-seleccionar tamaño (bracket más cercano)
+  const sqft = parseInt(lead.size_sqft) || 0;
+  const sizeSelect = document.getElementById('lqSize');
+  if (sqft > 0) {
+    const brackets = [1200, 1700, 2200, 2800, 3500, 4500];
+    const bracket = brackets.find(b => sqft <= b) || 4500;
+    sizeSelect.value = String(bracket);
+  } else {
+    sizeSelect.value = '2200';
+  }
+
+  // Pre-seleccionar frecuencia
+  const freqSelect = document.getElementById('lqFreq');
+  const freq = lead.frequency || '15';
+  freqSelect.value = (freq === 'once') ? 'deep' : String(freq);
+
+  // Pre-marcar extras si están en las notas
+  const notes = (lead.notes || '').toLowerCase();
+  document.getElementById('lqOven').checked = notes.includes('horno');
+  document.getElementById('lqFridge').checked = notes.includes('nevera') || notes.includes('refriger');
+  document.getElementById('lqCabinets').checked = notes.includes('gabinete');
+  document.getElementById('lqOverdue').checked = false;
+
+  // Cargar planes
+  const planSelect = document.getElementById('lqPlan');
+  const plans = DataStore.getPlans ? DataStore.getPlans() : [];
+  planSelect.innerHTML = '<option value="">— Sin plan —</option>' +
+    plans.filter(p => p.active !== false).map(p =>
+      `<option value="${p.id}">${p.name} — ${freqLabel(p.frequency)} — $${p.price}</option>`
+    ).join('');
+
+  // Calcular precio inicial
+  lqRecalculate();
+
+  // Mostrar modal
+  document.getElementById('leadQuoteModal').style.display = 'flex';
+}
+
+function lqRecalculate() {
+  const size = parseInt(document.getElementById('lqSize').value) || 2200;
+  const freq = document.getElementById('lqFreq').value || '15';
+
+  let base = (PRICING[size] && PRICING[size][freq]) ? PRICING[size][freq] : 0;
+  let extras = 0;
+  if (document.getElementById('lqOven').checked) extras += PRICING_ADDONS.oven;
+  if (document.getElementById('lqFridge').checked) extras += PRICING_ADDONS.fridge;
+  if (document.getElementById('lqCabinets').checked) extras += PRICING_ADDONS.cabinets;
+  if (document.getElementById('lqOverdue').checked) extras += PRICING_ADDONS.overdue;
+
+  const total = base + extras;
+
+  const freqLabels = { '10': 'c/10 días', '15': 'quincenal', '30': 'mensual', 'deep': 'profunda/mudanza' };
+  document.getElementById('lqSuggestedLabel').textContent =
+    `$${base} base (${size} sqft · ${freqLabels[freq] || freq})${extras > 0 ? ' + $' + extras + ' en extras' : ''}`;
+
+  document.getElementById('lqFinalInput').value = total;
+  document.getElementById('lqFinalPrice').textContent = '$' + total;
+}
+
+function lqUpdateFinalDisplay() {
+  const val = parseInt(document.getElementById('lqFinalInput').value) || 0;
+  document.getElementById('lqFinalPrice').textContent = '$' + val;
+}
+
+function lqSendWhatsApp() {
+  if (!_lqCurrentLead) return;
+  const lead = _lqCurrentLead;
+  const total = parseInt(document.getElementById('lqFinalInput').value) || 0;
+  const size = document.getElementById('lqSize').value;
+  const freq = document.getElementById('lqFreq').value;
+  const freqLabels = { '10': 'cada 10 días', '15': 'quincenal', '30': 'mensual', 'deep': 'profunda / mudanza' };
+
+  const extras = [];
+  if (document.getElementById('lqOven').checked) extras.push('Horno (+$40)');
+  if (document.getElementById('lqFridge').checked) extras.push('Nevera (+$50)');
+  if (document.getElementById('lqCabinets').checked) extras.push('Gabinetes (+$50)');
+  if (document.getElementById('lqOverdue').checked) extras.push('Recargo +30 días (+$30)');
+
+  let msg = `¡Hola ${lead.name}! 👋 Soy Anggie de *Ad Sparkling Cleaning* ✨%0A%0A`;
+  msg += `Recibí tu solicitud y te preparo tu cotización personalizada:%0A%0A`;
+  msg += `📍 *Dirección:* ${lead.address || 'Por confirmar'}%0A`;
+  msg += `📐 *Tamaño:* ${size} sqft%0A`;
+  msg += `🗓 *Frecuencia:* ${freqLabels[freq] || freq}%0A`;
+  if (extras.length) msg += `✨ *Adicionales:* ${extras.join(', ')}%0A`;
+  msg += `%0A💰 *Total estimado: $${total}*%0A%0A`;
+  msg += `Los insumos profesionales están incluidos. ✅%0A%0A`;
+  msg += `¿Te gustaría confirmar una fecha? ¡Cuéntame cuándo te vendría bien y lo agendamos! 🗓`;
+
+  window.open('https://wa.me/' + cleanPhone(lead.phone || '') + '?text=' + msg, '_blank');
+
+  // Cambiar estado del lead a "contactado"
+  DataStore.updateLead(lead.id, { status: 'contactado' });
+  if (lead) lead.status = 'contactado';
+}
+
+function closeLeadQuoteModal() {
+  document.getElementById('leadQuoteModal').style.display = 'none';
+  _lqCurrentLead = null;
+}
+
+function lqConvertToClient() {
+  if (!_lqCurrentLead) return;
+  const lead = _lqCurrentLead;
+  const finalPrice = parseInt(document.getElementById('lqFinalInput').value) || 0;
+  const planId = document.getElementById('lqPlan').value;
+  const freq = document.getElementById('lqFreq').value;
+  const size = parseInt(document.getElementById('lqSize').value) || 0;
+
+  closeLeadQuoteModal();
+  showTab('clients');
+
+  const form = document.getElementById('clientForm');
+  form.style.display = 'block';
+
+  document.getElementById('cId').value = '';
+  document.getElementById('cName').value = lead.name || '';
+  document.getElementById('cPhone').value = lead.phone || '';
+  document.getElementById('cAddress').value = lead.address || '';
+  document.getElementById('cSize').value = size || lead.size_sqft || '';
+  document.getElementById('cFreq').value = freq || lead.frequency || '';
+  document.getElementById('cPrice').value = finalPrice || '';
+  if (planId) {
+    const planEl = document.getElementById('cPlan');
+    if (planEl) planEl.value = planId;
+  }
+  document.getElementById('cNotes').value = lead.notes ? `Lead convertido. Notas: ${lead.notes}` : 'Lead convertido desde cotizador';
+  document.getElementById('cFormTitle').textContent = 'Convertir Lead a Cliente';
+  form.scrollIntoView({ behavior: 'smooth' });
 }
 
 function saveManualLead() {
