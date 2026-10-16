@@ -1,1 +1,1 @@
-feat: multi-category pricing (sqft and m2), modal scrolling fix, and service type cotizador
+fix pricing table display, add plan p-3, delete lead on client conversion

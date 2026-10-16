@@ -88,13 +88,36 @@ const DEFAULT_PRICING_CATALOG = {
   }
 };
 
-let PRICING_CATALOG = DEFAULT_PRICING_CATALOG;
+let PRICING_CATALOG = Object.assign({}, DEFAULT_PRICING_CATALOG);
 try {
   const savedCat = localStorage.getItem('adsparkling_pricing_catalog');
   if (savedCat) {
-    PRICING_CATALOG = Object.assign({}, DEFAULT_PRICING_CATALOG, JSON.parse(savedCat));
+    const parsed = JSON.parse(savedCat);
+    if (parsed && typeof parsed === 'object') {
+      PRICING_CATALOG = Object.assign({}, DEFAULT_PRICING_CATALOG, parsed);
+    }
   }
 } catch(e) {}
+
+// Validar que todas las categorías estándar existan y tengan columns y pricing
+for (const k of ['regular', 'post_construction', 'move', 'commercial']) {
+  if (!PRICING_CATALOG[k] || !PRICING_CATALOG[k].pricing || !PRICING_CATALOG[k].columns) {
+    PRICING_CATALOG[k] = DEFAULT_PRICING_CATALOG[k];
+  }
+}
+
+// Normalizar claves de pricing: JSON.parse convierte claves numéricas a strings → revertir a número
+(function normalizePricingKeys() {
+  for (const catKey of Object.keys(PRICING_CATALOG)) {
+    const cat = PRICING_CATALOG[catKey];
+    if (!cat || !cat.pricing) continue;
+    const normalized = {};
+    for (const [sz, colMap] of Object.entries(cat.pricing)) {
+      normalized[parseInt(sz)] = colMap;
+    }
+    cat.pricing = normalized;
+  }
+})();
 
 // Compatibilidad hacia atrás con código existente
 const PRICING = (PRICING_CATALOG.regular && PRICING_CATALOG.regular.pricing) ? PRICING_CATALOG.regular.pricing : DEFAULT_PRICING_CATALOG.regular.pricing;
@@ -386,9 +409,37 @@ const DataStore = {
           excluded: 'Interior de nevera/horno\nRecogida de desorden extremo',
           terms: 'Si la casa excede 45 días sin limpiar, aplica recargo.',
           active: true
+        },
+        {
+          id: 'p-3',
+          name: 'Post-Construcción / Mudanza',
+          frequency: 'deep',
+          price: 420,
+          included: 'Remoción de polvo de construcción y yeso\nLimpieza profunda de todas las superficies\nInterior de nevera y horno\nLimpieza de gabinetes interior/exterior\nSanitización completa de baños y cocina\nLimpieza de ventanas accesibles',
+          excluded: 'Pintura o reparaciones estructurales\nRecogida de escombros pesados',
+          terms: 'Se requiere inspección previa para casas mayores a 2,800 sqft. Pago 50% adelantado.',
+          active: true
         }
       ];
       localStorage.setItem(this.KEYS.PLANS, JSON.stringify(initialPlans));
+    } else {
+      // Migración: asegurar que plan p-3 exista para usuarios que ya tenían datos
+      try {
+        const existingPlans = JSON.parse(localStorage.getItem(this.KEYS.PLANS) || '[]');
+        if (!existingPlans.find(p => p.id === 'p-3')) {
+          existingPlans.push({
+            id: 'p-3',
+            name: 'Post-Construcción / Mudanza',
+            frequency: 'deep',
+            price: 420,
+            included: 'Remoción de polvo de construcción y yeso\nLimpieza profunda de todas las superficies\nInterior de nevera y horno\nLimpieza de gabinetes interior/exterior\nSanitización completa de baños y cocina\nLimpieza de ventanas accesibles',
+            excluded: 'Pintura o reparaciones estructurales\nRecogida de escombros pesados',
+            terms: 'Se requiere inspección previa para casas mayores a 2,800 sqft. Pago 50% adelantado.',
+            active: true
+          });
+          localStorage.setItem(this.KEYS.PLANS, JSON.stringify(existingPlans));
+        }
+      } catch(e) {}
     }
 
     // Leads de ejemplo
@@ -1510,11 +1561,14 @@ function lqConvertToClient() {
   document.getElementById('cFreq').value = freq || lead.frequency || '';
   document.getElementById('cPrice').value = finalPrice || '';
   if (planId) {
-    const planEl = document.getElementById('cPlan');
+    const planEl = document.getElementById('cPlanId');
     if (planEl) planEl.value = planId;
   }
   document.getElementById('cNotes').value = lead.notes ? `Lead convertido. Notas: ${lead.notes}` : 'Lead convertido desde cotizador';
   document.getElementById('cFormTitle').textContent = 'Convertir Lead a Cliente';
+  // Guardar el ID del lead origen para eliminarlo al guardar el cliente
+  const originEl = document.getElementById('cOriginLeadId');
+  if (originEl) originEl.value = lead.id;
   form.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -1570,6 +1624,9 @@ function convertLeadToClient(leadId) {
 
   document.getElementById('cNotes').value = lead.notes ? `Lead convertido. Notas: ${lead.notes}` : 'Lead convertido desde la web';
   document.getElementById('cFormTitle').textContent = 'Convertir Lead a Cliente';
+  // Guardar el ID del lead origen para eliminarlo al guardar el cliente
+  const originEl = document.getElementById('cOriginLeadId');
+  if (originEl) originEl.value = leadId;
   form.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -1903,6 +1960,8 @@ function resetClientForm() {
   document.getElementById('cFormTitle').textContent = 'Agregar Cliente';
   populatePlanSelect();
   document.getElementById('cPlanId').value = '';
+  const originEl = document.getElementById('cOriginLeadId');
+  if (originEl) originEl.value = '';
   checkContractState();
 }
 
@@ -1980,11 +2039,24 @@ function saveClient() {
   }
 
   DataStore.saveClient(clientData);
+
+  // Eliminar lead de origen si este cliente fue convertido desde un lead
+  if (!id) {
+    const originLeadId = document.getElementById('cOriginLeadId') ? document.getElementById('cOriginLeadId').value : '';
+    if (originLeadId) {
+      DataStore.deleteLead(originLeadId);
+      showToast('✅ Lead convertido a cliente y eliminado de la lista');
+    } else {
+      showToast('Cliente guardado con éxito ✅');
+    }
+  } else {
+    showToast('Cliente actualizado con éxito ✅');
+  }
+
   toggleForm('clientForm');
   resetClientForm();
   loadClients();
   loadDashboard();
-  showToast('Cliente guardado con éxito ✅');
 }
 
 function deleteClient(id) {
