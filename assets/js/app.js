@@ -18,13 +18,20 @@ function updateM2Hint(val) {
 
 // Sincronización de Leads con la Nube y Respaldo Local
 async function saveLeadFromLanding(lead) {
+  let cloudSuccess = false;
   try {
     // 1. Guardar en la nube (Vercel Serverless Function)
-    await fetch('/api/public', {
+    const res = await fetch('/api/public', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(lead)
     });
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (data && data.success) {
+        cloudSuccess = true;
+      }
+    }
   } catch (e) {
     console.error('Error enviando lead a la nube:', e);
   }
@@ -41,6 +48,8 @@ async function saveLeadFromLanding(lead) {
   } catch (e) {
     console.error('Error guardando lead en localStorage:', e);
   }
+
+  return cloudSuccess;
 }
 
 // ============================================
@@ -185,24 +194,28 @@ function handleRequest(e) {
   };
 
   // Guardar lead
-  saveLeadFromLanding(lead);
-
-  setTimeout(() => {
+  saveLeadFromLanding(lead).then((cloudSuccess) => {
     const form = document.getElementById('requestForm') || document.getElementById('contactForm');
     const success = document.getElementById('requestSuccess') || document.getElementById('formSuccess');
-
-    if (form) form.style.display = 'none';
-    if (success) {
-      success.style.display = 'block';
-      success.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
 
     if (btn) {
       btn.disabled = false;
       if (btnText) btnText.style.display = 'inline';
       if (btnLoader) btnLoader.style.display = 'none';
     }
-  }, 600);
+
+    if (cloudSuccess) {
+      if (form) form.style.display = 'none';
+      if (success) {
+        success.style.display = 'block';
+        success.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } else {
+      alert('No pudimos enviar tu solicitud, escríbenos por WhatsApp para atenderte de inmediato.');
+      const waMsg = encodeURIComponent(`Hola Anggie, intenté enviar una solicitud desde la web para ${name} (${phone}) pero hubo un problema técnico. ¿Podrías cotizarme?`);
+      window.open(`https://wa.me/17864582442?text=${waMsg}`, '_blank');
+    }
+  });
 }
 
 // Cotizador de la landing si existe
