@@ -12,7 +12,7 @@ function updateM2Hint(val) {
     hintEl.textContent = '1,800 sqft ≈ 167 m²';
     return;
   }
-  const m2 = Math.round(num / 10.7639);
+  const m2 = Math.round(num / 10.764);
   hintEl.textContent = `${num.toLocaleString()} sqft ≈ ${m2.toLocaleString()} m²`;
 }
 
@@ -58,11 +58,11 @@ async function saveLeadFromLanding(lead) {
 function getConfig() {
   return {
     companyName: 'Ad Sparkling Cleaning LLC',
-    phone: '13050000000',
+    phone: '17864582442',
     address: 'Miami-Dade & Broward, FL',
     extras: [
       { id: 'oven', name: 'Horno por dentro', i18n: 'ext_oven', price: 40, active: true },
-      { id: 'fridge', name: 'Nevera por dentro', i18n: 'ext_fridge', price: 50, active: true },
+      { id: 'fridge', name: 'Nevera por dentro', i18n: 'ext_fridge', price: 40, active: true },
       { id: 'blinds', name: 'Persianas', i18n: 'ext_blinds', price: 10, active: true, perUnit: true },
       { id: 'cabinets', name: 'Gabinetes + ventanas interior', i18n: 'ext_cabinets', price: 50, active: true }
     ],

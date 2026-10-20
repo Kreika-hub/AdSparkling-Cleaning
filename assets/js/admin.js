@@ -6,129 +6,78 @@
 let adminToken = sessionStorage.getItem('admin_token') || null;
 
 // ============================================
-// CATÁLOGO DE PRECIOS MULTI-CATEGORÍA (M² y SQFT)
+// SISTEMA UNIFICADO DE PRECIOS EN PIES CUADRADOS (SQFT)
+// Fuente única de verdad para Cotizador, Leads, Ajustes y Clientes
 // ============================================
-const DEFAULT_PRICING_CATALOG = {
-  regular: {
-    id: 'regular',
-    name: 'Limpieza Regular / Residencial',
-    icon: '🧹',
-    desc: 'Mantenimiento recurrente para hogares y apartamentos',
-    columns: [
-      { key: '10', label: '10 Días' },
-      { key: '15', label: 'Quincenal' },
-      { key: '30', label: 'Mensual' },
-      { key: 'deep', label: 'Profunda / Ocasional' }
-    ],
-    pricing: {
-      1200: { 10: 150, 15: 150, 30: 180, deep: 240 },
-      1700: { 10: 165, 15: 170, 30: 200, deep: 270 },
-      2200: { 10: 180, 15: 195, 30: 225, deep: 300 },
-      2800: { 10: 200, 15: 220, 30: 260, deep: 350 },
-      3500: { 10: 225, 15: 250, 30: 290, deep: 400 },
-      4500: { 10: 250, 15: 280, 30: 340, deep: 450 }
-    }
+const DEFAULT_CONFIG_PRICING = {
+  minVisit: 150,
+  generalAdjustmentPercent: 0,
+  tiers: [
+    { id: 1, minSqft: 0, maxSqft: 1800, label: 'Hasta 1,800 sqft', biweekly: 150, monthly: 180, deep: 265 },
+    { id: 2, minSqft: 1801, maxSqft: 2200, label: '1,801 – 2,200 sqft', biweekly: 170, monthly: 200, deep: 295 },
+    { id: 3, minSqft: 2201, maxSqft: 2800, label: '2,201 – 2,800 sqft', biweekly: 190, monthly: 220, deep: 330 },
+    { id: 4, minSqft: 2801, maxSqft: 3400, label: '2,801 – 3,400 sqft', biweekly: 240, monthly: 290, deep: 420 },
+    { id: 5, minSqft: 3401, maxSqft: 3800, label: '3,401 – 3,800 sqft', biweekly: 270, monthly: 320, deep: 470 }
+  ],
+  extras: {
+    oven: 40,
+    fridge: 40,
+    blindsPerUnit: 10
   },
-  post_construction: {
-    id: 'post_construction',
-    name: 'Limpieza Post-Construcción / Obra',
-    icon: '🏗️',
-    desc: 'Remoción de polvo fino de yeso, restos de pintura, silicón y limpieza profunda',
-    columns: [
-      { key: 'light', label: 'Polvo Leve' },
-      { key: 'standard', label: 'Estándar' },
-      { key: 'heavy', label: 'Polvo Pesado / Pintura' }
-    ],
-    pricing: {
-      1200: { light: 320, standard: 380, heavy: 450 },
-      1700: { light: 420, standard: 490, heavy: 580 },
-      2200: { light: 520, standard: 620, heavy: 740 },
-      2800: { light: 650, standard: 780, heavy: 920 },
-      3500: { light: 800, standard: 960, heavy: 1150 },
-      4500: { light: 980, standard: 1180, heavy: 1400 }
-    }
+  hourlyRates: {
+    extraLaundry: 30,
+    emptyMove: 50,
+    postConstructionPerPerson: 60
   },
-  move: {
-    id: 'move',
-    name: 'Mudanza (Move-in / Move-out)',
-    icon: '📦',
-    desc: 'Limpieza exhaustiva antes de mudarse o al entregar la propiedad',
-    columns: [
-      { key: 'empty', label: 'Casa Vacía' },
-      { key: 'furnished', label: 'Amoblada' },
-      { key: 'deep_move', label: 'Detallada / Con Electrodomésticos' }
-    ],
-    pricing: {
-      1200: { empty: 260, furnished: 310, deep_move: 370 },
-      1700: { empty: 310, furnished: 370, deep_move: 440 },
-      2200: { empty: 370, furnished: 440, deep_move: 520 },
-      2800: { empty: 440, furnished: 520, deep_move: 620 },
-      3500: { empty: 520, furnished: 620, deep_move: 740 },
-      4500: { empty: 620, furnished: 740, deep_move: 880 }
-    }
+  surcharges: {
+    overdue30Days: 30,
+    miamiDade: 0,
+    broward: 0,
+    palmBeach: 40,
+    otherCountyFL: 60
   },
-  commercial: {
-    id: 'commercial',
-    name: 'Comercial / Oficinas',
-    icon: '🏢',
-    desc: 'Oficinas corporativas, locales comerciales y consultorios',
-    columns: [
-      { key: 'weekly', label: 'Semanal' },
-      { key: 'biweekly', label: 'Quincenal' },
-      { key: 'monthly', label: 'Mensual' }
-    ],
-    pricing: {
-      1200: { weekly: 150, biweekly: 180, monthly: 220 },
-      1700: { weekly: 190, biweekly: 230, monthly: 270 },
-      2200: { weekly: 230, biweekly: 280, monthly: 330 },
-      2800: { weekly: 280, biweekly: 340, monthly: 400 },
-      3500: { weekly: 340, biweekly: 410, monthly: 480 },
-      4500: { weekly: 410, biweekly: 490, monthly: 580 }
-    }
+  team: {
+    chargeClientPerHour: 60,
+    helperPayPerHour: 18
   }
 };
 
-let PRICING_CATALOG = Object.assign({}, DEFAULT_PRICING_CATALOG);
-try {
-  const savedCat = localStorage.getItem('adsparkling_pricing_catalog');
-  if (savedCat) {
-    const parsed = JSON.parse(savedCat);
-    if (parsed && typeof parsed === 'object') {
-      PRICING_CATALOG = Object.assign({}, DEFAULT_PRICING_CATALOG, parsed);
-    }
-  }
-} catch(e) {}
-
-// Validar que todas las categorías estándar existan y tengan columns y pricing
-for (const k of ['regular', 'post_construction', 'move', 'commercial']) {
-  if (!PRICING_CATALOG[k] || !PRICING_CATALOG[k].pricing || !PRICING_CATALOG[k].columns) {
-    PRICING_CATALOG[k] = DEFAULT_PRICING_CATALOG[k];
-  }
+function roundToNearest5(val) {
+  return Math.round(val / 5) * 5;
 }
 
-// Normalizar claves de pricing: JSON.parse convierte claves numéricas a strings → revertir a número
-(function normalizePricingKeys() {
-  for (const catKey of Object.keys(PRICING_CATALOG)) {
-    const cat = PRICING_CATALOG[catKey];
-    if (!cat || !cat.pricing) continue;
-    const normalized = {};
-    for (const [sz, colMap] of Object.entries(cat.pricing)) {
-      normalized[parseInt(sz)] = colMap;
-    }
-    cat.pricing = normalized;
-  }
-})();
+function getAdjustedPrice(basePrice, adjPercent) {
+  if (!basePrice || typeof basePrice !== 'number') return 0;
+  if (!adjPercent || adjPercent === 0) return basePrice;
+  return roundToNearest5(basePrice * (1 + (adjPercent / 100)));
+}
 
-// Compatibilidad hacia atrás con código existente
-const PRICING = (PRICING_CATALOG.regular && PRICING_CATALOG.regular.pricing) ? PRICING_CATALOG.regular.pricing : DEFAULT_PRICING_CATALOG.regular.pricing;
-const PRICING_ADDONS = { oven: 40, fridge: 50, cabinets: 50, overdue: 30 };
-let currentPricingCategory = 'regular';
+function getPricingConfig() {
+  try {
+    const raw = localStorage.getItem('adsparkling_unified_pricing');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.tiers) && parsed.tiers.length === 5) {
+        return parsed;
+      }
+    }
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_CONFIG_PRICING));
+}
+
+function savePricingConfig(cfg) {
+  try {
+    localStorage.setItem('adsparkling_unified_pricing', JSON.stringify(cfg));
+  } catch(e) {}
+}
+
+let CONFIG_PRICING = getPricingConfig();
 
 function sqftToM2(sqft) {
-  return Math.round(sqft / 10.7639);
+  return Math.round(sqft / 10.764);
 }
 function m2ToSqft(m2) {
-  return Math.round(m2 * 10.7639);
+  return Math.round(m2 * 10.764);
 }
 
 // ============================================
@@ -1211,24 +1160,37 @@ function loadLeads() {
 
 function getSuggestedPrice(sqft, frequency) {
   if (!sqft) return null;
-  const s = parseInt(sqft);
-  let q = 150, m = 180, d = 240;
-  if (s >= 1771 && s <= 2200) { q = 170; m = 210; d = 280; }
-  else if (s >= 2201 && s <= 2700) { q = 200; m = 240; d = 330; }
-  else if (s >= 2701 && s <= 3200) { q = 225; m = 270; d = 380; }
-  else if (s >= 3201) { q = 240; m = 290; d = 420; }
-  
-  if (frequency === '15') return q;
-  if (frequency === '30') return m;
-  if (frequency === 'deep' || frequency === 'once') return d;
-  if (frequency === '10') return q;
-  return { biweekly: q, monthly: m, deep: d };
+  const s = parseInt(sqft, 10);
+  if (isNaN(s) || s <= 0) return null;
+
+  // Más de 3,800: sin precio automático → "Cotizar manualmente"
+  if (s > 3800) {
+    return { manual: true, text: 'Cotizar manualmente' };
+  }
+
+  const cfg = getPricingConfig();
+  const adj = cfg.generalAdjustmentPercent || 0;
+  const tier = cfg.tiers.find(t => s <= t.maxSqft);
+  if (!tier) {
+    return { manual: true, text: 'Cotizar manualmente' };
+  }
+
+  const biweekly = getAdjustedPrice(tier.biweekly, adj);
+  const monthly = getAdjustedPrice(tier.monthly, adj);
+  const deep = getAdjustedPrice(tier.deep, adj);
+
+  // Frecuencia '10' (cada 10 días) usa la columna Quincenal
+  if (frequency === '15' || frequency === '10' || frequency === 'biweekly') return biweekly;
+  if (frequency === '30' || frequency === 'monthly') return monthly;
+  if (frequency === 'deep' || frequency === 'once' || frequency === 'move') return deep;
+
+  return { biweekly, monthly, deep, tier };
 }
 
 function renderLeadsTable(leads) {
   const tbody = document.getElementById('leadsTable');
-  if (!leads || leads.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">No hay leads registrados aún.</td></tr>';
+  if (!tbody || !leads || leads.length === 0) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">No hay leads registrados aún.</td></tr>';
     return;
   }
 
@@ -1238,12 +1200,14 @@ function renderLeadsTable(leads) {
     if (l.size_sqft) {
       const price = getSuggestedPrice(l.size_sqft, l.frequency);
       const m2 = sqftToM2(l.size_sqft);
-      if (typeof price === 'number') {
-        const rateM2 = (price / m2).toFixed(2);
-        suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft <small style="color:var(--text-muted);">(~${m2}m²)</small></div><strong style="color:var(--primary); font-size:14px;">$${price} sug.</strong><div style="font-size:10px; color:var(--text-muted);">$${rateM2}/m²</div>`;
+      if (price && price.manual) {
+        suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft <small style="color:var(--text-muted);">(~${m2}m²)</small></div><span class="badge" style="background:#fff3cd; color:#856404; font-size:11px; font-weight:700;">Cotizar manualmente</span>`;
+        suggestedPriceText = ' Cotizar manualmente según requerimientos.';
+      } else if (typeof price === 'number') {
+        suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft <small style="color:var(--text-muted);">(~${m2}m²)</small></div><strong style="color:var(--primary); font-size:14px;">$${price} sug.</strong>`;
         suggestedPriceText = ` Tu cotización estimada es de $${price}.`;
       } else if (price) {
-        suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft <small>(~${m2}m²)</small></div><span style="font-size:11px; color:var(--primary); font-weight:700;">Q:$${price.biweekly} | M:$${price.monthly}</span>`;
+        suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft <small style="color:var(--text-muted);">(~${m2}m²)</small></div><span style="font-size:11px; color:var(--primary); font-weight:700;">Q:$${price.biweekly} | M:$${price.monthly}</span>`;
         suggestedPriceText = ` El estimado es Quincenal: $${price.biweekly} o Mensual: $${price.monthly}.`;
       }
     }
@@ -1334,16 +1298,20 @@ function deleteLead(id) {
 }
 
 // ============================================
-// MODAL COTIZADOR DE LEAD (MULTI-CATEGORÍA & M²)
+// MODAL COTIZADOR DE LEAD (LISTA UNIFICADA SQFT)
 // ============================================
 let _lqCurrentLead = null;
+let _lqMode = 'table';
+let _lqFinalTouched = false;
 
 function openLeadQuoteModal(leadId) {
   const lead = allLeads.find(l => l.id == leadId);
   if (!lead) return;
   _lqCurrentLead = lead;
+  _lqFinalTouched = false;
+  _lqMode = 'table';
 
-  // Datos del lead en la cabecera violeta
+  // Datos del lead en la cabecera
   document.getElementById('lqName').textContent = lead.name || '—';
   document.getElementById('lqAddress').textContent = lead.address || 'Dirección no especificada';
   const phoneEl = document.getElementById('lqPhoneLink');
@@ -1366,172 +1334,436 @@ function openLeadQuoteModal(leadId) {
     notesBox.style.display = 'none';
   }
 
-  // Poblar categorías de limpieza
-  const catSelect = document.getElementById('lqCategory');
-  if (catSelect) {
-    catSelect.innerHTML = Object.keys(PRICING_CATALOG).map(k => {
-      const c = PRICING_CATALOG[k];
-      return `<option value="${k}">${c.icon || '🏷️'} ${c.name}</option>`;
-    }).join('');
+  // Pre-cargar tamaño en sqft (input editable)
+  const sqftInput = document.getElementById('lqSqftInput');
+  const leadSqft = parseInt(lead.size_sqft, 10);
+  sqftInput.value = (leadSqft && leadSqft > 0) ? leadSqft : 1800;
 
-    // Pre-seleccionar categoría según el lead
-    let targetCat = 'regular';
-    if (lead.service_type && PRICING_CATALOG[lead.service_type]) {
-      targetCat = lead.service_type;
-    } else if (lead.notes && (lead.notes.toLowerCase().includes('construc') || lead.notes.toLowerCase().includes('obra'))) {
-      targetCat = 'post_construction';
-    } else if (lead.notes && (lead.notes.toLowerCase().includes('mudan') || lead.notes.toLowerCase().includes('move'))) {
-      targetCat = 'move';
-    }
-    catSelect.value = targetCat;
-  }
-
-  // Pre-seleccionar tamaño (bracket más cercano)
-  const sqft = parseInt(lead.size_sqft) || 0;
-  const sizeSelect = document.getElementById('lqSize');
-  if (sqft > 0) {
-    const brackets = [1200, 1700, 2200, 2800, 3500, 4500];
-    const bracket = brackets.find(b => sqft <= b) || 4500;
-    sizeSelect.value = String(bracket);
-  } else {
-    sizeSelect.value = '2200';
-  }
-
-  // Configurar columnas de modalidad según la categoría
-  lqOnCategoryChange(false);
-
-  // Pre-seleccionar frecuencia si aplica
-  const freqSelect = document.getElementById('lqFreq');
-  if (lead.frequency && freqSelect) {
-    const opts = Array.from(freqSelect.options).map(o => o.value);
-    if (opts.includes(lead.frequency)) {
-      freqSelect.value = lead.frequency;
-    } else if (lead.frequency === 'once' && opts.includes('deep')) {
+  // Pre-seleccionar frecuencia
+  const freqSelect = document.getElementById('lqFreqSelect');
+  if (freqSelect) {
+    if (lead.frequency === '30' || lead.frequency === 'monthly') {
+      freqSelect.value = '30';
+    } else if (lead.frequency === 'deep' || lead.frequency === 'once') {
       freqSelect.value = 'deep';
+    } else {
+      freqSelect.value = '15'; // Quincenal / Cada 10 días usa Quincenal
     }
   }
 
-  // Pre-marcar extras si están en las notas
-  const notes = (lead.notes || '').toLowerCase();
-  document.getElementById('lqOven').checked = notes.includes('horno');
-  document.getElementById('lqFridge').checked = notes.includes('nevera') || notes.includes('refriger');
-  document.getElementById('lqCabinets').checked = notes.includes('gabinete');
-  document.getElementById('lqOverdue').checked = false;
+  // Detección automática de condado / zona
+  const addrAndNotes = ((lead.address || '') + ' ' + (lead.notes || '')).toLowerCase();
+  const countySelect = document.getElementById('lqCounty');
+  if (countySelect) {
+    if (addrAndNotes.includes('palm beach')) {
+      countySelect.value = 'palm_beach';
+    } else if (addrAndNotes.includes('broward')) {
+      countySelect.value = 'broward';
+    } else if (addrAndNotes.includes('orlando') || addrAndNotes.includes('tampa') || addrAndNotes.includes('monroe') || addrAndNotes.includes('collier')) {
+      countySelect.value = 'other_fl';
+    } else {
+      countySelect.value = 'miami_dade';
+    }
+  }
+
+  // Pre-marcar extras según notas
+  document.getElementById('lqExtraOven').checked = addrAndNotes.includes('horno');
+  document.getElementById('lqExtraFridge').checked = addrAndNotes.includes('nevera') || addrAndNotes.includes('refriger');
+  document.getElementById('lqExtraBlinds').checked = addrAndNotes.includes('persiana') || addrAndNotes.includes('blind');
+  document.getElementById('lqBlindsQty').value = '1';
+  document.getElementById('lqExtraLaundry').checked = addrAndNotes.includes('laundry') || addrAndNotes.includes('ropa');
+  document.getElementById('lqLaundryHours').value = '1';
+  document.getElementById('lqOverdue30').checked = false;
+  document.getElementById('lqReferralDiscount').checked = (lead.source === 'referral');
+  document.getElementById('lqReferralPct').value = '10';
+  document.getElementById('lqComplexityAmt').value = '0';
+  document.getElementById('lqComplexityReason').value = '';
+
+  // Equipo
+  document.getElementById('lqTeamPeople').value = '1';
+  document.getElementById('lqEstHours').value = '3';
+
+  // Modo por horas: si el lead es de post-construcción o mudanza vacía
+  if (lead.service_type === 'post_construction' || addrAndNotes.includes('post-construc') || addrAndNotes.includes('obra')) {
+    lqSetMode('hours');
+    document.getElementById('lqHourlyJobType').value = 'post_construction';
+  } else {
+    lqSetMode('table');
+  }
 
   // Cargar planes
   const planSelect = document.getElementById('lqPlan');
-  const plans = DataStore.getPlans ? DataStore.getPlans() : [];
-  planSelect.innerHTML = '<option value="">— Sin plan —</option>' +
-    plans.filter(p => p.active !== false).map(p =>
-      `<option value="${p.id}">${p.name} — ${freqLabel(p.frequency)} — $${p.price}</option>`
-    ).join('');
+  if (planSelect) {
+    const plans = DataStore.getPlans ? DataStore.getPlans() : [];
+    planSelect.innerHTML = '<option value="">— Sin plan asignado —</option>' +
+      plans.filter(p => p.active !== false).map(p =>
+        `<option value="${p.id}">${p.name} — ${freqLabel(p.frequency)} — $${p.price}</option>`
+      ).join('');
+  }
 
-  // Calcular precio inicial
+  // Ocultar paso de revisión
+  const revStep = document.getElementById('lqReviewStep');
+  if (revStep) revStep.style.display = 'none';
+
+  // Renderizar la lista de precios de referencia en el modal
+  renderModalPricingReference();
+
+  // Calcular
   lqRecalculate();
 
-  // Mostrar modal
+  // Abrir modal
   document.getElementById('leadQuoteModal').style.display = 'flex';
 }
 
-function lqOnCategoryChange(doRecalc = true) {
-  const catSelect = document.getElementById('lqCategory');
-  const catKey = catSelect ? catSelect.value : 'regular';
-  const cat = PRICING_CATALOG[catKey] || PRICING_CATALOG.regular;
+function lqSetMode(mode) {
+  _lqMode = mode;
+  const btnTable = document.getElementById('lqBtnModeTable');
+  const btnHours = document.getElementById('lqBtnModeHours');
+  const wrapTable = document.getElementById('lqTableModeWrap');
+  const wrapHours = document.getElementById('lqHoursModeWrap');
 
-  const freqSelect = document.getElementById('lqFreq');
-  const freqLabel = document.getElementById('lqFreqLabel');
-  if (freqSelect && cat.columns) {
-    if (freqLabel) {
-      freqLabel.textContent = (cat.id === 'post_construction') ? 'Nivel de Polvo / Obra' : ((cat.id === 'move') ? 'Tipo de Mudanza' : 'Frecuencia / Modalidad');
-    }
-    const currentVal = freqSelect.value;
-    freqSelect.innerHTML = cat.columns.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
-    if (cat.columns.some(c => c.key === currentVal)) {
-      freqSelect.value = currentVal;
-    }
+  if (mode === 'hours') {
+    if (btnTable) btnTable.classList.remove('active');
+    if (btnHours) btnHours.classList.add('active');
+    if (wrapTable) wrapTable.style.display = 'none';
+    if (wrapHours) wrapHours.style.display = 'block';
+  } else {
+    if (btnTable) btnTable.classList.add('active');
+    if (btnHours) btnHours.classList.remove('active');
+    if (wrapTable) wrapTable.style.display = 'block';
+    if (wrapHours) wrapHours.style.display = 'none';
   }
+  lqRecalculate();
+}
 
-  if (doRecalc) lqRecalculate();
+function renderModalPricingReference(highlightSqft = 0) {
+  const container = document.getElementById('lqModalPricingRefContent');
+  if (!container) return;
+
+  const cfg = getPricingConfig();
+  const adj = cfg.generalAdjustmentPercent || 0;
+  const minV = getAdjustedPrice(cfg.minVisit, adj);
+
+  let html = `
+    <div style="margin-bottom:12px;">
+      <div style="font-weight:800; font-size:14px; color:var(--primary); margin-bottom:2px;">📋 Lista Oficial de Precios (sqft)</div>
+      <div style="font-size:11px; color:var(--text-sec);">
+        Visita mínima: <strong>$${minV}</strong> ${adj !== 0 ? `· Ajuste activo: <strong>${adj > 0 ? '+' : ''}${adj}%</strong>` : ''}
+      </div>
+    </div>
+
+    <table class="lq-tier-table">
+      <thead>
+        <tr>
+          <th>Tramo sqft (≈ m²)</th>
+          <th>Quincenal</th>
+          <th>Mensual</th>
+          <th>Profunda</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  cfg.tiers.forEach(t => {
+    const isMatch = highlightSqft > 0 && highlightSqft <= t.maxSqft && (t.id === 1 || highlightSqft >= t.minSqft);
+    const m2Max = sqftToM2(t.maxSqft);
+    const qPrice = getAdjustedPrice(t.biweekly, adj);
+    const mPrice = getAdjustedPrice(t.monthly, adj);
+    const dPrice = getAdjustedPrice(t.deep, adj);
+
+    html += `
+      <tr class="${isMatch ? 'tier-active' : ''}">
+        <td>
+          <strong>${t.label}</strong>
+          <div style="font-size:10px; opacity:0.8;">≈ hasta ${m2Max} m²</div>
+        </td>
+        <td>$${qPrice}</td>
+        <td>$${mPrice}</td>
+        <td>$${dPrice}</td>
+      </tr>
+    `;
+  });
+
+  const isManual = highlightSqft > 3800;
+  html += `
+        <tr class="${isManual ? 'tier-active' : ''}" style="background:#fff8ed;">
+          <td><strong>Más de 3,800 sqft</strong></td>
+          <td colspan="3" style="font-size:11px; font-weight:700; color:#b7791f;">Cotizar manualmente</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:14px; padding-top:10px; border-top:1px dashed var(--border); font-size:11px; color:var(--text-sec); line-height:1.5;">
+      <div>✨ <strong>Extras:</strong> Horno $${cfg.extras.oven} · Nevera $${cfg.extras.fridge} · Persianas $${cfg.extras.blindsPerUnit} c/u</div>
+      <div>⏱️ <strong>Por hora:</strong> Laundry/Extra $${cfg.hourlyRates.extraLaundry}/h · Mudanza vacía $${cfg.hourlyRates.emptyMove}/h · Post-obra $${cfg.hourlyRates.postConstructionPerPerson}/h</div>
+      <div>🚗 <strong>Recargos:</strong> Palm Beach $${cfg.surcharges.palmBeach} · Otro FL $${cfg.surcharges.otherCountyFL} · +30 días $${cfg.surcharges.overdue30Days}</div>
+      <div>👥 <strong>Equipo:</strong> Cobro $${cfg.team.chargeClientPerHour}/h · Pago ayudante $${cfg.team.helperPayPerHour}/h</div>
+    </div>
+  `;
+
+  container.innerHTML = html;
 }
 
 function lqRecalculate() {
-  const catSelect = document.getElementById('lqCategory');
-  const catKey = catSelect ? catSelect.value : 'regular';
-  const cat = PRICING_CATALOG[catKey] || PRICING_CATALOG.regular;
+  const cfg = getPricingConfig();
+  const adj = cfg.generalAdjustmentPercent || 0;
+  const minVisit = getAdjustedPrice(cfg.minVisit, adj);
 
-  const size = parseInt(document.getElementById('lqSize').value) || 2200;
-  const freqSelect = document.getElementById('lqFreq');
-  const freq = freqSelect ? freqSelect.value : '15';
+  let sugBase = 0;
+  let isManual = false;
+  let tierLabel = '';
 
-  let base = (cat.pricing[size] && cat.pricing[size][freq] !== undefined) ? cat.pricing[size][freq] : 0;
-  if (!base && cat.pricing[size]) {
-    const firstKey = Object.keys(cat.pricing[size])[0];
-    base = cat.pricing[size][firstKey] || 0;
+  const sqftInput = document.getElementById('lqSqftInput');
+  const sqft = parseInt(sqftInput ? sqftInput.value : 0, 10) || 0;
+
+  // Actualizar m2 hint
+  const m2Hint = document.getElementById('lqSqftM2Hint');
+  if (m2Hint) m2Hint.textContent = `≈ ${sqftToM2(sqft)} m²`;
+
+  if (_lqMode === 'hours') {
+    const jobType = document.getElementById('lqHourlyJobType').value;
+    let ratePerHour = cfg.hourlyRates.postConstructionPerPerson;
+    if (jobType === 'empty_move') ratePerHour = cfg.hourlyRates.emptyMove;
+    if (jobType === 'laundry_extra') ratePerHour = cfg.hourlyRates.extraLaundry;
+
+    const people = parseInt(document.getElementById('lqHourlyPeople').value, 10) || 1;
+    const hours = parseFloat(document.getElementById('lqHourlyHours').value) || 4;
+
+    sugBase = Math.round(people * hours * ratePerHour);
+
+    const formulaEl = document.getElementById('lqHourlyFormula');
+    if (formulaEl) {
+      formulaEl.innerHTML = `Fórmula: <strong>${people} persona(s)</strong> × <strong>${hours} hrs</strong> × <strong>$${ratePerHour}/h</strong> = <strong>$${sugBase}</strong>`;
+    }
+
+    const sugBanner = document.getElementById('lqSuggestedBanner');
+    if (sugBanner) {
+      sugBanner.innerHTML = `💡 Base por horas estimada: <strong style="font-size:16px; color:var(--primary);">$${sugBase}</strong> <span style="font-size:11px; color:var(--text-muted);">(desde $420 mudanza/post-obra)</span>`;
+    }
+  } else {
+    // Modo por tabla
+    const freqSelect = document.getElementById('lqFreqSelect');
+    const freq = freqSelect ? freqSelect.value : '15';
+    const priceRes = getSuggestedPrice(sqft, freq);
+
+    if (!priceRes || priceRes.manual) {
+      isManual = true;
+      sugBase = 0;
+      const sugBanner = document.getElementById('lqSuggestedBanner');
+      if (sugBanner) {
+        sugBanner.innerHTML = `<span style="color:#b7791f; font-weight:700;">⚠️ Más de 3,800 sqft: Sin precio automático → Cotizar manualmente</span>`;
+      }
+    } else {
+      sugBase = typeof priceRes === 'number' ? priceRes : (priceRes.biweekly || 150);
+      tierLabel = priceRes.tier ? priceRes.tier.label : '';
+      const sugBanner = document.getElementById('lqSuggestedBanner');
+      if (sugBanner) {
+        const isFirstDeep = (freq === 'deep');
+        sugBanner.innerHTML = `💡 Precio sugerido por tabla: <strong style="font-size:17px; color:var(--primary);">$${sugBase}</strong> <span class="badge" style="background:#f5eaff; color:var(--primary); font-size:11px; font-weight:700;">${tierLabel}</span> ${isFirstDeep ? '<span style="font-size:11px; color:#d97706; font-weight:600;">(Tarifa Profunda / 1ª visita)</span>' : ''}`;
+      }
+    }
   }
 
-  let extras = 0;
-  if (document.getElementById('lqOven').checked) extras += PRICING_ADDONS.oven;
-  if (document.getElementById('lqFridge').checked) extras += PRICING_ADDONS.fridge;
-  if (document.getElementById('lqCabinets').checked) extras += PRICING_ADDONS.cabinets;
-  if (document.getElementById('lqOverdue').checked) extras += PRICING_ADDONS.overdue;
+  // Resaltar tramo en la tabla de referencia lateral
+  renderModalPricingReference(sqft);
 
-  const total = base + extras;
-  const m2 = sqftToM2(size);
-  const rateM2 = (base / m2).toFixed(2);
-  const rateSqft = (base / size).toFixed(2);
+  // Extras
+  let extrasTotal = 0;
+  const extrasList = [];
+  if (document.getElementById('lqExtraOven').checked) {
+    extrasTotal += cfg.extras.oven;
+    extrasList.push(`Horno ($${cfg.extras.oven})`);
+  }
+  if (document.getElementById('lqExtraFridge').checked) {
+    extrasTotal += cfg.extras.fridge;
+    extrasList.push(`Nevera ($${cfg.extras.fridge})`);
+  }
+  if (document.getElementById('lqExtraBlinds').checked) {
+    const qty = parseInt(document.getElementById('lqBlindsQty').value, 10) || 1;
+    const cost = cfg.extras.blindsPerUnit * qty;
+    extrasTotal += cost;
+    extrasList.push(`Persianas (${qty}x $${cfg.extras.blindsPerUnit} = $${cost})`);
+  }
+  if (document.getElementById('lqExtraLaundry').checked) {
+    const hrs = parseFloat(document.getElementById('lqLaundryHours').value) || 1;
+    const cost = Math.round(cfg.hourlyRates.extraLaundry * hrs);
+    extrasTotal += cost;
+    extrasList.push(`Laundry/Org (${hrs}h = $${cost})`);
+  }
 
-  const freqOption = freqSelect ? freqSelect.options[freqSelect.selectedIndex] : null;
-  const freqText = freqOption ? freqOption.text : freq;
+  // Recargos
+  let surchargesTotal = 0;
+  const surchargesList = [];
+  const county = document.getElementById('lqCounty').value;
+  if (county === 'palm_beach') {
+    surchargesTotal += cfg.surcharges.palmBeach;
+    surchargesList.push(`Palm Beach (+$${cfg.surcharges.palmBeach})`);
+  } else if (county === 'other_fl') {
+    surchargesTotal += cfg.surcharges.otherCountyFL;
+    surchargesList.push(`Otro FL (+$${cfg.surcharges.otherCountyFL})`);
+  }
+  if (document.getElementById('lqOverdue30').checked) {
+    surchargesTotal += cfg.surcharges.overdue30Days;
+    surchargesList.push(`Reanudación +30d (+$${cfg.surcharges.overdue30Days})`);
+  }
 
-  document.getElementById('lqSuggestedLabel').innerHTML =
-    `<strong>$${base}</strong> base · <span style="color:var(--primary); font-weight:700;">$${rateM2}/m²</span> ($${rateSqft}/sqft) · ${size.toLocaleString()} sqft (~${m2} m²) · ${freqText}${extras > 0 ? ' <span style="color:#d35400;">+$' + extras + ' extras</span>' : ''}`;
+  // Ajuste por complejidad
+  const compAmt = parseFloat(document.getElementById('lqComplexityAmt').value) || 0;
+  const compReason = (document.getElementById('lqComplexityReason').value || '').trim();
 
-  document.getElementById('lqFinalInput').value = total;
-  document.getElementById('lqFinalPrice').textContent = '$' + total;
+  // Descuento referido
+  let discount = 0;
+  if (document.getElementById('lqReferralDiscount').checked) {
+    const discPct = parseFloat(document.getElementById('lqReferralPct').value) || 10;
+    discount = Math.round((sugBase + extrasTotal + surchargesTotal) * (discPct / 100));
+  }
+
+  // Total acumulado
+  const subtotal = sugBase + extrasTotal + surchargesTotal + compAmt - discount;
+  const totalCalculado = Math.max(0, subtotal);
+
+  // Input de precio final
+  const finalInput = document.getElementById('lqFinalInput');
+  if (!_lqFinalTouched && finalInput) {
+    finalInput.value = totalCalculado;
+  }
+  const finalPrice = parseInt(finalInput ? finalInput.value : totalCalculado, 10) || totalCalculado;
+  document.getElementById('lqFinalPrice').textContent = '$' + finalPrice;
+
+  // Comparación con sugerido
+  const diffEl = document.getElementById('lqPriceDiffBadge');
+  if (diffEl) {
+    if (sugBase > 0) {
+      const diff = finalPrice - sugBase;
+      const pct = Math.round((diff / sugBase) * 100);
+      const sign = diff >= 0 ? '+' : '';
+      diffEl.textContent = `${sign}$${diff} (${sign}${pct}%) vs sugerido`;
+      diffEl.style.color = diff >= 0 ? '#15803d' : '#b91c1c';
+    } else {
+      diffEl.textContent = 'Cotización manual';
+      diffEl.style.color = 'var(--text-sec)';
+    }
+  }
+
+  // Alerta de visita mínima
+  const minWarning = document.getElementById('lqMinVisitWarning');
+  if (minWarning) {
+    if (finalPrice < minVisit) {
+      minWarning.style.display = 'block';
+      minWarning.innerHTML = `⚠️ <strong>Por debajo de la visita mínima ($${minVisit})</strong>: Anggie decide si mantener este precio según su criterio.`;
+    } else {
+      minWarning.style.display = 'none';
+    }
+  }
+
+  // Costo estimado de ayudantes y margen
+  const people = parseInt(document.getElementById('lqTeamPeople').value, 10) || 1;
+  const estHours = parseFloat(document.getElementById('lqEstHours').value) || 3;
+  const helperRate = cfg.team.helperPayPerHour || 18;
+  const helpersCount = Math.max(0, people - 1);
+  const helpersCost = Math.round(helpersCount * estHours * helperRate);
+  const margin = finalPrice - helpersCost;
+
+  const costEl = document.getElementById('lqHelpersCostDisplay');
+  if (costEl) costEl.textContent = `$${helpersCost} (${helpersCount} ayudante(s) × ${estHours}h × $${helperRate}/h)`;
+  const marginEl = document.getElementById('lqMarginDisplay');
+  if (marginEl) {
+    marginEl.textContent = `$${margin}`;
+    marginEl.style.color = margin >= 0 ? '#15803d' : '#b91c1c';
+  }
+
+  // Desglose visual
+  const summaryEl = document.getElementById('lqBreakdownSummary');
+  if (summaryEl) {
+    const parts = [];
+    if (sugBase > 0) parts.push(`Base: $${sugBase}`);
+    if (extrasTotal > 0) parts.push(`Extras: +$${extrasTotal}`);
+    if (surchargesTotal > 0) parts.push(`Recargos: +$${surchargesTotal}`);
+    if (compAmt !== 0) parts.push(`Complejidad: ${compAmt > 0 ? '+' : ''}$${compAmt}`);
+    if (discount > 0) parts.push(`Descuento: -$${discount}`);
+    summaryEl.textContent = parts.join(' · ') || 'Sin ajustes adicionales';
+  }
 }
 
-function lqUpdateFinalDisplay() {
-  const val = parseInt(document.getElementById('lqFinalInput').value) || 0;
-  document.getElementById('lqFinalPrice').textContent = '$' + val;
+function lqOnFinalPriceUserChange() {
+  _lqFinalTouched = true;
+  lqRecalculate();
 }
 
-function lqSendWhatsApp() {
+function lqResetFinalPriceToSuggested() {
+  _lqFinalTouched = false;
+  lqRecalculate();
+}
+
+function lqShowReviewStep() {
   if (!_lqCurrentLead) return;
   const lead = _lqCurrentLead;
-  const total = parseInt(document.getElementById('lqFinalInput').value) || 0;
-  const size = document.getElementById('lqSize').value;
-  const m2 = sqftToM2(parseInt(size) || 2200);
-
-  const catSelect = document.getElementById('lqCategory');
-  const catKey = catSelect ? catSelect.value : 'regular';
-  const cat = PRICING_CATALOG[catKey] || PRICING_CATALOG.regular;
-
-  const freqSelect = document.getElementById('lqFreq');
+  const finalPrice = parseInt(document.getElementById('lqFinalInput').value, 10) || 0;
+  const sqft = parseInt(document.getElementById('lqSqftInput').value, 10) || 0;
+  const m2 = sqftToM2(sqft);
+  const freqSelect = document.getElementById('lqFreqSelect');
   const freqText = freqSelect ? freqSelect.options[freqSelect.selectedIndex].text : '';
 
+  const cfg = getPricingConfig();
   const extras = [];
-  if (document.getElementById('lqOven').checked) extras.push('Horno (+$40)');
-  if (document.getElementById('lqFridge').checked) extras.push('Nevera (+$50)');
-  if (document.getElementById('lqCabinets').checked) extras.push('Gabinetes (+$50)');
-  if (document.getElementById('lqOverdue').checked) extras.push('Recargo +30 días (+$30)');
+  if (document.getElementById('lqExtraOven').checked) extras.push(`Horno por dentro (+$${cfg.extras.oven})`);
+  if (document.getElementById('lqExtraFridge').checked) extras.push(`Nevera por dentro (+$${cfg.extras.fridge})`);
+  if (document.getElementById('lqExtraBlinds').checked) {
+    const qty = document.getElementById('lqBlindsQty').value;
+    extras.push(`Persianas (${qty} unidades)`);
+  }
+  if (document.getElementById('lqExtraLaundry').checked) {
+    const hrs = document.getElementById('lqLaundryHours').value;
+    extras.push(`Laundry/Organización (${hrs} hrs)`);
+  }
+  if (document.getElementById('lqOverdue30').checked) {
+    extras.push('Reanudación servicio tras +30 días');
+  }
 
-  let msg = `¡Hola ${lead.name}! 👋 Soy Anggie de *Ad Sparkling Cleaning* ✨%0A%0A`;
-  msg += `Recibí tu solicitud y te preparé tu cotización personalizada:%0A%0A`;
-  msg += `🏷 *Tipo de Servicio:* ${cat.name}%0A`;
-  msg += `📍 *Dirección:* ${lead.address || 'Por confirmar'}%0A`;
-  msg += `📐 *Tamaño:* ${parseInt(size).toLocaleString()} sqft (~${m2} m²)%0A`;
-  msg += `🗓 *Modalidad:* ${freqText}%0A`;
-  if (extras.length) msg += `✨ *Adicionales:* ${extras.join(', ')}%0A`;
-  msg += `%0A💰 *Total estimado: $${total}*%0A%0A`;
-  msg += `Los insumos y equipos profesionales están 100% incluidos. ✅%0A%0A`;
-  msg += `¿Te gustaría confirmar una fecha en la agenda? ¡Cuéntame cuándo te vendría mejor! 🗓`;
+  const county = document.getElementById('lqCounty').value;
+  if (county === 'palm_beach') extras.push('Recargo distancia Palm Beach (+$40)');
+  if (county === 'other_fl') extras.push('Recargo distancia FL (+$60)');
 
-  window.open('https://wa.me/' + cleanPhone(lead.phone || '') + '?text=' + msg, '_blank');
+  const compAmt = parseFloat(document.getElementById('lqComplexityAmt').value) || 0;
+  const compReason = (document.getElementById('lqComplexityReason').value || '').trim();
+  if (compAmt !== 0) {
+    extras.push(`Ajuste de complejidad (${compAmt > 0 ? '+' : ''}$${compAmt}${compReason ? ': ' + compReason : ''})`);
+  }
 
-  // Cambiar estado del lead a "contactado"
+  let text = `¡Hola ${lead.name}! 👋 Soy Anggie de *Ad Sparkling Cleaning* ✨\n\n`;
+  text += `Te comparto tu propuesta de limpieza personalizada:\n\n`;
+  text += `📍 *Dirección:* ${lead.address || 'Por confirmar'}\n`;
+  if (_lqMode === 'hours') {
+    const jobType = document.getElementById('lqHourlyJobType');
+    text += `⏱️ *Modalidad:* Por horas (${jobType ? jobType.options[jobType.selectedIndex].text : 'Especial'})\n`;
+  } else {
+    text += `📐 *Tamaño:* ${sqft.toLocaleString()} sqft (~${m2} m²)\n`;
+    text += `🗓 *Frecuencia:* ${freqText}\n`;
+  }
+  if (extras.length) {
+    text += `✨ *Detalles incluidos:* ${extras.join(', ')}\n`;
+  }
+  text += `\n💰 *PRECIO FINAL ACORDADO: $${finalPrice}*\n\n`;
+  text += `✅ Insumos profesionales y equipos de alta calidad 100% incluidos.\n`;
+  text += `¿Te gustaría apartar tu fecha en la agenda? ¡Cuéntame qué día te conviene mejor! 🗓`;
+
+  document.getElementById('lqWaPreviewText').value = text;
+  document.getElementById('lqReviewStep').style.display = 'block';
+  document.getElementById('lqReviewStep').scrollIntoView({ behavior: 'smooth' });
+}
+
+function lqSendConfirmedWhatsApp() {
+  if (!_lqCurrentLead) return;
+  const lead = _lqCurrentLead;
+  const text = document.getElementById('lqWaPreviewText').value || '';
+  const cleanP = cleanPhone(lead.phone || '');
+
+  window.open(`https://wa.me/${cleanP}?text=${encodeURIComponent(text)}`, '_blank');
+
   DataStore.updateLead(lead.id, { status: 'contactado' });
   if (lead) lead.status = 'contactado';
   loadLeads();
+  showToast('Cotización enviada a WhatsApp y lead marcado como contactado ✅');
 }
 
 function closeLeadQuoteModal() {
@@ -1542,10 +1774,11 @@ function closeLeadQuoteModal() {
 function lqConvertToClient() {
   if (!_lqCurrentLead) return;
   const lead = _lqCurrentLead;
-  const finalPrice = parseInt(document.getElementById('lqFinalInput').value) || 0;
+  const finalPrice = parseInt(document.getElementById('lqFinalInput').value, 10) || 0;
   const planId = document.getElementById('lqPlan').value;
-  const freq = document.getElementById('lqFreq').value;
-  const size = parseInt(document.getElementById('lqSize').value) || 0;
+  const freq = document.getElementById('lqFreqSelect') ? document.getElementById('lqFreqSelect').value : '15';
+  const sqft = parseInt(document.getElementById('lqSqftInput').value, 10) || 0;
+  const compReason = (document.getElementById('lqComplexityReason').value || '').trim();
 
   closeLeadQuoteModal();
   showTab('clients');
@@ -1557,16 +1790,19 @@ function lqConvertToClient() {
   document.getElementById('cName').value = lead.name || '';
   document.getElementById('cPhone').value = lead.phone || '';
   document.getElementById('cAddress').value = lead.address || '';
-  document.getElementById('cSize').value = size || lead.size_sqft || '';
-  document.getElementById('cFreq').value = freq || lead.frequency || '';
-  document.getElementById('cPrice').value = finalPrice || '';
+  document.getElementById('cSize').value = sqft || lead.size_sqft || '';
+  document.getElementById('cFreq').value = freq || lead.frequency || '15';
+  document.getElementById('cPrice').value = finalPrice || ''; // PRECIO FINAL
   if (planId) {
     const planEl = document.getElementById('cPlanId');
     if (planEl) planEl.value = planId;
   }
-  document.getElementById('cNotes').value = lead.notes ? `Lead convertido. Notas: ${lead.notes}` : 'Lead convertido desde cotizador';
+
+  // Guardar sugerido y motivo de ajuste en el campo de texto notes existente
+  const noteDetails = `[Cotización: Final $${finalPrice}${compReason ? ' · Motivo: ' + compReason : ''}]`;
+  document.getElementById('cNotes').value = lead.notes ? `${noteDetails} - ${lead.notes}` : noteDetails;
   document.getElementById('cFormTitle').textContent = 'Convertir Lead a Cliente';
-  // Guardar el ID del lead origen para eliminarlo al guardar el cliente
+
   const originEl = document.getElementById('cOriginLeadId');
   if (originEl) originEl.value = lead.id;
   form.scrollIntoView({ behavior: 'smooth' });
@@ -2822,199 +3058,170 @@ function deleteExpense(id) {
 }
 
 // ============================================
-// COTIZADOR RÁPIDO & TABLAS MULTI-CATEGORÍA
+// COTIZADOR RÁPIDO & TABLAS DE PRECIOS UNIFICADAS (SQFT)
 // ============================================
-function savePricingCatalog() {
-  try {
-    localStorage.setItem('adsparkling_pricing_catalog', JSON.stringify(PRICING_CATALOG));
-  } catch(e) {}
-}
-
-function renderPricingCategoryTabs() {
-  const container = document.getElementById('pricingCatTabs');
-  if (!container) return;
-
-  const cats = Object.keys(PRICING_CATALOG);
-  let html = cats.map(k => {
-    const cat = PRICING_CATALOG[k];
-    const isActive = (k === currentPricingCategory);
-    return `<button class="pricing-cat-tab ${isActive ? 'active' : ''}" onclick="switchPricingCategory('${k}')">
-      ${cat.icon || '🏷️'} ${cat.name}
-    </button>`;
-  }).join('');
-
-  html += `<button class="pricing-cat-tab add-tab" onclick="promptAddNewCategory()">
-    ➕ Nueva Categoría
-  </button>`;
-
-  container.innerHTML = html;
-}
-
-function switchPricingCategory(catKey) {
-  if (!PRICING_CATALOG[catKey]) catKey = 'regular';
-  currentPricingCategory = catKey;
-  renderPricingCategoryTabs();
-  
-  const cat = PRICING_CATALOG[catKey];
-  const titleEl = document.getElementById('pricingTableSectionTitle');
-  if (titleEl) titleEl.textContent = `📋 Tabla de Precios: ${cat.name}`;
-
-  const qcTitle = document.getElementById('qcCategoryTitle');
-  if (qcTitle) qcTitle.textContent = `${cat.icon || '🏷️'} ${cat.name}`;
-
-  // Actualizar opciones de frecuencia / modalidad en el cotizador
-  const freqSelect = document.getElementById('qcFreq');
-  const freqLabel = document.getElementById('qcFreqLabel');
-  if (freqSelect && cat.columns) {
-    if (freqLabel) {
-      freqLabel.textContent = (cat.id === 'post_construction') ? 'Nivel de Obra / Polvo' : ((cat.id === 'move') ? 'Tipo de Mudanza' : 'Frecuencia / Modalidad');
-    }
-    freqSelect.innerHTML = cat.columns.map((c, idx) => `<option value="${c.key}" ${idx === 1 ? 'selected' : ''}>${c.label}</option>`).join('');
-  }
-
-  renderPricingTable();
-  qcCalculate();
-}
 
 function renderPricingTable() {
   const thead = document.getElementById('pricingRefTableHead');
   const tbody = document.getElementById('pricingRefTableBody');
   if (!tbody || !thead) return;
 
-  const cat = PRICING_CATALOG[currentPricingCategory] || PRICING_CATALOG.regular;
-  const cols = cat.columns || [
-    { key: '10', label: '10 Días' },
-    { key: '15', label: 'Quincenal' },
-    { key: '30', label: 'Mensual' },
-    { key: 'deep', label: 'Profunda' }
-  ];
+  const cfg = getPricingConfig();
+  const adj = cfg.generalAdjustmentPercent || 0;
 
   thead.innerHTML = `
     <tr>
-      <th style="min-width:140px;">Área (Sqft / m²)</th>
-      ${cols.map(c => `<th>${c.label}</th>`).join('')}
+      <th style="min-width:180px;">Tramo de Área (sqft & m²)</th>
+      <th>Quincenal<br><small style="font-weight:400; opacity:0.8;">(o cada 10 días)</small></th>
+      <th>Mensual</th>
+      <th>Primera Limpieza /<br>Profunda / Mudanza</th>
     </tr>
   `;
 
-  const sizes = [1200, 1700, 2200, 2800, 3500, 4500];
-  tbody.innerHTML = sizes.map(sz => {
-    const m2 = sqftToM2(sz);
+  let rowsHtml = cfg.tiers.map(t => {
+    const m2Max = sqftToM2(t.maxSqft);
+    const qAdj = getAdjustedPrice(t.biweekly, adj);
+    const mAdj = getAdjustedPrice(t.monthly, adj);
+    const dAdj = getAdjustedPrice(t.deep, adj);
+
+    const formatCell = (baseVal, adjVal, colKey) => {
+      const showAdj = adj !== 0;
+      return `
+        <td>
+          <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
+            <div style="display:flex; align-items:center; gap:2px;">
+              <span style="font-weight:700; color:var(--text-sec); font-size:12px;">$</span>
+              <input type="number" step="5" value="${baseVal}" style="width:75px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); font-size:13px; text-align:center; font-weight:700;" onchange="updateTierCell(${t.id}, '${colKey}', this.value)">
+            </div>
+            ${showAdj ? `<span style="font-size:11px; font-weight:800; color:var(--primary);">$${adjVal} (${adj > 0 ? '+' : ''}${adj}%)</span>` : ''}
+          </div>
+        </td>
+      `;
+    };
+
     return `
       <tr>
         <td>
-          <strong style="color:var(--primary); font-size:14px;">${sz.toLocaleString()} sqft</strong>
-          <span class="m2-label">≈ ${m2} m²</span>
+          <strong style="color:var(--primary); font-size:14px;">${t.label}</strong>
+          <div class="m2-label">≈ hasta ${m2Max} m²</div>
         </td>
-        ${cols.map(col => {
-          const val = (cat.pricing[sz] && cat.pricing[sz][col.key] !== undefined) ? cat.pricing[sz][col.key] : '';
-          const rateM2 = val ? (val / m2).toFixed(2) : '0.00';
-          const rateSqft = val ? (val / sz).toFixed(2) : '0.00';
-          return `
-            <td>
-              <div style="display:flex; flex-direction:column; align-items:center;">
-                <input type="number" value="${val}" style="width:75px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); font-size:13px; text-align:center; font-weight:700;" oninput="updatePricingValue(${sz}, '${col.key}', this.value)">
-                <span class="rate-badge" id="rate-${currentPricingCategory}-${sz}-${col.key}">$${rateM2}/m² · $${rateSqft}/sqft</span>
-              </div>
-            </td>
-          `;
-        }).join('')}
+        ${formatCell(t.biweekly, qAdj, 'biweekly')}
+        ${formatCell(t.monthly, mAdj, 'monthly')}
+        ${formatCell(t.deep, dAdj, 'deep')}
       </tr>
     `;
   }).join('');
-}
 
-function updatePricingValue(size, colKey, val) {
-  const num = parseInt(val) || 0;
-  const cat = PRICING_CATALOG[currentPricingCategory];
-  if (!cat) return;
+  // Fila informativa para > 3,800 sqft
+  rowsHtml += `
+    <tr style="background:#fff8ed;">
+      <td>
+        <strong style="color:#b7791f; font-size:14px;">Más de 3,800 sqft</strong>
+        <div class="m2-label">≈ más de 353 m²</div>
+      </td>
+      <td colspan="3" style="text-align:center; padding:12px; font-weight:700; color:#b7791f; font-size:13px;">
+        ⚠️ Sin precio automático → Cotizar manualmente según requerimientos
+      </td>
+    </tr>
+  `;
 
-  if (!cat.pricing[size]) cat.pricing[size] = {};
-  cat.pricing[size][colKey] = num;
+  tbody.innerHTML = rowsHtml;
 
-  // Actualizar badge de tasa en vivo
-  const m2 = sqftToM2(size);
-  const badge = document.getElementById(`rate-${currentPricingCategory}-${size}-${colKey}`);
-  if (badge) {
-    const rateM2 = num ? (num / m2).toFixed(2) : '0.00';
-    const rateSqft = num ? (num / size).toFixed(2) : '0.00';
-    badge.textContent = `$${rateM2}/m² · $${rateSqft}/sqft`;
+  // Actualizar indicador de % activo
+  const adjBadge = document.getElementById('pricingActiveAdjBadge');
+  if (adjBadge) {
+    if (adj !== 0) {
+      adjBadge.textContent = `Ajuste activo: ${adj > 0 ? '+' : ''}${adj}% (redondeo a $5)`;
+      adjBadge.style.display = 'inline-block';
+    } else {
+      adjBadge.textContent = 'Ajuste activo: 0% (precios base directos)';
+      adjBadge.style.display = 'inline-block';
+    }
   }
 
-  savePricingCatalog();
-  qcCalculate();
+  // Pre-cargar valores de inputs en el panel de reglas si existen
+  const inpMinVisit = document.getElementById('cfgMinVisit');
+  if (inpMinVisit) inpMinVisit.value = cfg.minVisit;
+  const inpGenAdj = document.getElementById('cfgGeneralAdj');
+  if (inpGenAdj) inpGenAdj.value = cfg.generalAdjustmentPercent;
+  const inpExtraOven = document.getElementById('cfgExtraOven');
+  if (inpExtraOven) inpExtraOven.value = cfg.extras.oven;
+  const inpExtraFridge = document.getElementById('cfgExtraFridge');
+  if (inpExtraFridge) inpExtraFridge.value = cfg.extras.fridge;
+  const inpExtraBlinds = document.getElementById('cfgExtraBlinds');
+  if (inpExtraBlinds) inpExtraBlinds.value = cfg.extras.blindsPerUnit;
+  const inpHrLaundry = document.getElementById('cfgHrLaundry');
+  if (inpHrLaundry) inpHrLaundry.value = cfg.hourlyRates.extraLaundry;
+  const inpHrMove = document.getElementById('cfgHrMove');
+  if (inpHrMove) inpHrMove.value = cfg.hourlyRates.emptyMove;
+  const inpHrPost = document.getElementById('cfgHrPost');
+  if (inpHrPost) inpHrPost.value = cfg.hourlyRates.postConstructionPerPerson;
+  const inpSurchOverdue = document.getElementById('cfgSurchOverdue');
+  if (inpSurchOverdue) inpSurchOverdue.value = cfg.surcharges.overdue30Days;
+  const inpSurchPB = document.getElementById('cfgSurchPalmBeach');
+  if (inpSurchPB) inpSurchPB.value = cfg.surcharges.palmBeach;
+  const inpSurchFL = document.getElementById('cfgSurchOtherFL');
+  if (inpSurchFL) inpSurchFL.value = cfg.surcharges.otherCountyFL;
+  const inpTeamCharge = document.getElementById('cfgTeamChargeClient');
+  if (inpTeamCharge) inpTeamCharge.value = cfg.team.chargeClientPerHour;
+  const inpTeamPay = document.getElementById('cfgTeamHelperPay');
+  if (inpTeamPay) inpTeamPay.value = cfg.team.helperPayPerHour;
 }
 
-function applyRatePerM2ToCurrentTable() {
-  const input = document.getElementById('quickRatePerM2');
-  if (!input) return;
-  const rate = parseFloat(input.value);
-  if (!rate || isNaN(rate) || rate <= 0) {
-    showToast('Ingresa una tarifa válida por m² (ej. 1.25 o 2.50)', 'error');
-    return;
+function updateTierCell(tierId, colKey, val) {
+  const num = parseInt(val, 10) || 0;
+  const cfg = getPricingConfig();
+  const tier = cfg.tiers.find(t => t.id === tierId);
+  if (tier) {
+    tier[colKey] = num;
+    savePricingConfig(cfg);
+    CONFIG_PRICING = cfg;
+    renderPricingTable();
+    qcCalculate();
+    showToast(`Precio actualizado para "${tier.label}" ✅`);
   }
+}
 
-  const cat = PRICING_CATALOG[currentPricingCategory];
-  if (!cat) return;
-
-  const sizes = [1200, 1700, 2200, 2800, 3500, 4500];
-  const cols = cat.columns || [];
-
-  sizes.forEach(sz => {
-    const m2 = sqftToM2(sz);
-    if (!cat.pricing[sz]) cat.pricing[sz] = {};
-    
-    cols.forEach((col, idx) => {
-      let colMultiplier = 1.0;
-      if (idx === 0) colMultiplier = 0.90;
-      else if (idx === 1) colMultiplier = 1.0;
-      else if (idx === 2) colMultiplier = 1.15;
-      else if (idx >= 3) colMultiplier = 1.35;
-
-      const calculated = Math.round(m2 * rate * colMultiplier);
-      cat.pricing[sz][col.key] = calculated;
-    });
-  });
-
-  savePricingCatalog();
+function applyGeneralAdjustment() {
+  const inp = document.getElementById('cfgGeneralAdj');
+  if (!inp) return;
+  const val = parseFloat(inp.value) || 0;
+  const cfg = getPricingConfig();
+  cfg.generalAdjustmentPercent = val;
+  savePricingConfig(cfg);
+  CONFIG_PRICING = cfg;
   renderPricingTable();
   qcCalculate();
-  showToast(`¡Tabla de "${cat.name}" calculada con base de $${rate.toFixed(2)}/m²! ✅`);
+  showToast(`Ajuste general de ${val > 0 ? '+' : ''}${val}% aplicado a la lista de precios ✅`);
 }
 
-function promptAddNewCategory() {
-  const name = prompt('Ingresa el nombre de la nueva categoría de limpieza:\n(Ej: Casas Vacacionales / Airbnb, Limpieza de Cristales, etc.)');
-  if (!name || !name.trim()) return;
+function saveAllPricingSettings() {
+  const cfg = getPricingConfig();
 
-  const id = 'cat_' + Date.now();
-  const rateStr = prompt(`¿Qué tarifa promedio por m² deseas asignar como base para "${name.trim()}"?\n(Ej: 1.20 para regular, 2.50 para trabajos pesados o post-obra):`, '1.50');
-  const rate = parseFloat(rateStr) || 1.50;
-
-  const sizes = [1200, 1700, 2200, 2800, 3500, 4500];
-  const initialPricing = {};
-
-  sizes.forEach(sz => {
-    const m2 = sqftToM2(sz);
-    initialPricing[sz] = {
-      standard: Math.round(m2 * rate),
-      deep: Math.round(m2 * rate * 1.35)
-    };
-  });
-
-  PRICING_CATALOG[id] = {
-    id,
-    name: name.trim(),
-    icon: '✨',
-    desc: 'Categoría personalizada de limpieza',
-    columns: [
-      { key: 'standard', label: 'Estándar' },
-      { key: 'deep', label: 'Profunda' }
-    ],
-    pricing: initialPricing
+  const getNum = (id, fallback) => {
+    const el = document.getElementById(id);
+    return el ? (parseFloat(el.value) || fallback) : fallback;
   };
 
-  savePricingCatalog();
-  switchPricingCategory(id);
-  showToast(`Categoría "${name.trim()}" creada con éxito ✅`);
+  cfg.minVisit = getNum('cfgMinVisit', 150);
+  cfg.generalAdjustmentPercent = getNum('cfgGeneralAdj', 0);
+  cfg.extras.oven = getNum('cfgExtraOven', 40);
+  cfg.extras.fridge = getNum('cfgExtraFridge', 40);
+  cfg.extras.blindsPerUnit = getNum('cfgExtraBlinds', 10);
+  cfg.hourlyRates.extraLaundry = getNum('cfgHrLaundry', 30);
+  cfg.hourlyRates.emptyMove = getNum('cfgHrMove', 50);
+  cfg.hourlyRates.postConstructionPerPerson = getNum('cfgHrPost', 60);
+  cfg.surcharges.overdue30Days = getNum('cfgSurchOverdue', 30);
+  cfg.surcharges.palmBeach = getNum('cfgSurchPalmBeach', 40);
+  cfg.surcharges.otherCountyFL = getNum('cfgSurchOtherFL', 60);
+  cfg.team.chargeClientPerHour = getNum('cfgTeamChargeClient', 60);
+  cfg.team.helperPayPerHour = getNum('cfgTeamHelperPay', 18);
+
+  savePricingConfig(cfg);
+  CONFIG_PRICING = cfg;
+  renderPricingTable();
+  qcCalculate();
+  showToast('¡Todas las reglas y precios guardados con éxito! ✅');
 }
 
 function qcCalculate() {
@@ -3022,29 +3229,42 @@ function qcCalculate() {
   const freqSelect = document.getElementById('qcFreq');
   if (!sizeSelect || !freqSelect) return 0;
 
-  const size = parseInt(sizeSelect.value) || 2200;
+  const sqft = parseInt(sizeSelect.value, 10) || 1800;
   const freq = freqSelect.value || '15';
-  const cat = PRICING_CATALOG[currentPricingCategory] || PRICING_CATALOG.regular;
+  const cfg = getPricingConfig();
 
-  let total = (cat.pricing[size] && cat.pricing[size][freq] !== undefined) ? cat.pricing[size][freq] : 195;
-  if (!total && cat.pricing[size]) {
-    const firstKey = Object.keys(cat.pricing[size])[0];
-    total = cat.pricing[size][firstKey] || 195;
+  const priceRes = getSuggestedPrice(sqft, freq);
+  let base = 0;
+  if (priceRes && priceRes.manual) {
+    base = 0;
+  } else if (typeof priceRes === 'number') {
+    base = priceRes;
+  } else if (priceRes && priceRes.biweekly) {
+    base = priceRes.biweekly;
   }
 
+  let total = base;
+
+  // Extras rápidos
   document.querySelectorAll('.qc-check input:checked').forEach(el => {
-    total += parseInt(el.dataset.price) || 0;
+    total += parseInt(el.dataset.price, 10) || 0;
   });
 
   const totalEl = document.getElementById('qcTotal');
-  if (totalEl) totalEl.textContent = '$' + total;
+  if (totalEl) {
+    if (priceRes && priceRes.manual) {
+      totalEl.textContent = 'Cotizar manual';
+      totalEl.style.fontSize = '20px';
+    } else {
+      totalEl.textContent = '$' + total;
+      totalEl.style.fontSize = '';
+    }
+  }
 
   const rateEl = document.getElementById('qcRateIndicator');
   if (rateEl) {
-    const m2 = sqftToM2(size);
-    const rateM2 = (total / m2).toFixed(2);
-    const rateSqft = (total / size).toFixed(2);
-    rateEl.textContent = `≈ $${rateM2}/m² · $${rateSqft}/sqft (${m2} m² / ${size} sqft)`;
+    const m2 = sqftToM2(sqft);
+    rateEl.textContent = `${sqft.toLocaleString()} sqft (≈ ${m2} m²) · Frecuencia: ${freqSelect.options[freqSelect.selectedIndex].text}`;
   }
 
   return total;
@@ -3054,8 +3274,7 @@ function qcSendWhatsApp() {
   const total = qcCalculate();
   const sizeSelect = document.getElementById('qcSize');
   const freqSelect = document.getElementById('qcFreq');
-  const cat = PRICING_CATALOG[currentPricingCategory] || PRICING_CATALOG.regular;
-  const size = parseInt(sizeSelect.value) || 2200;
+  const size = parseInt(sizeSelect.value, 10) || 1800;
   const m2 = sqftToM2(size);
 
   const addonsChecked = [];
@@ -3063,16 +3282,16 @@ function qcSendWhatsApp() {
     addonsChecked.push(el.parentElement.textContent.trim());
   });
 
-  let msg = '¡Hola! Soy Anggie de *Ad Sparkling Cleaning*. Te comparto tu cotización personalizada:%0A%0A';
-  msg += '🏷 *Tipo de Servicio:* ' + cat.name + '%0A';
-  msg += '📍 *Tamaño:* ' + sizeSelect.options[sizeSelect.selectedIndex].text.split('·')[0].trim() + ' (~' + m2 + ' m²)%0A';
-  msg += '🗓 *Modalidad:* ' + freqSelect.options[freqSelect.selectedIndex].text + '%0A';
+  let msg = '¡Hola! Soy Anggie de *Ad Sparkling Cleaning* ✨%0A%0A';
+  msg += 'Te comparto el estimado para tu propiedad:%0A%0A';
+  msg += `📍 *Tamaño:* ${size.toLocaleString()} sqft (~${m2} m²)%0A`;
+  msg += `🗓 *Frecuencia:* ${freqSelect.options[freqSelect.selectedIndex].text}%0A`;
   if (addonsChecked.length) {
-    msg += '➕ *Extras incluidos:* ' + addonsChecked.join(', ') + '%0A';
+    msg += `➕ *Extras incluidos:* ${addonsChecked.join(', ')}%0A`;
   }
-  msg += '%0A💰 *Total estimado: $' + total + '*%0A%0A';
-  msg += 'Insumos y equipos profesionales incluidos. ✅%0A';
-  msg += '¿Te gustaría reservar fecha en la agenda? Confírmanos tu dirección. ¡Muchas gracias! ✨';
+  msg += `%0A💰 *Total estimado: $${total}*%0A%0A`;
+  msg += 'Insumos y equipos profesionales 100% incluidos. ✅%0A';
+  msg += '¿Te gustaría reservar fecha en la agenda? ¡Cuéntame qué día te viene mejor! 🗓';
 
   window.open('https://wa.me/?text=' + msg, '_blank');
 }
@@ -3081,8 +3300,7 @@ function qcCopyText() {
   const total = qcCalculate();
   const sizeSelect = document.getElementById('qcSize');
   const freqSelect = document.getElementById('qcFreq');
-  const cat = PRICING_CATALOG[currentPricingCategory] || PRICING_CATALOG.regular;
-  const size = parseInt(sizeSelect.value) || 2200;
+  const size = parseInt(sizeSelect.value, 10) || 1800;
   const m2 = sqftToM2(size);
 
   const addonsChecked = [];
@@ -3091,8 +3309,7 @@ function qcCopyText() {
   });
 
   let text = `Ad Sparkling Cleaning — Cotización\n\n`;
-  text += `Servicio: ${cat.name}\n`;
-  text += `Tamaño: ${sizeSelect.options[sizeSelect.selectedIndex].text.split('·')[0].trim()} (~${m2} m²)\n`;
+  text += `Tamaño: ${size.toLocaleString()} sqft (~${m2} m²)\n`;
   text += `Modalidad: ${freqSelect.options[freqSelect.selectedIndex].text}\n`;
   if (addonsChecked.length) text += `Extras: ${addonsChecked.join(', ')}\n`;
   text += `Total: $${total}\n\n`;
@@ -3107,7 +3324,7 @@ function qcCopyText() {
 
 function qcSaveAsLead() {
   const total = qcCalculate();
-  const size = parseInt(document.getElementById('qcSize').value);
+  const size = parseInt(document.getElementById('qcSize').value, 10) || 1800;
   const freq = document.getElementById('qcFreq').value;
 
   const leadName = prompt('Ingresa el nombre del prospecto:');
@@ -3130,7 +3347,7 @@ function qcSaveAsLead() {
 
 function qcCreateClient() {
   const total = qcCalculate();
-  const size = parseInt(document.getElementById('qcSize').value);
+  const size = parseInt(document.getElementById('qcSize').value, 10) || 1800;
   const freq = document.getElementById('qcFreq').value;
 
   showTab('clients');

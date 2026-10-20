@@ -689,18 +689,16 @@
           </div>
         </div>
 
-        <!-- COTIZADOR RÁPIDO & TABLAS DE PRECIOS MULTI-CATEGORÍA -->
+        <!-- COTIZADOR RÁPIDO & TABLAS DE PRECIOS UNIFICADAS (SQFT) -->
         <div id="tab-cotizar" class="tab-panel">
           <div class="panel-header">
             <div>
-              <h1>Cotizador & Tablas de Precios (m² y sqft)</h1>
-              <p class="tab-desc">Administra precios por metro cuadrado y pie cuadrado para Limpieza Regular, Post-Construcción, Mudanzas y crea nuevas categorías.</p>
+              <h1>Cotizador & Lista Oficial de Precios (sqft)</h1>
+              <p class="tab-desc">Precios base unificados por tramos de pies cuadrados para Miami-Dade, Broward y Palm Beach. Una sola fuente de verdad para toda la aplicación.</p>
             </div>
-          </div>
-
-          <!-- Pestañas de Categorías de Limpieza -->
-          <div class="pricing-cat-tabs" id="pricingCatTabs">
-            <!-- Dinámico por JS -->
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span id="pricingActiveAdjBadge" class="badge-hint" style="background:#f5eaff; color:var(--primary); font-weight:700; padding:6px 12px; border-radius:20px; font-size:12px;">Ajuste activo: 0%</span>
+            </div>
           </div>
 
           <div class="quick-calc-wrapper" style="flex-direction:column; gap:24px;">
@@ -708,29 +706,30 @@
             <!-- CALCULADORA RÁPIDA -->
             <div class="quick-calc">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
-                <h3 id="qcCategoryTitle" style="color:var(--primary); font-size:17px; font-weight:800; margin:0;">🧹 Limpieza Regular</h3>
-                <span id="qcCategoryRateBadge" class="badge-hint" style="background:#f5eaff; color:var(--primary); font-weight:700;">Tarifa calculada en tiempo real</span>
+                <h3 id="qcCategoryTitle" style="color:var(--primary); font-size:17px; font-weight:800; margin:0;">🧹 Cotizador Rápido</h3>
+                <span id="qcCategoryRateBadge" class="badge-hint" style="background:#f5eaff; color:var(--primary); font-weight:700;">Tarifa oficial en tiempo real</span>
               </div>
 
               <div class="qc-grid">
                 <div class="qc-field">
                   <label>Tamaño de la propiedad (sqft / m²)</label>
                   <select id="qcSize" onchange="qcCalculate()">
-                    <option value="1200">1,200 sqft (~111 m²) · 1-2 hab</option>
-                    <option value="1700">1,700 sqft (~158 m²) · 2-3 hab</option>
-                    <option value="2200" selected>2,200 sqft (~204 m²) · 3-4 hab</option>
-                    <option value="2800">2,800 sqft (~260 m²) · 4 hab</option>
-                    <option value="3500">3,500 sqft (~325 m²) · 4-5 hab</option>
-                    <option value="4500">4,500 sqft (~418 m²) · Casa grande</option>
+                    <option value="1200">1,200 sqft (~111 m²) · Hasta 1,800</option>
+                    <option value="1770">1,770 sqft (~164 m²) · Hasta 1,800</option>
+                    <option value="2000">2,000 sqft (~186 m²) · 1,801 - 2,200</option>
+                    <option value="2500" selected>2,500 sqft (~232 m²) · 2,201 - 2,800</option>
+                    <option value="3100">3,100 sqft (~288 m²) · 2,801 - 3,400</option>
+                    <option value="3600">3,600 sqft (~334 m²) · 3,401 - 3,800</option>
+                    <option value="4500">4,500 sqft (~418 m²) · Más de 3,800 (Manual)</option>
                   </select>
                 </div>
                 <div class="qc-field">
                   <label id="qcFreqLabel">Frecuencia / Modalidad</label>
                   <select id="qcFreq" onchange="qcCalculate()">
-                    <option value="10">Cada 10 días</option>
+                    <option value="10">Cada 10 días (tarifa quincenal)</option>
                     <option value="15" selected>Quincenal</option>
                     <option value="30">Mensual</option>
-                    <option value="deep">Profunda / Ocasional</option>
+                    <option value="deep">Primera Limpieza / Profunda / Mudanza</option>
                   </select>
                 </div>
               </div>
@@ -738,7 +737,7 @@
               <div class="qc-addons-label">Adicionales / Extras:</div>
               <div class="qc-addons">
                 <label class="qc-check"><input type="checkbox" id="qcOven" data-price="40" onchange="qcCalculate()"> Horno (+$40)</label>
-                <label class="qc-check"><input type="checkbox" id="qcFridge" data-price="50" onchange="qcCalculate()"> Nevera (+$50)</label>
+                <label class="qc-check"><input type="checkbox" id="qcFridge" data-price="40" onchange="qcCalculate()"> Nevera (+$40)</label>
                 <label class="qc-check"><input type="checkbox" id="qcCabinets" data-price="50" onchange="qcCalculate()"> Gabinetes (+$50)</label>
                 <label class="qc-check"><input type="checkbox" id="qcOverdue" data-price="30" onchange="qcCalculate()"> +30 días sin limpiar (+$30)</label>
               </div>
@@ -746,10 +745,10 @@
               <div class="qc-total">
                 <div>
                   <span style="font-weight:700;">Total Estimado:</span>
-                  <div id="qcRateIndicator" style="font-size:12px; color:var(--text-sec); margin-top:2px;">≈ $0.96/m² · $0.09/sqft</div>
-                  <p style="font-size:11px; color:var(--text-muted); margin-top:2px;">Insumos profesionales incluidos</p>
+                  <div id="qcRateIndicator" style="font-size:12px; color:var(--text-sec); margin-top:2px;">≈ Tarifa calculada según tramo oficial</div>
+                  <p style="font-size:11px; color:var(--text-muted); margin-top:2px;">Insumos profesionales y equipos 100% incluidos</p>
                 </div>
-                <span id="qcTotal" class="total-amount">$195</span>
+                <span id="qcTotal" class="total-amount">$190</span>
               </div>
 
               <div class="qc-actions">
@@ -769,46 +768,136 @@
               </div>
             </div>
 
-            <!-- TABLA DE PRECIOS EDITABLE CON COSTO X M2 Y SQFT -->
+            <!-- TABLA DE PRECIOS EDITABLE POR TRAMOS -->
             <div class="dash-section" style="margin-bottom:0;">
               <div class="section-title-row" style="margin-bottom:12px; flex-wrap:wrap; gap:10px;">
                 <div>
-                  <h2 id="pricingTableSectionTitle">📋 Tabla de Precios: Limpieza Regular</h2>
+                  <h2 id="pricingTableSectionTitle">📋 Lista Oficial de Precios por Tramos (sqft)</h2>
                   <p style="font-size:13px; color:var(--text-sec); margin-top:4px;">
-                    Edita cualquier celda para actualizar la calculadora. Debajo de cada precio verás el costo real por m² y por sqft.
+                    Edita el valor de cualquier celda. Todos los cálculos y cotizaciones de la aplicación se actualizan automáticamente.
                   </p>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <button class="btn-action-pill" onclick="promptAddNewCategory()" style="background:#f5eaff; color:var(--primary); border:1px solid #d8b4f8;">
-                    ➕ Nueva Categoría
-                  </button>
                 </div>
               </div>
 
-              <!-- Herramienta de auto-cálculo por tarifa m2 -->
-              <div style="background:#fff8ed; border:1px solid #f0c070; border-radius:10px; padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-                <div style="font-size:13px; color:#7a5200;">
-                  ⚡ <strong>Auto-llenar tabla con tarifa base por m²:</strong>
-                  <span style="font-size:12px; opacity:0.85;"> (Calcula el precio de cada tamaño automáticamente)</span>
+              <!-- Herramienta de ajuste porcentual general -->
+              <div style="background:#f5eaff; border:1px solid #d8b4f8; border-radius:10px; padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                <div style="font-size:13px; color:var(--primary);">
+                  ⚡ <strong>Ajuste general porcentual a la lista de precios:</strong>
+                  <span style="font-size:12px; opacity:0.85;">(Aplica +% o -% sobre todos los tramos redondeando al múltiplo de $5 más cercano)</span>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
-                  <span style="font-size:13px; font-weight:700;">$</span>
-                  <input type="number" id="quickRatePerM2" placeholder="ej. 1.25" step="0.05" style="width:85px; padding:6px 10px; border:1px solid #f0c070; border-radius:6px; font-weight:700;">
-                  <span style="font-size:12px; font-weight:600;">/ m²</span>
-                  <button class="btn-action-pill" onclick="applyRatePerM2ToCurrentTable()" style="background:#d35400; color:#fff; padding:6px 14px; font-size:12px;">Aplicar a tabla</button>
+                  <span style="font-size:13px; font-weight:700; color:var(--primary);">%</span>
+                  <input type="number" id="cfgGeneralAdj" placeholder="0" step="1" style="width:75px; padding:6px 10px; border:1px solid #d8b4f8; border-radius:6px; font-weight:700; text-align:center;">
+                  <button class="btn-action-pill" onclick="applyGeneralAdjustment()" style="background:var(--primary); color:#fff; padding:6px 14px; font-size:12px;">Aplicar %</button>
                 </div>
               </div>
 
               <div class="table-wrap">
                 <table class="data-table" style="font-size:13px;" id="pricingRefTable">
                   <thead id="pricingRefTableHead">
-                    <!-- Dinámico por JS según categoría -->
+                    <!-- Dinámico por JS -->
                   </thead>
                   <tbody id="pricingRefTableBody">
-                    <!-- Cargado por JS con inputs y badges $/m² -->
+                    <!-- Dinámico por JS con inputs editables -->
                   </tbody>
                 </table>
               </div>
+
+              <!-- PANEL DE REGLAS GENERALES Y COSTOS OPERATIVOS -->
+              <div style="margin-top:20px; background:#fafafa; border:1px solid var(--border); border-radius:12px; padding:18px;">
+                <h3 style="font-size:15px; font-weight:800; color:var(--primary); margin:0 0 12px 0;">⚙️ Reglas Operativas, Extras, Recargos y Tarifas por Hora</h3>
+                
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                  
+                  <!-- Visita Mínima -->
+                  <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:12px;">
+                    <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-sec); display:block; margin-bottom:4px;">Visita mínima absoluta ($)</label>
+                    <input type="number" id="cfgMinVisit" value="150" step="5" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid var(--border); font-weight:700;">
+                    <div style="font-size:10px; color:var(--text-muted); margin-top:3px;">Alerta si una cotización es menor a $150</div>
+                  </div>
+
+                  <!-- Extras fijos -->
+                  <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:12px;">
+                    <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-sec); display:block; margin-bottom:4px;">Extras Fijos ($)</label>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                      <div>
+                        <span style="font-size:10px; color:var(--text-sec);">Horno:</span>
+                        <input type="number" id="cfgExtraOven" value="40" step="5" style="width:100%; padding:4px 6px; border-radius:4px; border:1px solid var(--border); font-size:12px; font-weight:700;">
+                      </div>
+                      <div>
+                        <span style="font-size:10px; color:var(--text-sec);">Nevera:</span>
+                        <input type="number" id="cfgExtraFridge" value="40" step="5" style="width:100%; padding:4px 6px; border-radius:4px; border:1px solid var(--border); font-size:12px; font-weight:700;">
+                      </div>
+                    </div>
+                    <div style="margin-top:6px;">
+                      <span style="font-size:10px; color:var(--text-sec);">Persianas c/u:</span>
+                      <input type="number" id="cfgExtraBlinds" value="10" step="1" style="width:100%; padding:4px 6px; border-radius:4px; border:1px solid var(--border); font-size:12px; font-weight:700;">
+                    </div>
+                  </div>
+
+                  <!-- Tarifas por hora -->
+                  <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:12px;">
+                    <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-sec); display:block; margin-bottom:4px;">Tarifas por Hora ($/h)</label>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                      <div>
+                        <span style="font-size:10px; color:var(--text-sec);">Laundry/Org:</span>
+                        <input type="number" id="cfgHrLaundry" value="30" step="5" style="width:100%; padding:4px 6px; border-radius:4px; border:1px solid var(--border); font-size:12px; font-weight:700;">
+                      </div>
+                      <div>
+                        <span style="font-size:10px; color:var(--text-sec);">Mudanza vacía:</span>
+                        <input type="number" id="cfgHrMove" value="50" step="5" style="width:100%; padding:4px 6px; border-radius:4px; border:1px solid var(--border); font-size:12px; font-weight:700;">
+                      </div>
+                    </div>
+                    <div style="margin-top:6px;">
+                      <span style="font-size:10px; color:var(--text-sec);">Post-obra ($/h pers):</span>
+                      <input type="number" id="cfgHrPost" value="60" step="5" style="width:100%; padding:4px 6px; border-radius:4px; border:1px solid var(--border); font-size:12px; font-weight:700;">
+                    </div>
+                  </div>
+
+                  <!-- Recargos por distancia y reanudación -->
+                  <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:12px;">
+                    <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-sec); display:block; margin-bottom:4px;">Recargos Especiales ($)</label>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                      <div>
+                        <span style="font-size:10px; color:var(--text-sec);">Palm Beach:</span>
+                        <input type="number" id="cfgSurchPalmBeach" value="40" step="5" style="width:100%; padding:4px 6px; border-radius:4px; border:1px solid var(--border); font-size:12px; font-weight:700;">
+                      </div>
+                      <div>
+                        <span style="font-size:10px; color:var(--text-sec);">Otro FL:</span>
+                        <input type="number" id="cfgSurchOtherFL" value="60" step="5" style="width:100%; padding:4px 6px; border-radius:4px; border:1px solid var(--border); font-size:12px; font-weight:700;">
+                      </div>
+                    </div>
+                    <div style="margin-top:6px;">
+                      <span style="font-size:10px; color:var(--text-sec);">Reanudación (+30 días):</span>
+                      <input type="number" id="cfgSurchOverdue" value="30" step="5" style="width:100%; padding:4px 6px; border-radius:4px; border:1px solid var(--border); font-size:12px; font-weight:700;">
+                    </div>
+                  </div>
+
+                  <!-- Equipo y Ayudantes -->
+                  <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:12px;">
+                    <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-sec); display:block; margin-bottom:4px;">Equipo & Ayudantes ($/h)</label>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                      <div>
+                        <span style="font-size:10px; color:var(--text-sec);">Cobro cliente:</span>
+                        <input type="number" id="cfgTeamChargeClient" value="60" step="5" style="width:100%; padding:4px 6px; border-radius:4px; border:1px solid var(--border); font-size:12px; font-weight:700;">
+                      </div>
+                      <div>
+                        <span style="font-size:10px; color:var(--text-sec);">Pago ayudante:</span>
+                        <input type="number" id="cfgTeamHelperPay" value="18" step="1" style="width:100%; padding:4px 6px; border-radius:4px; border:1px solid var(--border); font-size:12px; font-weight:700;">
+                      </div>
+                    </div>
+                    <div style="font-size:10px; color:var(--text-muted); margin-top:6px;">Margen calculado automáticamente en cotizador</div>
+                  </div>
+
+                </div>
+
+                <div style="margin-top:16px; display:flex; justify-content:flex-end;">
+                  <button class="btn-action-pill" onclick="saveAllPricingSettings()" style="background:var(--primary); color:#fff; padding:10px 22px; font-size:13px; font-weight:700;">
+                    💾 Guardar Todas las Reglas y Precios
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -947,131 +1036,255 @@
   </div>
 
   <!-- ============================================
-       6. MODAL COTIZADOR DE LEAD
+       6. MODAL COTIZADOR DE LEAD (2 COLUMNAS CON TABLA OFICIAL)
        ============================================ -->
   <div id="leadQuoteModal" class="modal-backdrop" style="display:none;">
-    <div class="modal-card" style="max-width:560px;">
+    <div class="modal-card lq-modal-card">
       <div class="modal-header">
-        <h3>📋 Cotización para Lead</h3>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:18px;">📋</span>
+          <h3 style="margin:0;">Cotizador de Lead & Propuesta Personalizada</h3>
+        </div>
         <button class="modal-close" onclick="closeLeadQuoteModal()">✕</button>
       </div>
-      <div class="modal-body" style="padding:0;">
+      <div class="modal-body" style="padding:0; overflow-y:auto; max-height:calc(90vh - 65px);">
 
-        <!-- Datos del lead -->
-        <div style="background:linear-gradient(135deg,#31013F,#4e0863); color:#fff; padding:20px 24px; border-radius:0;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+        <!-- Header con datos del lead y precio final destacado -->
+        <div style="background:linear-gradient(135deg,#31013F,#4e0863); color:#fff; padding:16px 20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
             <div>
-              <div id="lqName" style="font-size:20px; font-weight:800; margin-bottom:2px;">—</div>
-              <div id="lqAddress" style="font-size:13px; opacity:0.8; margin-bottom:6px;">—</div>
-              <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <a id="lqPhoneLink" href="#" style="color:#e8a87c; font-weight:700; font-size:14px; text-decoration:none;">📞 —</a>
-                <a id="lqMapsLink" href="#" target="_blank" style="color:rgba(255,255,255,0.7); font-size:13px; text-decoration:none;">🗺️ Ver en Maps</a>
+              <div id="lqName" style="font-size:19px; font-weight:800; margin-bottom:2px;">—</div>
+              <div id="lqAddress" style="font-size:12px; opacity:0.85; margin-bottom:4px;">—</div>
+              <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                <a id="lqPhoneLink" href="#" style="color:#e8a87c; font-weight:700; font-size:13px; text-decoration:none;">📞 —</a>
+                <a id="lqMapsLink" href="#" target="_blank" style="color:rgba(255,255,255,0.75); font-size:12px; text-decoration:none;">🗺️ Ver en Maps</a>
               </div>
             </div>
-            <div style="text-align:right;">
-              <div style="font-size:11px; opacity:0.7; text-transform:uppercase; letter-spacing:0.5px;">Precio Final</div>
-              <div id="lqFinalPrice" style="font-size:32px; font-weight:900; color:#e8a87c;">$—</div>
-              <div style="font-size:11px; opacity:0.7;">Anggie decide el precio final</div>
+            <div style="text-align:right; background:rgba(255,255,255,0.1); padding:8px 16px; border-radius:10px; border:1px solid rgba(255,255,255,0.15);">
+              <div style="font-size:10px; opacity:0.8; text-transform:uppercase; letter-spacing:0.5px;">PRECIO FINAL ACORDADO</div>
+              <div id="lqFinalPrice" style="font-size:30px; font-weight:900; color:#e8a87c; line-height:1.1;">$—</div>
+              <div style="font-size:10px; opacity:0.85;">Anggie decide el precio final</div>
             </div>
           </div>
         </div>
 
-        <div style="padding:20px 24px; display:flex; flex-direction:column; gap:16px;">
+        <!-- Layout 2 columnas: Izquierda Cotizador / Derecha Tabla de Precios Oficial -->
+        <div class="lq-modal-grid">
 
-          <!-- Tipo de Limpieza / Categoría -->
-          <div>
-            <label style="font-size:12px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:4px;">🏷️ Tipo de Limpieza / Categoría de Precio</label>
-            <select id="lqCategory" onchange="lqOnCategoryChange()" style="width:100%; padding:9px 12px; border:2px solid var(--primary); border-radius:8px; font-size:14px; font-weight:700; color:var(--primary); background:#fff;">
-              <!-- Llenado dinámico por JS -->
-            </select>
-          </div>
+          <!-- COLUMNA PRINCIPAL (COTIZADOR) -->
+          <div class="lq-col-main">
 
-          <!-- Tamaño y frecuencia -->
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-            <div>
-              <label style="font-size:12px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:4px;">📐 Tamaño (sqft / m²)</label>
-              <select id="lqSize" onchange="lqRecalculate()" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-weight:600;">
-                <option value="1200">1,200 sqft (~111 m²)</option>
-                <option value="1700">1,700 sqft (~158 m²)</option>
-                <option value="2200">2,200 sqft (~204 m²)</option>
-                <option value="2800">2,800 sqft (~260 m²)</option>
-                <option value="3500">3,500 sqft (~325 m²)</option>
-                <option value="4500">4,500 sqft (~418 m²)</option>
-              </select>
+            <!-- Selector de Modalidad -->
+            <div class="lq-mode-toggle">
+              <button type="button" id="lqBtnModeTable" class="lq-mode-btn active" onclick="lqSetMode('table')">📊 Por Tabla (sqft)</button>
+              <button type="button" id="lqBtnModeHours" class="lq-mode-btn" onclick="lqSetMode('hours')">⏱️ Por Horas (Mudanza / Post-obra)</button>
             </div>
-            <div>
-              <label id="lqFreqLabel" style="font-size:12px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:4px;">🗓️ Frecuencia / Modalidad</label>
-              <select id="lqFreq" onchange="lqRecalculate()" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-weight:600;">
-                <option value="10">Cada 10 días</option>
-                <option value="15">Quincenal</option>
-                <option value="30">Mensual</option>
-                <option value="deep">Profunda / Ocasional</option>
-              </select>
-            </div>
-          </div>
 
-          <!-- Extras -->
-          <div>
-            <label style="font-size:12px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:8px;">✨ Servicios adicionales</label>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
-              <label style="display:flex; align-items:center; gap:6px; background:var(--bg-alt); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">
-                <input type="checkbox" id="lqOven" data-price="40" onchange="lqRecalculate()"> 🍳 Horno <span style="color:var(--primary); font-weight:700;">+$40</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:6px; background:var(--bg-alt); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">
-                <input type="checkbox" id="lqFridge" data-price="50" onchange="lqRecalculate()"> 🧊 Nevera <span style="color:var(--primary); font-weight:700;">+$50</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:6px; background:var(--bg-alt); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">
-                <input type="checkbox" id="lqCabinets" data-price="50" onchange="lqRecalculate()"> 🗄️ Gabinetes <span style="color:var(--primary); font-weight:700;">+$50</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:6px; background:var(--bg-alt); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">
-                <input type="checkbox" id="lqOverdue" data-price="30" onchange="lqRecalculate()"> ⏰ +30 días sin limpiar <span style="color:var(--primary); font-weight:700;">+$30</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Precio final editable -->
-          <div style="background:#f5eaff; border:1px solid #d8b4f8; border-radius:10px; padding:14px 16px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-              <div>
-                <div style="font-size:12px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px;">💡 Precio sugerido por tabla</div>
-                <div id="lqSuggestedLabel" style="font-size:13px; color:var(--text-sec); margin-top:2px;">—</div>
-              </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:13px; font-weight:700; color:var(--primary);">Precio final ($):</span>
-                <input type="number" id="lqFinalInput" onchange="lqUpdateFinalDisplay()" style="width:90px; padding:8px 10px; border:2px solid var(--primary); border-radius:8px; font-size:16px; font-weight:800; color:var(--primary); text-align:center;">
+            <!-- MODO TABLA SQFT -->
+            <div id="lqTableModeWrap">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                <div>
+                  <label style="font-size:11px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:4px;">
+                    📐 Tamaño en sqft <span id="lqSqftM2Hint" style="font-weight:400; color:var(--text-muted);">(≈ — m²)</span>
+                  </label>
+                  <input type="number" id="lqSqftInput" step="50" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-weight:700;" oninput="lqRecalculate()">
+                </div>
+                <div>
+                  <label style="font-size:11px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:4px;">🗓️ Frecuencia / Servicio</label>
+                  <select id="lqFreqSelect" onchange="lqRecalculate()" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-weight:600;">
+                    <option value="15">Quincenal (o cada 10 días)</option>
+                    <option value="30">Mensual</option>
+                    <option value="deep">Primera Limpieza / Profunda</option>
+                  </select>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Plan a asignar -->
-          <div>
-            <label style="font-size:12px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:4px;">📦 Plan a asignar (opcional)</label>
-            <select id="lqPlan" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px;">
-              <option value="">— Sin plan —</option>
-            </select>
-          </div>
+            <!-- MODO POR HORAS (MUDANZA / POST-OBRA) -->
+            <div id="lqHoursModeWrap" style="display:none; background:#faf5ff; border:1px solid #e9d5ff; border-radius:8px; padding:12px; margin-bottom:12px;">
+              <div style="margin-bottom:8px;">
+                <label style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:4px;">Tipo de Trabajo por Horas</label>
+                <select id="lqHourlyJobType" onchange="lqRecalculate()" style="width:100%; padding:8px 10px; border:1px solid #d8b4f8; border-radius:6px; font-size:13px; font-weight:600;">
+                  <option value="post_construction">Post-construcción ($60/h por persona)</option>
+                  <option value="empty_move">Mudanza / Casa vacía ($50/h por persona - desde $420)</option>
+                  <option value="laundry_extra">Laundry / Organización especial ($30/h)</option>
+                </select>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div>
+                  <label style="font-size:11px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:3px;">Horas estimadas</label>
+                  <input type="number" id="lqHourlyHours" value="4" min="1" step="0.5" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid var(--border); font-weight:700;" oninput="lqRecalculate()">
+                </div>
+                <div>
+                  <label style="font-size:11px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:3px;">Nº Personas en equipo</label>
+                  <input type="number" id="lqHourlyPeople" value="1" min="1" step="1" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid var(--border); font-weight:700;" oninput="lqRecalculate()">
+                </div>
+              </div>
+              <div id="lqHourlyFormula" style="margin-top:8px; font-size:11px; color:var(--primary); font-weight:600;"></div>
+            </div>
 
-          <!-- Notas del lead -->
-          <div id="lqNotesBox" style="background:#fff8ed; border:1px solid #f0c070; border-radius:8px; padding:10px 14px; font-size:13px; color:#7a5200; display:none;">
-            <strong>📝 Notas del lead:</strong> <span id="lqNotes"></span>
-          </div>
+            <!-- Banner con el precio sugerido por la tabla -->
+            <div id="lqSuggestedBanner" style="background:#f5eaff; border:1px solid #d8b4f8; border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:13px;">
+              <!-- Llenado dinámico por lqRecalculate() -->
+            </div>
 
-          <!-- Acciones -->
-          <div style="display:flex; flex-direction:column; gap:10px; padding-top:4px; border-top:1px solid var(--border);">
-            <button id="lqBtnWa" onclick="lqSendWhatsApp()" style="background:#25d366; color:#fff; border:none; padding:12px; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-              💬 Enviar Cotización por WhatsApp
-            </button>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-              <button onclick="lqConvertToClient()" style="background:var(--primary); color:#fff; border:none; padding:10px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer;">
-                👥 Convertir a Cliente
+            <!-- Servicios Adicionales / Extras -->
+            <div style="margin-bottom:14px;">
+              <label style="font-size:11px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:6px; text-transform:uppercase;">✨ Servicios Adicionales (Extras)</label>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:8px;">
+                <label style="display:flex; align-items:center; gap:6px; background:#fff; border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:12px; cursor:pointer;">
+                  <input type="checkbox" id="lqExtraOven" onchange="lqRecalculate()"> 🍳 Horno (+$40)
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; background:#fff; border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:12px; cursor:pointer;">
+                  <input type="checkbox" id="lqExtraFridge" onchange="lqRecalculate()"> 🧊 Nevera (+$40)
+                </label>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+                <div style="display:flex; align-items:center; gap:6px; background:#fff; border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:12px;">
+                  <input type="checkbox" id="lqExtraBlinds" onchange="lqRecalculate()">
+                  <span style="flex:1;">Persianas ($10 c/u):</span>
+                  <input type="number" id="lqBlindsQty" value="1" min="1" style="width:45px; padding:2px 4px; border:1px solid var(--border); border-radius:4px; font-size:11px; text-align:center;" oninput="lqRecalculate()">
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; background:#fff; border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:12px;">
+                  <input type="checkbox" id="lqExtraLaundry" onchange="lqRecalculate()">
+                  <span style="flex:1;">Laundry ($30/h):</span>
+                  <input type="number" id="lqLaundryHours" value="1" min="0.5" step="0.5" style="width:45px; padding:2px 4px; border:1px solid var(--border); border-radius:4px; font-size:11px; text-align:center;" oninput="lqRecalculate()">
+                </div>
+              </div>
+            </div>
+
+            <!-- Recargos por Zona y Reanudación -->
+            <div style="margin-bottom:14px; background:#f9fafb; border:1px solid var(--border); border-radius:8px; padding:10px;">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
+                <div>
+                  <label style="font-size:11px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:3px;">🚗 Zona / Condado</label>
+                  <select id="lqCounty" onchange="lqRecalculate()" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid var(--border); font-size:12px;">
+                    <option value="miami_dade">Miami-Dade (Tarifa habitual)</option>
+                    <option value="broward">Broward (Tarifa habitual)</option>
+                    <option value="palm_beach">Palm Beach (+$40 recargo distancia)</option>
+                    <option value="other_fl">Otro condado FL (+$60 recargo distancia)</option>
+                  </select>
+                </div>
+                <div style="display:flex; align-items:flex-end;">
+                  <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; padding-bottom:6px;">
+                    <input type="checkbox" id="lqOverdue30" onchange="lqRecalculate()"> ⏰ Reanudación (+30 días: +$30)
+                  </label>
+                </div>
+              </div>
+
+              <!-- Descuento y Ajuste de Complejidad -->
+              <div style="display:grid; grid-template-columns:1fr 1.2fr; gap:10px;">
+                <div style="display:flex; align-items:center; gap:6px; font-size:12px;">
+                  <input type="checkbox" id="lqReferralDiscount" onchange="lqRecalculate()">
+                  <span>Descuento referido:</span>
+                  <input type="number" id="lqReferralPct" value="10" min="1" max="50" style="width:45px; padding:2px 4px; border:1px solid var(--border); border-radius:4px; font-size:11px; text-align:center;" oninput="lqRecalculate()">%
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; font-size:12px;">
+                  <span>Complejidad ($):</span>
+                  <input type="number" id="lqComplexityAmt" value="0" step="5" style="width:55px; padding:2px 4px; border:1px solid var(--border); border-radius:4px; font-size:11px; text-align:center; font-weight:700;" placeholder="+/- $" oninput="lqRecalculate()">
+                  <input type="text" id="lqComplexityReason" placeholder="Motivo (mascotas/grasa)" style="flex:1; padding:2px 6px; border:1px solid var(--border); border-radius:4px; font-size:11px;">
+                </div>
+              </div>
+            </div>
+
+            <!-- Cálculo de Equipo y Ayudantes (Margen para Anggie) -->
+            <div style="margin-bottom:14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-size:11px; font-weight:700; color:#166534; text-transform:uppercase;">👥 Equipo, Ayudantes y Margen</span>
+                <span style="font-size:11px; color:#166534;">Pago ayudante: $18/h</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:6px;">
+                <div>
+                  <label style="font-size:10px; color:var(--text-sec); display:block;">Personas en el trabajo:</label>
+                  <input type="number" id="lqTeamPeople" value="1" min="1" style="width:100%; padding:4px 6px; border-radius:4px; border:1px solid #bbf7d0; font-size:12px; font-weight:700;" oninput="lqRecalculate()">
+                </div>
+                <div>
+                  <label style="font-size:10px; color:var(--text-sec); display:block;">Horas estimadas:</label>
+                  <input type="number" id="lqEstHours" value="3" min="1" step="0.5" style="width:100%; padding:4px 6px; border-radius:4px; border:1px solid #bbf7d0; font-size:12px; font-weight:700;" oninput="lqRecalculate()">
+                </div>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:600; padding-top:4px; border-top:1px dashed #bbf7d0;">
+                <div>Pago a ayudantes: <strong id="lqHelpersCostDisplay" style="color:#b91c1c;">$0</strong></div>
+                <div>Margen para Anggie: <strong id="lqMarginDisplay" style="color:#15803d; font-size:13px;">$0</strong></div>
+              </div>
+            </div>
+
+            <!-- PRECIO FINAL DECIDIDO POR LA DUEÑA -->
+            <div style="background:#fff8ed; border:2px solid #f0c070; border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <div>
+                  <div style="font-size:11px; font-weight:800; color:#7a5200; text-transform:uppercase; letter-spacing:0.5px;">👑 Decisión Final de Anggie</div>
+                  <div id="lqBreakdownSummary" style="font-size:11px; color:#92400e; margin-top:2px;">Cargando desglose...</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:13px; font-weight:800; color:#7a5200;">Precio Final: $</span>
+                  <input type="number" id="lqFinalInput" style="width:90px; padding:6px 8px; border:2px solid #b45309; border-radius:6px; font-size:18px; font-weight:900; color:#7a5200; text-align:center;" oninput="lqOnFinalPriceUserChange()">
+                </div>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding-top:6px; border-top:1px dashed #fcd34d;">
+                <span id="lqPriceDiffBadge" style="font-size:11px; font-weight:700;">—</span>
+                <button type="button" onclick="lqResetFinalPriceToSuggested()" style="background:none; border:none; color:#b45309; font-size:11px; font-weight:600; cursor:pointer; text-decoration:underline;">
+                  Restablecer a sugerido
+                </button>
+              </div>
+              <!-- Alerta de visita mínima -->
+              <div id="lqMinVisitWarning" style="display:none; margin-top:8px; background:#fef2f2; border:1px solid #fca5a5; border-radius:6px; padding:6px 10px; font-size:11px; color:#991b1b;"></div>
+            </div>
+
+            <!-- Plan y Notas del Lead -->
+            <div style="margin-bottom:14px;">
+              <label style="font-size:11px; font-weight:700; color:var(--text-sec); display:block; margin-bottom:3px;">📦 Asignar Plan Periódico (opcional)</label>
+              <select id="lqPlan" style="width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:12px;">
+                <option value="">— Sin plan recurrente asignado —</option>
+              </select>
+            </div>
+
+            <div id="lqNotesBox" style="background:#fff; border:1px dashed #f0c070; border-radius:6px; padding:8px 12px; font-size:11px; color:#7a5200; margin-bottom:14px; display:none;">
+              <strong>📝 Notas originales del cliente:</strong> <span id="lqNotes"></span>
+            </div>
+
+            <!-- PASO DE REVISIÓN WHATSAPP (CONFIRMACIÓN PREVIA) -->
+            <div id="lqReviewStep" style="display:none; background:#f0fdf4; border:1px solid #86efac; border-radius:10px; padding:12px; margin-bottom:14px;">
+              <div style="font-size:12px; font-weight:800; color:#166534; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                <span>📲</span> Mensaje a Enviar por WhatsApp (Revisa o edita antes de enviar):
+              </div>
+              <textarea id="lqWaPreviewText" rows="6" style="width:100%; border:1px solid #86efac; border-radius:6px; padding:8px; font-family:monospace; font-size:11px; line-height:1.4; resize:vertical; background:#fff;"></textarea>
+              <div style="margin-top:8px; display:flex; gap:8px;">
+                <button type="button" onclick="lqSendConfirmedWhatsApp()" style="flex:1; background:#25d366; color:#fff; border:none; padding:10px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+                  🚀 Confirmar y Abrir WhatsApp
+                </button>
+                <button type="button" onclick="document.getElementById('lqReviewStep').style.display='none'" style="background:#fff; color:var(--text-sec); border:1px solid var(--border); padding:10px 14px; border-radius:8px; font-size:12px; cursor:pointer;">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+
+            <!-- Acciones -->
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <button type="button" id="lqBtnWa" onclick="lqShowReviewStep()" style="background:#25d366; color:#fff; border:none; padding:11px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+                💬 Revisar y Enviar Cotización por WhatsApp
               </button>
-              <button onclick="closeLeadQuoteModal()" style="background:var(--bg-alt); color:var(--text-sec); border:1px solid var(--border); padding:10px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer;">
-                Cerrar
-              </button>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <button type="button" onclick="lqConvertToClient()" style="background:var(--primary); color:#fff; border:none; padding:9px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">
+                  👥 Convertir a Cliente
+                </button>
+                <button type="button" onclick="closeLeadQuoteModal()" style="background:var(--bg-alt); color:var(--text-sec); border:1px solid var(--border); padding:9px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">
+                  Cerrar
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- COLUMNA LATERAL (TABLA OFICIAL DE REFERENCIA) -->
+          <div class="lq-col-ref">
+            <div id="lqModalPricingRefContent" style="background:#fff; border:1px solid var(--border); border-radius:10px; padding:14px; position:sticky; top:10px;">
+              <!-- Renderizado dinámico por renderModalPricingReference() -->
             </div>
           </div>
 
         </div>
+
       </div>
     </div>
   </div>
