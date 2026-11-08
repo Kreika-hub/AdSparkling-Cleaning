@@ -1,18 +1,7 @@
+-- REFERENCIA ÚNICAMENTE. NO ejecutar tal cual en producción: no coincide con la base real y será reemplazado por una migración segura.
 -- ============================================
 -- AD SPARKLING CLEANING — Master SQL Schema
 -- ============================================
-
--- Limpieza limpia para evitar conflictos entre tipos UUID y TEXT de versiones previas
-DROP TABLE IF EXISTS appointment_assignments CASCADE;
-DROP TABLE IF EXISTS appointments CASCADE;
-DROP TABLE IF EXISTS contracts CASCADE;
-DROP TABLE IF EXISTS reviews CASCADE;
-DROP TABLE IF EXISTS clients CASCADE;
-DROP TABLE IF EXISTS leads CASCADE;
-DROP TABLE IF EXISTS team_members CASCADE;
-DROP TABLE IF EXISTS expenses CASCADE;
-DROP TABLE IF EXISTS quotes CASCADE;
-DROP TABLE IF EXISTS plans CASCADE;
 
 -- 1. TABLA DE LEADS / PROSPECTOS
 CREATE TABLE leads (

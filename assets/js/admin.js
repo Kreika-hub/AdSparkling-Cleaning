@@ -144,6 +144,14 @@ function showToast(msg, type = 'success') {
 // ============================================
 // DATASTORE (PERSISTENCIA LOCAL & CLOUD SYNC)
 // ============================================
+const DEMO_IDS = new Set([
+  'c-101', 'c-102', 'c-103', 'c-104',
+  'a-201', 'a-202', 'a-203', 'a-204',
+  'e-301', 'e-302', 'e-303',
+  'l-401', 'l-402',
+  'rev-501', 'rev-502'
+]);
+
 const DataStore = {
   KEYS: {
     LEADS: 'adsparkling_leads',
@@ -166,7 +174,36 @@ const DataStore = {
   },
 
   async init() {
+    this.purgeDemoDataOnce();
     this.seedInitialData();
+  },
+
+  purgeDemoDataOnce() {
+    try {
+      if (localStorage.getItem('adsparkling_demo_purged')) return;
+      const demoKeys = [
+        this.KEYS.CLIENTS,
+        this.KEYS.APPTS,
+        this.KEYS.EXPENSES,
+        this.KEYS.LEADS,
+        this.KEYS.REVIEWS
+      ];
+      demoKeys.forEach(k => {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          try {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list)) {
+              const cleaned = list.filter(item => !item || !DEMO_IDS.has(item.id));
+              localStorage.setItem(k, JSON.stringify(cleaned));
+            }
+          } catch(e) {}
+        }
+      });
+      localStorage.setItem('adsparkling_demo_purged', 'true');
+    } catch(e) {
+      console.warn('Error purging demo data:', e);
+    }
   },
   
   async cloudQuery(table, method, payload = null) {
@@ -203,7 +240,7 @@ const DataStore = {
         const localData = this.getList(key);
         if (localData && localData.length > 0) {
           const cloudIds = new Set(res.data.map(item => item.id));
-          const unsynced = localData.filter(item => !cloudIds.has(item.id));
+          const unsynced = localData.filter(item => !cloudIds.has(item.id) && !DEMO_IDS.has(item.id));
           for (const item of unsynced) {
             await this.cloudQuery(t, 'upsert', item);
             res.data.push(item);
@@ -229,146 +266,7 @@ const DataStore = {
   },
 
   seedInitialData() {
-    const now = new Date();
-    const curYear = now.getFullYear();
-    const curMonth = String(now.getMonth() + 1).padStart(2, '0');
-
-    // Clientes de ejemplo
-    if (!localStorage.getItem(this.KEYS.CLIENTS)) {
-      const initialClients = [
-        {
-          id: 'c-101',
-          name: 'María Rodríguez',
-          phone: '3055550192',
-          address: '742 Brickell Ave, Miami, FL 33131',
-          size_sqft: 2200,
-          frequency: '15',
-          base_price: 195,
-          last_visit: `${curYear}-${curMonth}-02`,
-          next_visit: `${curYear}-${curMonth}-16`,
-          status: 'activo',
-          notes: 'Tiene un perro pequeño amigable. Clave portón #4052.'
-        },
-        {
-          id: 'c-102',
-          name: 'Carlos Gómez',
-          phone: '7865550143',
-          address: '1200 Ocean Dr, Miami Beach, FL 33139',
-          size_sqft: 1700,
-          frequency: '10',
-          base_price: 165,
-          last_visit: `${curYear}-${curMonth}-05`,
-          next_visit: `${curYear}-${curMonth}-15`,
-          status: 'activo',
-          notes: 'Enfocar en baños y balcón.'
-        },
-        {
-          id: 'c-103',
-          name: 'Elena Suárez',
-          phone: '9545550881',
-          address: '2500 Las Olas Blvd, Fort Lauderdale, FL 33301',
-          size_sqft: 2800,
-          frequency: '30',
-          base_price: 260,
-          last_visit: `${curYear}-${curMonth}-01`,
-          next_visit: `${curYear}-${curMonth}-28`,
-          status: 'activo',
-          notes: 'Productos eco-amigables preferidos.'
-        },
-        {
-          id: 'c-104',
-          name: 'David Pérez',
-          phone: '3055559821',
-          address: '8800 Doral Blvd, Doral, FL 33178',
-          size_sqft: 1200,
-          frequency: '15',
-          base_price: 150,
-          last_visit: '2026-07-15',
-          next_visit: null,
-          status: 'activo',
-          notes: 'Viajó de vacaciones.'
-        }
-      ];
-      localStorage.setItem(this.KEYS.CLIENTS, JSON.stringify(initialClients));
-    }
-
-    // Citas de ejemplo
-    if (!localStorage.getItem(this.KEYS.APPTS)) {
-      const initialAppts = [
-        {
-          id: 'a-201',
-          client_id: 'c-101',
-          date: `${curYear}-${curMonth}-02`,
-          time: '09:00 AM',
-          price: 195,
-          addons: [],
-          notes: 'Limpieza quincenal regular',
-          status: 'completada'
-        },
-        {
-          id: 'a-202',
-          client_id: 'c-102',
-          date: `${curYear}-${curMonth}-05`,
-          time: '01:30 PM',
-          price: 215,
-          addons: ['Nevera por dentro'],
-          notes: 'Incluyó limpieza interior de nevera',
-          status: 'completada'
-        },
-        {
-          id: 'a-203',
-          client_id: 'c-101',
-          date: `${curYear}-${curMonth}-16`,
-          time: '09:00 AM',
-          price: 195,
-          addons: [],
-          notes: 'Próxima visita agendada',
-          status: 'pendiente'
-        },
-        {
-          id: 'a-204',
-          client_id: 'c-102',
-          date: `${curYear}-${curMonth}-15`,
-          time: '02:00 PM',
-          price: 165,
-          addons: [],
-          notes: 'Confirmada por WhatsApp',
-          status: 'pendiente'
-        }
-      ];
-      localStorage.setItem(this.KEYS.APPTS, JSON.stringify(initialAppts));
-    }
-
-    // Gastos de ejemplo
-    if (!localStorage.getItem(this.KEYS.EXPENSES)) {
-      const initialExpenses = [
-        {
-          id: 'e-301',
-          category: 'insumos',
-          amount: 65.50,
-          date: `${curYear}-${curMonth}-03`,
-          description: 'Detergentes, microfibras y desinfectantes (Home Depot)'
-        },
-        {
-          id: 'e-302',
-          category: 'gasolina',
-          amount: 45.00,
-          date: `${curYear}-${curMonth}-04`,
-          description: 'Gasolina semana 1 (Ruta Miami Beach - Brickell)'
-        },
-        {
-          id: 'e-303',
-          category: 'salario_asistente',
-          amount: 120.00,
-          date: `${curYear}-${curMonth}-05`,
-          description: 'Pago asistente apoyo casa grande'
-        }
-      ];
-      localStorage.setItem(this.KEYS.EXPENSES, JSON.stringify(initialExpenses));
-      localStorage.setItem(this.KEYS.EXPENSES, JSON.stringify(initialExpenses));
-    }
-
-    // Planes de ejemplo
+    // Planes oficiales
     if (!localStorage.getItem(this.KEYS.PLANS)) {
       const initialPlans = [
         {
@@ -423,65 +321,7 @@ const DataStore = {
       } catch(e) {}
     }
 
-    // Leads de ejemplo
-    if (!localStorage.getItem(this.KEYS.LEADS)) {
-      const initialLeads = [
-        {
-          id: 'l-401',
-          name: 'Andrés Morales',
-          phone: '3055553322',
-          address: '150 SE 2nd Ave, Miami, FL 33131',
-          size_sqft: 1700,
-          frequency: '15',
-          notes: 'Interesado en empezar la próxima semana. Apartamento piso 12.',
-          status: 'nuevo',
-          created_at: new Date().toISOString()
-        },
-        {
-          id: 'l-402',
-          name: 'Sofía Navarro',
-          phone: '9545557766',
-          address: '401 E Las Olas, Fort Lauderdale, FL 33301',
-          size_sqft: 2800,
-          frequency: 'deep',
-          notes: 'Mudanza a fin de mes. Quiere horno y gabinetes.',
-          status: 'contactado',
-          created_at: new Date(Date.now() - 86400000).toISOString()
-        }
-      ];
-      localStorage.setItem(this.KEYS.LEADS, JSON.stringify(initialLeads));
-    }
-
-    // Reseñas de ejemplo
-    if (!localStorage.getItem(this.KEYS.REVIEWS)) {
-      const initialReviews = [
-        {
-          id: 'rev-501',
-          client_id: 'c-101',
-          client_name: 'María Rodríguez',
-          client_phone: '3055550192',
-          rating: 5,
-          comment: '¡El servicio de Anggie superó todas nuestras expectativas! Nuestra casa quedó impecable, y el aroma a limpio duró días.',
-          photo_url: 'imagenes%20comparativa/ba%C3%B1o%20blanco%20limpio.jpeg',
-          status: 'publicada',
-          created_at: new Date(Date.now() - 172800000).toISOString()
-        },
-        {
-          id: 'rev-502',
-          client_id: 'c-102',
-          client_name: 'Carlos Gómez',
-          client_phone: '7865550143',
-          rating: 5,
-          comment: 'La limpieza profunda del horno y la sala fue increíble. Se nota el amor y la dedicación con la que trabajan.',
-          photo_url: 'imagenes%20comparativa/horno%20azul%20limpio%202.jpeg',
-          status: 'pendiente',
-          created_at: new Date(Date.now() - 3600000).toISOString()
-        }
-      ];
-      localStorage.setItem(this.KEYS.REVIEWS, JSON.stringify(initialReviews));
-    }
-
-    // Equipo de ejemplo
+    // Equipo de trabajo
     if (!localStorage.getItem(this.KEYS.TEAM)) {
       const initialTeam = [
         {
@@ -567,6 +407,15 @@ const DataStore = {
     this.setList(this.KEYS.CLIENTS, clients);
     this.cloudQuery('clients', 'upsert', [client]);
     return client;
+  },
+  updateClient(id, updates) {
+    const clients = this.getClients();
+    const idx = clients.findIndex(c => c.id == id);
+    if (idx !== -1) {
+      clients[idx] = { ...clients[idx], ...updates, updated_at: new Date().toISOString() };
+      this.setList(this.KEYS.CLIENTS, clients);
+      this.cloudQuery('clients', 'update', { id, data: updates });
+    }
   },
   deleteClient(id) {
     const clients = this.getClients().filter(c => c.id != id);
@@ -1353,7 +1202,7 @@ function openLeadQuoteModal(leadId) {
     const plans = DataStore.getPlans ? DataStore.getPlans() : [];
     planSelect.innerHTML = '<option value="">— Sin plan asignado —</option>' +
       plans.filter(p => p.active !== false).map(p =>
-        `<option value="${p.id}">${p.name} — ${freqLabel(p.frequency)} — $${p.price}</option>`
+        `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} — ${escapeHtml(freqLabel(p.frequency))} — $${parseFloat(p.price || 0)}</option>`
       ).join('');
   }
 
@@ -1430,7 +1279,7 @@ function renderModalPricingReference(highlightSqft = 0) {
     html += `
       <tr class="${isMatch ? 'tier-active' : ''}">
         <td>
-          <strong>${t.label}</strong>
+          <strong>${escapeHtml(t.label)}</strong>
           <div style="font-size:10px; opacity:0.8;">≈ hasta ${m2Max} m²</div>
         </td>
         <td>$${qPrice}</td>
@@ -1517,7 +1366,7 @@ function lqRecalculate() {
       const sugBanner = document.getElementById('lqSuggestedBanner');
       if (sugBanner) {
         const isFirstDeep = (freq === 'deep');
-        sugBanner.innerHTML = `💡 Precio sugerido por tabla: <strong style="font-size:17px; color:var(--primary);">$${sugBase}</strong> ${tierLabel ? `<span class="badge" style="background:#f5eaff; color:var(--primary); font-size:11px; font-weight:700;">${tierLabel}</span>` : ''} ${isFirstDeep ? '<span style="font-size:11px; color:#d97706; font-weight:600;">(Tarifa Profunda / 1ª visita)</span>' : ''}`;
+        sugBanner.innerHTML = `💡 Precio sugerido por tabla: <strong style="font-size:17px; color:var(--primary);">$${sugBase}</strong> ${tierLabel ? `<span class="badge" style="background:#f5eaff; color:var(--primary); font-size:11px; font-weight:700;">${escapeHtml(tierLabel)}</span>` : ''} ${isFirstDeep ? '<span style="font-size:11px; color:#d97706; font-weight:600;">(Tarifa Profunda / 1ª visita)</span>' : ''}`;
       }
     }
   }
@@ -2005,7 +1854,7 @@ function populatePlanSelect() {
   const select = document.getElementById('cPlanId');
   if (!select) return;
   const plans = DataStore.getPlans().filter(p => p.active !== false);
-  select.innerHTML = '<option value="">Sin plan asignado</option>' + plans.map(p => `<option value="${p.id}">${p.name} ($${p.price})</option>`).join('');
+  select.innerHTML = '<option value="">Sin plan asignado</option>' + plans.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} ($${parseFloat(p.price || 0)})</option>`).join('');
 }
 
 function checkContractState() {
@@ -2051,11 +1900,11 @@ function checkContractState() {
               const p = DataStore.getPlans().find(pl => pl.id === c.plan_id);
               const pName = p ? p.name : 'Desconocido';
               const stateText = c.status === 'activo' ? (c.accepted ? 'Activo (Aceptado)' : 'Activo (Pendiente)') : 'Reemplazado';
-              const btnHtml = (c.accepted && c.pdf_url) ? `<button type="button" onclick="viewContractPdf('${c.pdf_url}')" style="background:var(--primary); color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">Ver PDF</button>` : '-';
+              const btnHtml = (c.accepted && c.pdf_url) ? `<button type="button" onclick="viewContractPdf('${escapeHtml(c.pdf_url)}')" style="background:var(--primary); color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">Ver PDF</button>` : '-';
               return `<tr>
                 <td>${formatDate(c.created_at)}</td>
-                <td>${pName}</td>
-                <td>${stateText}</td>
+                <td>${escapeHtml(pName)}</td>
+                <td>${escapeHtml(stateText)}</td>
                 <td>${btnHtml}</td>
               </tr>`;
             }).join('')}
@@ -2899,7 +2748,7 @@ function loadExpenses() {
     const categories = new Set(allExpenses.map(e => e.category));
     let options = '<option value="todas">Todas las categorías</option>';
     categories.forEach(cat => {
-      if(cat) options += `<option value="${cat}">${cat}</option>`;
+      if(cat) options += `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`;
     });
     filterSelect.innerHTML = options;
     filterSelect.value = currentVal || 'todas';
@@ -2954,14 +2803,14 @@ function renderExpensesTable(exps) {
   tbody.innerHTML = exps.map(e => `
     <tr>
       <td><strong>${formatDate(e.date)}</strong></td>
-      <td><span class="badge" style="background:#f0e6f5; color:var(--primary); font-weight:700;">${e.category}</span></td>
-      <td>${e.description || '-'}</td>
+      <td><span class="badge" style="background:#f0e6f5; color:var(--primary); font-weight:700;">${escapeHtml(e.category)}</span></td>
+      <td>${escapeHtml(e.description || '-')}</td>
       <td><strong style="color:var(--danger); font-weight:800;">$${parseFloat(e.amount).toFixed(2)}</strong></td>
       <td class="action-cell" style="display:flex; gap:6px; justify-content:flex-end;">
-        <button class="btn-table-action" style="background:#fff8ed; color:#d4a017; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;" onclick="editExpense('${e.id}')" title="Editar gasto">
+        <button class="btn-table-action" style="background:#fff8ed; color:#d4a017; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;" onclick="editExpense('${escapeHtml(e.id)}')" title="Editar gasto">
           ✏️
         </button>
-        <button class="btn-table-action btn-del-table" style="background:#f44336; color:#fff;" onclick="deleteExpense('${e.id}')" title="Eliminar gasto">
+        <button class="btn-table-action btn-del-table" style="background:#f44336; color:#fff;" onclick="deleteExpense('${escapeHtml(e.id)}')" title="Eliminar gasto">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
         </button>
       </td>
@@ -3060,7 +2909,7 @@ function renderPricingTable() {
     return `
       <tr>
         <td>
-          <strong style="color:var(--primary); font-size:14px;">${t.label}</strong>
+          <strong style="color:var(--primary); font-size:14px;">${escapeHtml(t.label)}</strong>
           <div class="m2-label">≈ hasta ${m2Max} m²</div>
         </td>
         ${formatCell(t.biweekly, qAdj, 'biweekly')}
@@ -3504,8 +3353,8 @@ function loadNotificationsList() {
 
   container.innerHTML = alerts.map(a => `
     <div class="dash-item" style="cursor:pointer; padding:14px; margin-bottom:8px; border-radius:8px; background:var(--bg-alt); border:1px solid var(--border);" onclick="${a.action}">
-      <strong style="color:var(--primary); font-size:15px; display:block;">${a.title}</strong>
-      <p style="font-size:13px; color:var(--text-sec); margin-top:4px; margin-bottom:0;">${a.desc}</p>
+      <strong style="color:var(--primary); font-size:15px; display:block;">${escapeHtml(a.title)}</strong>
+      <p style="font-size:13px; color:var(--text-sec); margin-top:4px; margin-bottom:0;">${escapeHtml(a.desc)}</p>
     </div>
   `).join('');
 }
@@ -3524,17 +3373,8 @@ function closeSettingsModal() {
 }
 
 function resetDemoData() {
-  if (confirm('¿Restaurar todos los datos a la demostración inicial? (Esto sobreescribirá cambios locales)')) {
-    localStorage.removeItem(DataStore.KEYS.CLIENTS);
-    localStorage.removeItem(DataStore.KEYS.APPTS);
-    localStorage.removeItem(DataStore.KEYS.EXPENSES);
-    localStorage.removeItem(DataStore.KEYS.LEADS);
-    localStorage.removeItem(DataStore.KEYS.REVIEWS);
-    DataStore.seedInitialData();
-    closeSettingsModal();
-    loadDashboard();
-    showToast('Datos de prueba restaurados exitosamente ✅');
-  }
+  closeSettingsModal();
+  showToast('Los datos de demostración fueron desactivados', 'info');
 }
 
 // ============================================
@@ -3584,11 +3424,11 @@ function renderPlansList(plans) {
     <div class="dash-item dash-item--card" style="opacity: ${p.active !== false ? '1' : '0.65'};">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
         <div>
-          <span class="badge" style="background:rgba(49,1,63,0.08); color:var(--primary); font-weight:700; margin-bottom:6px; display:inline-block;">${freqLabel(p.frequency)}</span>
-          <h3 style="margin:4px 0 0 0; color:var(--primary); font-size:18px; font-weight:800;">${p.name || 'Sin nombre'}</h3>
+          <span class="badge" style="background:rgba(49,1,63,0.08); color:var(--primary); font-weight:700; margin-bottom:6px; display:inline-block;">${escapeHtml(freqLabel(p.frequency))}</span>
+          <h3 style="margin:4px 0 0 0; color:var(--primary); font-size:18px; font-weight:800;">${escapeHtml(p.name || 'Sin nombre')}</h3>
         </div>
         <div style="text-align:right;">
-          <div style="font-size:22px; font-weight:800; color:var(--success);">$${p.price || 0}</div>
+          <div style="font-size:22px; font-weight:800; color:var(--success);">$${parseFloat(p.price || 0)}</div>
           <span style="font-size:11px; padding:3px 8px; border-radius:12px; font-weight:600; background:${p.active !== false ? '#e8f5e9' : '#ffebee'}; color:${p.active !== false ? '#2d8a5e' : '#c62828'};">${p.active !== false ? '● Activo' : '○ Inactivo'}</span>
         </div>
       </div>
@@ -3597,16 +3437,16 @@ function renderPlansList(plans) {
         <div style="font-size:13px; color:var(--text); margin-bottom:10px;">
           <strong style="color:var(--primary);">Incluye:</strong>
           <ul style="margin:4px 0 0 18px; padding:0; color:var(--text-sec);">
-            ${p.included.map(inc => `<li>${inc}</li>`).join('')}
+            ${p.included.map(inc => `<li>${escapeHtml(inc)}</li>`).join('')}
           </ul>
         </div>
       ` : ''}
 
-      ${p.terms ? `<div style="font-size:12px; color:var(--text-muted); background:var(--bg-alt); padding:8px 12px; border-radius:8px; margin-bottom:12px;">📌 ${p.terms}</div>` : ''}
+      ${p.terms ? `<div style="font-size:12px; color:var(--text-muted); background:var(--bg-alt); padding:8px 12px; border-radius:8px; margin-bottom:12px;">📌 ${escapeHtml(p.terms)}</div>` : ''}
 
       <div class="card-actions-row" style="justify-content:flex-end;">
-        <button class="btn-action-pill" onclick="editPlan('${p.id}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border);">✏️ Editar Plan</button>
-        <button class="btn-action-pill" onclick="togglePlanActive('${p.id}')" style="background:${p.active !== false ? '#ffebee' : '#e8f5e9'}; color:${p.active !== false ? '#c62828' : '#2d8a5e'};">${p.active !== false ? '🚫 Desactivar' : '✅ Activar'}</button>
+        <button class="btn-action-pill" onclick="editPlan('${escapeHtml(p.id)}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border);">✏️ Editar Plan</button>
+        <button class="btn-action-pill" onclick="togglePlanActive('${escapeHtml(p.id)}')" style="background:${p.active !== false ? '#ffebee' : '#e8f5e9'}; color:${p.active !== false ? '#c62828' : '#2d8a5e'};">${p.active !== false ? '🚫 Desactivar' : '✅ Activar'}</button>
       </div>
     </div>
   `).join('');
@@ -3728,12 +3568,12 @@ function renderTeamList(team) {
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <div style="display:flex; align-items:center; gap:12px;">
           <div style="width:42px; height:42px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px;">
-            ${t.name ? t.name.charAt(0).toUpperCase() : 'E'}
+            ${t.name ? escapeHtml(t.name.charAt(0).toUpperCase()) : 'E'}
           </div>
           <div>
-            <strong style="font-size:16px; color:var(--primary); display:block;">${t.name}</strong>
+            <strong style="font-size:16px; color:var(--primary); display:block;">${escapeHtml(t.name)}</strong>
             <div style="font-size:13px; color:var(--text-sec);">
-              Rol: <span style="font-weight:600; text-transform:capitalize;">${t.role}</span>
+              Rol: <span style="font-weight:600; text-transform:capitalize;">${escapeHtml(t.role)}</span>
             </div>
           </div>
         </div>
@@ -3743,13 +3583,13 @@ function renderTeamList(team) {
       </div>
 
       <div style="font-size:13px; color:var(--text-sec); background:#fff; border:1px solid var(--border); padding:8px 12px; border-radius:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-        <span>📞 Teléfono: ${t.phone || 'Sin registrar'}</span>
+        <span>📞 Teléfono: ${escapeHtml(t.phone || 'Sin registrar')}</span>
         ${t.phone ? `<a href="tel:${cleanPhone(t.phone)}" style="color:var(--primary); text-decoration:none; font-weight:600;">Llamar 📞</a>` : ''}
       </div>
 
       <div class="card-actions-row" style="justify-content:flex-end; border-top:none; padding-top:0;">
-        <button class="btn-action-pill" onclick="editTeamMember('${t.id}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border);">✏️ Editar</button>
-        <button class="btn-action-pill" onclick="deleteTeamMember('${t.id}')" style="background:#ffebee; color:#c62828;">🗑️ Eliminar</button>
+        <button class="btn-action-pill" onclick="editTeamMember('${escapeHtml(t.id)}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border);">✏️ Editar</button>
+        <button class="btn-action-pill" onclick="deleteTeamMember('${escapeHtml(t.id)}')" style="background:#ffebee; color:#c62828;">🗑️ Eliminar</button>
       </div>
     </div>
   `).join('');
