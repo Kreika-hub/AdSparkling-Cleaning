@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables & secrets (CRITICAL)
+.env
+.env*
+!.env.example
+
+# Production & build artifacts
+dist/
+build/
+.next/
+out/
+.vercel/
+
+# Logs & cache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+.cache/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE & Editor settings
+.gemini/
+.claude/
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temporary & report files
+cyber-neo-report-*.md
+*.tmp

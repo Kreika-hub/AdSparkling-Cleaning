@@ -5,19 +5,30 @@
 
 let adminToken = sessionStorage.getItem('admin_token') || null;
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ============================================
 // SISTEMA UNIFICADO DE PRECIOS EN PIES CUADRADOS (SQFT)
 // Fuente única de verdad para Cotizador, Leads, Ajustes y Clientes
 // ============================================
 const DEFAULT_CONFIG_PRICING = {
+  schemaVersion: 2,
   minVisit: 150,
   generalAdjustmentPercent: 0,
   tiers: [
     { id: 1, minSqft: 0, maxSqft: 1800, label: 'Hasta 1,800 sqft', biweekly: 150, monthly: 180, deep: 265 },
-    { id: 2, minSqft: 1801, maxSqft: 2200, label: '1,801 – 2,200 sqft', biweekly: 170, monthly: 200, deep: 295 },
-    { id: 3, minSqft: 2201, maxSqft: 2800, label: '2,201 – 2,800 sqft', biweekly: 190, monthly: 220, deep: 330 },
-    { id: 4, minSqft: 2801, maxSqft: 3400, label: '2,801 – 3,400 sqft', biweekly: 240, monthly: 290, deep: 420 },
-    { id: 5, minSqft: 3401, maxSqft: 3800, label: '3,401 – 3,800 sqft', biweekly: 270, monthly: 320, deep: 470 }
+    { id: 2, minSqft: 1801, maxSqft: 2300, label: '1,801 – 2,300 sqft', biweekly: 170, monthly: 205, deep: 300 },
+    { id: 3, minSqft: 2301, maxSqft: 2800, label: '2,301 – 2,800 sqft', biweekly: 195, monthly: 235, deep: 340 },
+    { id: 4, minSqft: 2801, maxSqft: 3300, label: '2,801 – 3,300 sqft', biweekly: 220, monthly: 265, deep: 385 },
+    { id: 5, minSqft: 3301, maxSqft: 3800, label: '3,301 – 3,800 sqft', biweekly: 240, monthly: 290, deep: 420 }
   ],
   extras: {
     oven: 40,
@@ -57,21 +68,50 @@ function getPricingConfig() {
     const raw = localStorage.getItem('adsparkling_unified_pricing');
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && Array.isArray(parsed.tiers) && parsed.tiers.length === 5) {
+      if (parsed && parsed.schemaVersion === 2 && Array.isArray(parsed.tiers) && parsed.tiers.length === 5) {
         return parsed;
       }
     }
   } catch(e) {}
-  return JSON.parse(JSON.stringify(DEFAULT_CONFIG_PRICING));
+  const fresh = JSON.parse(JSON.stringify(DEFAULT_CONFIG_PRICING));
+  savePricingConfig(fresh);
+  return fresh;
 }
 
 function savePricingConfig(cfg) {
   try {
+    cfg.schemaVersion = 2;
     localStorage.setItem('adsparkling_unified_pricing', JSON.stringify(cfg));
   } catch(e) {}
 }
 
 let CONFIG_PRICING = getPricingConfig();
+
+function getSuggestedPrice(sqft, frequency) {
+  const sqftNum = parseInt(sqft, 10) || 0;
+  if (sqftNum <= 0) return null;
+  if (sqftNum > 3800) return null; // Más de 3,800 sqft: cotizar manualmente
+
+  const cfg = getPricingConfig();
+  const tier = cfg.tiers.find(t => sqftNum <= t.maxSqft);
+  if (!tier) return null;
+
+  const adj = cfg.generalAdjustmentPercent || 0;
+  const minVisit = Math.max(150, getAdjustedPrice(cfg.minVisit || 150, adj));
+
+  let basePrice = 0;
+  const f = String(frequency || '').toLowerCase().trim();
+  if (f === '30' || f === 'monthly' || f === 'mensual') {
+    basePrice = getAdjustedPrice(tier.monthly, adj);
+  } else if (f === 'deep' || f === 'once' || f === 'profunda' || f === 'primera' || f === 'move') {
+    basePrice = getAdjustedPrice(tier.deep, adj);
+  } else {
+    // 10, 15, biweekly, quincenal, default
+    basePrice = getAdjustedPrice(tier.biweekly, adj);
+  }
+
+  return Math.max(150, minVisit, basePrice);
+}
 
 function sqftToM2(sqft) {
   return Math.round(sqft / 10.764);
@@ -186,14 +226,6 @@ const DataStore = {
     } else {
       sessionStorage.removeItem('admin_token');
     }
-  },
-
-  getPassword() {
-    return localStorage.getItem('adsparkling_admin_pass') || 'Anggie2026';
-  },
-
-  setPassword(newPass) {
-    localStorage.setItem('adsparkling_admin_pass', newPass);
   },
 
   seedInitialData() {
@@ -760,64 +792,41 @@ async function handleLogin(e) {
 
   if (submitBtn) submitBtn.textContent = 'Verificando...';
 
-  const storedCustom = DataStore.getPassword();
-  const validPasses = ['Anggie2026', storedCustom];
-
   try {
-    let authenticated = false;
-    let tokenToStore = null;
+    const res = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', password: entered })
+    });
 
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'login', password: entered })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.token) {
-          authenticated = true;
-          tokenToStore = data.token;
-        }
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.token) {
+        if (errorMsg) errorMsg.style.display = 'none';
+        DataStore.setLoggedIn(data.token);
+        if (input) input.value = '';
+
+        const loginScreen = document.getElementById('loginScreen');
+        const adminApp = document.getElementById('adminApp');
+        if (loginScreen) loginScreen.style.display = 'none';
+        if (adminApp) adminApp.style.display = 'block';
+
+        checkAuth();
+        showToast('¡Bienvenida a tu Panel de Control! ✨');
+        return;
       }
-    } catch (netErr) {
-      console.warn('API connection failed, falling back to local authentication:', netErr);
     }
 
-    // Fallback local check
-    if (!authenticated && validPasses.includes(entered)) {
-      authenticated = true;
-      tokenToStore = 'admin-local-session';
+    const errData = await res.json().catch(() => ({}));
+    if (errorMsg) {
+      errorMsg.textContent = errData.error || 'Contraseña incorrecta. Por favor intenta de nuevo.';
+      errorMsg.style.display = 'block';
     }
-
-    if (authenticated && tokenToStore) {
-      if (errorMsg) errorMsg.style.display = 'none';
-      DataStore.setLoggedIn(tokenToStore);
-      if (input) input.value = '';
-      
-      const loginScreen = document.getElementById('loginScreen');
-      const adminApp = document.getElementById('adminApp');
-      if (loginScreen) loginScreen.style.display = 'none';
-      if (adminApp) adminApp.style.display = 'block';
-      
-      checkAuth();
-      showToast('¡Bienvenida a tu Panel de Control! ✨');
-    } else {
-      if (errorMsg) {
-        errorMsg.textContent = 'Contraseña incorrecta. Por favor intenta de nuevo.';
-        errorMsg.style.display = 'block';
-      }
-      if (input) input.focus();
-    }
-  } catch (err) {
-    console.error('Login exception:', err);
-    if (validPasses.includes(entered)) {
-      if (errorMsg) errorMsg.style.display = 'none';
-      DataStore.setLoggedIn('admin-local-session');
-      if (input) input.value = '';
-      checkAuth();
-    } else if (errorMsg) {
-      errorMsg.textContent = 'Contraseña incorrecta. Por favor intenta de nuevo.';
+    if (input) input.focus();
+  } catch (netErr) {
+    console.error('Login error:', netErr);
+    if (errorMsg) {
+      errorMsg.textContent = 'Error de conexión con el servidor. Verifica tu internet.';
       errorMsg.style.display = 'block';
     }
   } finally {
@@ -840,30 +849,8 @@ function togglePasswordVisibility(fieldId) {
 }
 
 function saveNewPassword() {
-  const current = document.getElementById('pwdCurrent').value;
-  const newPass = document.getElementById('pwdNew').value;
-  const confirmPass = document.getElementById('pwdConfirm').value;
-  const storedPass = DataStore.getPassword();
-
-  if (current !== storedPass) {
-    showToast('La contraseña actual es incorrecta.');
-    return;
-  }
-  if (!newPass || newPass.length < 4) {
-    showToast('La nueva contraseña debe tener al menos 4 caracteres.');
-    return;
-  }
-  if (newPass !== confirmPass) {
-    showToast('La nueva contraseña y su confirmación no coinciden.');
-    return;
-  }
-
-  DataStore.setPassword(newPass);
-  document.getElementById('pwdCurrent').value = '';
-  document.getElementById('pwdNew').value = '';
-  document.getElementById('pwdConfirm').value = '';
+  showToast('Por seguridad, la contraseña maestra se gestiona directamente en las variables de entorno de Vercel (ADMIN_PASSWORD).', 'info');
   closeSettingsModal();
-  showToast('¡Contraseña actualizada exitosamente! ✅');
 }
 
 // ============================================
@@ -947,7 +934,7 @@ function showTab(tabId) {
   if (tabId === 'reviews') loadAdminReviews();
   if (tabId === 'plans') loadPlans();
   if (tabId === 'team') loadTeam();
-  if (tabId === 'cotizar') { renderPricingCategoryTabs(); switchPricingCategory(currentPricingCategory); }
+  if (tabId === 'cotizar') { renderPricingTable(); qcCalculate(); }
 }
 
 function toggleSidebar() {
@@ -1031,12 +1018,12 @@ function loadDashboard() {
     upcomingEl.innerHTML = upcoming.map(a => `
       <div class="dash-item">
         <div class="dash-item-info">
-          <span class="dash-item-name">${a.clients?.name || 'Cliente'} <strong style="color:var(--success); font-weight:800;">$${a.price}</strong></span>
-          <span class="dash-item-meta">📅 ${formatDate(a.date)} ${a.time ? '• ⏰ ' + a.time : ''} — 📍 ${a.clients?.address || 'Sin dirección'}</span>
-          ${a.addons && a.addons.length ? `<span class="dash-item-addons">Extras: ${a.addons.join(', ')}</span>` : ''}
+          <span class="dash-item-name">${escapeHtml(a.clients?.name || 'Cliente')} <strong style="color:var(--success); font-weight:800;">$${parseFloat(a.price || 0)}</strong></span>
+          <span class="dash-item-meta">📅 ${formatDate(a.date)} ${a.time ? '• ⏰ ' + escapeHtml(a.time) : ''} — 📍 ${escapeHtml(a.clients?.address || 'Sin dirección')}</span>
+          ${a.addons && a.addons.length ? `<span class="dash-item-addons">Extras: ${a.addons.map(escapeHtml).join(', ')}</span>` : ''}
         </div>
         <div class="dash-item-actions">
-          <button class="btn-action btn-complete" title="Marcar como Completada" onclick="quickCompleteAppt('${a.id}')">✓ Completar</button>
+          <button class="btn-action btn-complete" title="Marcar como Completada" onclick="quickCompleteAppt('${escapeHtml(a.id)}')">✓ Completar</button>
           <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=Hola ${encodeURIComponent(a.clients?.name || '')}, te recordamos tu cita de limpieza de Ad Sparkling para el ${formatDate(a.date)} a las ${a.time || 'hora acordada'}. ¡Nos vemos pronto!" target="_blank" class="btn-action btn-wa-sm" title="Recordar por WhatsApp">📱 Recordar</a>
         </div>
       </div>
@@ -1060,8 +1047,8 @@ function loadDashboard() {
     inactiveEl.innerHTML = inactive.map(c => `
       <div class="dash-item">
         <div class="dash-item-info">
-          <span class="dash-item-name">${c.name}</span>
-          <span class="dash-item-meta">Última visita: ${c.last_visit ? formatDate(c.last_visit) : 'Sin registro'} — 📞 ${c.phone}</span>
+          <span class="dash-item-name">${escapeHtml(c.name)}</span>
+          <span class="dash-item-meta">Última visita: ${c.last_visit ? formatDate(c.last_visit) : 'Sin registro'} — 📞 ${escapeHtml(c.phone)}</span>
         </div>
         <a href="https://wa.me/${cleanPhone(c.phone)}?text=Hola ${encodeURIComponent(c.name)}, te saluda Anggie de Ad Sparkling Cleaning ✨. Notamos que han pasado varios días desde tu última limpieza. ¿Te gustaría agendar una visita esta semana?" class="dash-item-action" target="_blank">📱 Reactivar por WhatsApp →</a>
       </div>
@@ -1158,35 +1145,6 @@ function loadLeads() {
   renderLeadsTable(allLeads);
 }
 
-function getSuggestedPrice(sqft, frequency) {
-  if (!sqft) return null;
-  const s = parseInt(sqft, 10);
-  if (isNaN(s) || s <= 0) return null;
-
-  // Más de 3,800: sin precio automático → "Cotizar manualmente"
-  if (s > 3800) {
-    return { manual: true, text: 'Cotizar manualmente' };
-  }
-
-  const cfg = getPricingConfig();
-  const adj = cfg.generalAdjustmentPercent || 0;
-  const tier = cfg.tiers.find(t => s <= t.maxSqft);
-  if (!tier) {
-    return { manual: true, text: 'Cotizar manualmente' };
-  }
-
-  const biweekly = getAdjustedPrice(tier.biweekly, adj);
-  const monthly = getAdjustedPrice(tier.monthly, adj);
-  const deep = getAdjustedPrice(tier.deep, adj);
-
-  // Frecuencia '10' (cada 10 días) usa la columna Quincenal
-  if (frequency === '15' || frequency === '10' || frequency === 'biweekly') return biweekly;
-  if (frequency === '30' || frequency === 'monthly') return monthly;
-  if (frequency === 'deep' || frequency === 'once' || frequency === 'move') return deep;
-
-  return { biweekly, monthly, deep, tier };
-}
-
 function renderLeadsTable(leads) {
   const tbody = document.getElementById('leadsTable');
   if (!tbody || !leads || leads.length === 0) {
@@ -1198,17 +1156,15 @@ function renderLeadsTable(leads) {
     let suggestedHtml = '-';
     let suggestedPriceText = '';
     if (l.size_sqft) {
-      const price = getSuggestedPrice(l.size_sqft, l.frequency);
+      const priceQ = getSuggestedPrice(l.size_sqft, '15');
+      const priceM = getSuggestedPrice(l.size_sqft, '30');
       const m2 = sqftToM2(l.size_sqft);
-      if (price && price.manual) {
+      if (!priceQ) {
         suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft <small style="color:var(--text-muted);">(~${m2}m²)</small></div><span class="badge" style="background:#fff3cd; color:#856404; font-size:11px; font-weight:700;">Cotizar manualmente</span>`;
         suggestedPriceText = ' Cotizar manualmente según requerimientos.';
-      } else if (typeof price === 'number') {
-        suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft <small style="color:var(--text-muted);">(~${m2}m²)</small></div><strong style="color:var(--primary); font-size:14px;">$${price} sug.</strong>`;
-        suggestedPriceText = ` Tu cotización estimada es de $${price}.`;
-      } else if (price) {
-        suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft <small style="color:var(--text-muted);">(~${m2}m²)</small></div><span style="font-size:11px; color:var(--primary); font-weight:700;">Q:$${price.biweekly} | M:$${price.monthly}</span>`;
-        suggestedPriceText = ` El estimado es Quincenal: $${price.biweekly} o Mensual: $${price.monthly}.`;
+      } else {
+        suggestedHtml = `<div style="font-size:12px; color:var(--text-sec);">${l.size_sqft} sqft <small style="color:var(--text-muted);">(~${m2}m²)</small></div><span style="font-size:11px; color:var(--primary); font-weight:700;">Q:$${priceQ} | M:$${priceM}</span>`;
+        suggestedPriceText = ` El estimado es Quincenal: $${priceQ} o Mensual: $${priceM}.`;
       }
     }
 
@@ -1229,19 +1185,19 @@ function renderLeadsTable(leads) {
     return `
     <tr>
       <td>
-        <strong>${l.name}</strong>
+        <strong>${escapeHtml(l.name)}</strong>
         ${sTypeBadge ? `<div style="margin-top:2px;"><span class="badge" style="background:#f5eaff; color:var(--primary); font-size:11px; font-weight:700;">${sTypeBadge}</span></div>` : ''}
-        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${l.source === 'referral' ? '⭐ Referido' : (l.source || 'web')}</div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${l.source === 'referral' ? '⭐ Referido' : escapeHtml(l.source || 'web')}</div>
       </td>
-      <td><a href="tel:${cleanPhone(l.phone)}" style="color:inherit; font-weight:600;">${l.phone}</a></td>
-      <td title="${l.address}">
-        ${truncate(l.address, 25)}
+      <td><a href="tel:${cleanPhone(l.phone)}" style="color:inherit; font-weight:600;">${escapeHtml(l.phone)}</a></td>
+      <td title="${escapeHtml(l.address || '')}">
+        ${escapeHtml(truncate(l.address || '', 25))}
         ${l.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.address)}" target="_blank" style="text-decoration:none; margin-left:4px;" title="Ver ubicación en Google Maps">🗺️</a>` : ''}
       </td>
       <td>${suggestedHtml}${extrasList}</td>
-      <td>${l.frequency ? freqLabel(l.frequency) : '-'}</td>
+      <td>${l.frequency ? escapeHtml(freqLabel(l.frequency)) : '-'}</td>
       <td>
-        <select class="status-select status-${l.status}" onchange="changeLeadStatus('${l.id}', this.value)">
+        <select class="status-select status-${escapeHtml(l.status)}" onchange="changeLeadStatus('${escapeHtml(l.id)}', this.value)">
           <option value="nuevo" ${l.status === 'nuevo' ? 'selected' : ''}>Nuevo</option>
           <option value="contactado" ${l.status === 'contactado' ? 'selected' : ''}>Contactado</option>
           <option value="agendado" ${l.status === 'agendado' ? 'selected' : ''}>Agendado</option>
@@ -1250,16 +1206,16 @@ function renderLeadsTable(leads) {
       </td>
       <td><small>${formatDate(l.created_at)}</small></td>
       <td class="action-cell">
-        <button class="btn-table-action" style="background:#f5eaff; color:var(--primary); border:1px solid #d8b4f8;" onclick="openLeadQuoteModal('${l.id}')" title="Cotizar este lead">
+        <button class="btn-table-action" style="background:#f5eaff; color:var(--primary); border:1px solid #d8b4f8;" onclick="openLeadQuoteModal('${escapeHtml(l.id)}')" title="Cotizar este lead">
           📋
         </button>
-        <a href="https://wa.me/${cleanPhone(l.phone)}?text=Hola ${encodeURIComponent(l.name)}, te saluda Anggie de Ad Sparkling Cleaning ✨. Recibimos tu solicitud de cotización para tu hogar en ${l.address}.${encodeURIComponent(suggestedPriceText)} ¿Tienes alguna fecha en mente para agendar?" target="_blank" class="btn-table-action btn-wa-table" style="background:#25d366; color:#fff;" title="Contactar por WhatsApp">
+        <a href="https://wa.me/${cleanPhone(l.phone)}?text=Hola ${encodeURIComponent(l.name)}, te saluda Anggie de Ad Sparkling Cleaning ✨. Recibimos tu solicitud de cotización para tu hogar en ${encodeURIComponent(l.address || '')}.${encodeURIComponent(suggestedPriceText)} ¿Tienes alguna fecha en mente para agendar?" target="_blank" class="btn-table-action btn-wa-table" style="background:#25d366; color:#fff;" title="Contactar por WhatsApp">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         </a>
-        <button class="btn-table-action btn-convert-table" style="background:var(--primary); color:#fff;" onclick="convertLeadToClient('${l.id}')" title="Convertir a Cliente">
+        <button class="btn-table-action btn-convert-table" style="background:var(--primary); color:#fff;" onclick="convertLeadToClient('${escapeHtml(l.id)}')" title="Convertir a Cliente">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
         </button>
-        <button class="btn-table-action btn-del-table" style="background:#f44336; color:#fff;" onclick="deleteLead('${l.id}')" title="Eliminar lead">
+        <button class="btn-table-action btn-del-table" style="background:#f44336; color:#fff;" onclick="deleteLead('${escapeHtml(l.id)}')" title="Eliminar lead">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
         </button>
       </td>
@@ -1546,7 +1502,7 @@ function lqRecalculate() {
     const freq = freqSelect ? freqSelect.value : '15';
     const priceRes = getSuggestedPrice(sqft, freq);
 
-    if (!priceRes || priceRes.manual) {
+    if (!priceRes) {
       isManual = true;
       sugBase = 0;
       const sugBanner = document.getElementById('lqSuggestedBanner');
@@ -1554,12 +1510,14 @@ function lqRecalculate() {
         sugBanner.innerHTML = `<span style="color:#b7791f; font-weight:700;">⚠️ Más de 3,800 sqft: Sin precio automático → Cotizar manualmente</span>`;
       }
     } else {
-      sugBase = typeof priceRes === 'number' ? priceRes : (priceRes.biweekly || 150);
-      tierLabel = priceRes.tier ? priceRes.tier.label : '';
+      sugBase = priceRes;
+      const cfgTiers = cfg.tiers || [];
+      const matchedTier = cfgTiers.find(t => sqft <= t.maxSqft);
+      tierLabel = matchedTier ? matchedTier.label : '';
       const sugBanner = document.getElementById('lqSuggestedBanner');
       if (sugBanner) {
         const isFirstDeep = (freq === 'deep');
-        sugBanner.innerHTML = `💡 Precio sugerido por tabla: <strong style="font-size:17px; color:var(--primary);">$${sugBase}</strong> <span class="badge" style="background:#f5eaff; color:var(--primary); font-size:11px; font-weight:700;">${tierLabel}</span> ${isFirstDeep ? '<span style="font-size:11px; color:#d97706; font-weight:600;">(Tarifa Profunda / 1ª visita)</span>' : ''}`;
+        sugBanner.innerHTML = `💡 Precio sugerido por tabla: <strong style="font-size:17px; color:var(--primary);">$${sugBase}</strong> ${tierLabel ? `<span class="badge" style="background:#f5eaff; color:var(--primary); font-size:11px; font-weight:700;">${tierLabel}</span>` : ''} ${isFirstDeep ? '<span style="font-size:11px; color:#d97706; font-weight:600;">(Tarifa Profunda / 1ª visita)</span>' : ''}`;
       }
     }
   }
@@ -1852,8 +1810,9 @@ function convertLeadToClient(leadId) {
   document.getElementById('cSize').value = lead.size_sqft || '';
   document.getElementById('cFreq').value = lead.frequency || '';
   
-  if (lead.size_sqft && lead.frequency && PRICING[lead.size_sqft]) {
-    document.getElementById('cPrice').value = PRICING[lead.size_sqft][lead.frequency] || '';
+  if (lead.size_sqft && lead.frequency) {
+    const sug = getSuggestedPrice(lead.size_sqft, lead.frequency);
+    document.getElementById('cPrice').value = sug || '';
   } else {
     document.getElementById('cPrice').value = '';
   }
@@ -1899,10 +1858,10 @@ function renderClientsTable(clients) {
       <!-- Fila principal: nombre + badge -->
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
         <div>
-          <div style="font-size:16px; font-weight:700; color:var(--primary); margin-bottom:2px;">${c.name}</div>
-          <div style="font-size:13px; color:var(--text-sec);">📞 ${c.phone || '—'}</div>
+          <div style="font-size:16px; font-weight:700; color:var(--primary); margin-bottom:2px;">${escapeHtml(c.name)}</div>
+          <div style="font-size:13px; color:var(--text-sec);">📞 ${escapeHtml(c.phone || '—')}</div>
         </div>
-        <span style="background:${statusBg}; color:${statusColor}; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap; text-transform:uppercase; letter-spacing:0.4px;">${c.status || 'activo'}</span>
+        <span style="background:${statusBg}; color:${statusColor}; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap; text-transform:uppercase; letter-spacing:0.4px;">${escapeHtml(c.status || 'activo')}</span>
       </div>
 
       <!-- Info grid: próxima visita, última, precio, LTV -->
@@ -1917,7 +1876,7 @@ function renderClientsTable(clients) {
         </div>
         <div>
           <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin-bottom:2px;">Precio base</div>
-          <div style="font-size:13px; font-weight:600; color:var(--text);">$${c.base_price || '—'}</div>
+          <div style="font-size:13px; font-weight:600; color:var(--text);">$${parseFloat(c.base_price || 0)}</div>
         </div>
         <div>
           <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin-bottom:2px;">Valor total</div>
@@ -1943,7 +1902,7 @@ function renderClientsTable(clients) {
 
       ${c.address ? `
       <div class="card-address-row">
-        📍 <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.address}</span>
+        📍 <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(c.address)}</span>
       </div>` : ''}
 
       <!-- Acciones -->
@@ -1952,11 +1911,11 @@ function renderClientsTable(clients) {
            style="display:inline-flex; align-items:center; gap:5px; background:#f0e8f8; color:var(--primary); border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; text-decoration:none;">
           🗺️ Ver en Mapa
         </a>
-        <button onclick="scheduleForClient('${c.id}')" title="Agendar Cita" 
+        <button onclick="scheduleForClient('${escapeHtml(c.id)}')" title="Agendar Cita" 
            style="display:inline-flex; align-items:center; gap:5px; background:#e8f3ff; color:#1565c0; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
           📅 Agendar
         </button>
-        <button onclick="openClientPortalModal('${c.id}')" title="Acceso a Portal y Referidos" 
+        <button onclick="openClientPortalModal('${escapeHtml(c.id)}')" title="Acceso a Portal y Referidos" 
            style="display:inline-flex; align-items:center; gap:5px; background:#e8f5e9; color:var(--success); border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">
           📱 Portal & Referidos
         </button>
@@ -1964,11 +1923,11 @@ function renderClientsTable(clients) {
            style="display:inline-flex; align-items:center; gap:5px; background:#e8faf0; color:#25d366; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; text-decoration:none;">
           💬 WA
         </a>
-        <button onclick="editClient('${c.id}')" title="Editar cliente" 
+        <button onclick="editClient('${escapeHtml(c.id)}')" title="Editar cliente" 
            style="display:inline-flex; align-items:center; gap:5px; background:#fff8ed; color:#d4a017; border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; margin-left:auto;">
           ✏️
         </button>
-        <button onclick="deleteClient('${c.id}')" title="Eliminar" 
+        <button onclick="deleteClient('${escapeHtml(c.id)}')" title="Eliminar" 
            style="display:inline-flex; align-items:center; gap:5px; background:var(--danger-bg); color:var(--danger); border:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
           🗑
         </button>
@@ -2500,11 +2459,11 @@ function renderCalendarActivities() {
   }
 
   container.innerHTML = dayAppts.map(a => `
-    <div class="cal-activity-card status-${a.status}">
+    <div class="cal-activity-card status-${escapeHtml(a.status)}">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; gap:8px;">
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <span class="cal-activity-time-badge">⏰ ${a.time || '09:00 AM'}</span>
-          <strong style="font-size:16px; color:var(--primary);">${a.clients?.name || 'Cliente'}</strong>
+          <span class="cal-activity-time-badge">⏰ ${escapeHtml(a.time || '09:00 AM')}</span>
+          <strong style="font-size:16px; color:var(--primary);">${escapeHtml(a.clients?.name || 'Cliente')}</strong>
         </div>
         <div style="text-align:right;">
           <div style="font-size:18px; font-weight:900; color:var(--primary);">$${parseFloat(a.price || 0).toFixed(2)}</div>
@@ -2513,11 +2472,11 @@ function renderCalendarActivities() {
 
       <div style="font-size:13px; color:var(--text-sec); margin-bottom:12px; background:var(--bg-alt); border:1px solid var(--border); padding:10px 12px; border-radius:8px;">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
-          <span>📍 <strong>Dirección:</strong> ${a.clients?.address || 'Sin dirección'}</span>
+          <span>📍 <strong>Dirección:</strong> ${escapeHtml(a.clients?.address || 'Sin dirección')}</span>
           ${a.clients?.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.clients.address)}" target="_blank" style="text-decoration:none; font-size:12px; font-weight:700; color:var(--primary);" title="Ver en Google Maps">🗺️ Mapa y Ruta</a>` : ''}
         </div>
-        ${a.addons && a.addons.length ? `<div style="margin-top:4px;">✨ <strong>Extras:</strong> ${Array.isArray(a.addons) ? a.addons.join(', ') : a.addons}</div>` : ''}
-        ${a.notes ? `<div style="margin-top:4px;">📝 <strong>Notas:</strong> ${a.notes}</div>` : ''}
+        ${a.addons && a.addons.length ? `<div style="margin-top:4px;">✨ <strong>Extras:</strong> ${Array.isArray(a.addons) ? a.addons.map(escapeHtml).join(', ') : escapeHtml(a.addons)}</div>` : ''}
+        ${a.notes ? `<div style="margin-top:4px;">📝 <strong>Notas:</strong> ${escapeHtml(a.notes)}</div>` : ''}
         ${a.status === 'en_progreso' && a.started_at ? `<div style="margin-top:4px; color:#f57c00; font-weight:600;">🧹 En progreso desde: ${new Date(a.started_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>` : ''}
         ${a.status === 'pausada' ? `<div style="margin-top:4px; color:#f57c00; font-weight:600;">⏸️ Pausada (${formatDuration(a.accumulated_minutes || 0)})</div>` : ''}
         ${a.status === 'completada' && a.duration_minutes ? `<div style="margin-top:4px; color:var(--success); font-weight:600;">✓ Limpieza completada en: ${formatDuration(a.duration_minutes)}</div>` : ''}
@@ -2525,7 +2484,7 @@ function renderCalendarActivities() {
 
       <div class="card-actions-row" style="flex-wrap:wrap; justify-content:space-between; align-items:center;">
         <div>
-          <select class="status-select status-${a.status}" onchange="changeApptStatus('${a.id}', this.value)" style="padding:6px 10px; font-size:12px;">
+          <select class="status-select status-${escapeHtml(a.status)}" onchange="changeApptStatus('${escapeHtml(a.id)}', this.value)" style="padding:6px 10px; font-size:12px;">
             <option value="pendiente" ${a.status === 'pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
             <option value="en_progreso" ${a.status === 'en_progreso' ? 'selected' : ''}>🧹 En progreso</option>
             <option value="pausada" ${a.status === 'pausada' ? 'selected' : ''}>⏸️ Pausada</option>
@@ -2536,19 +2495,19 @@ function renderCalendarActivities() {
 
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           ${a.status === 'pendiente' ? `
-            <button class="btn-action-pill" onclick="startCleaning('${a.id}')" style="background:var(--primary); color:#fff;">▶️ Iniciar</button>
+            <button class="btn-action-pill" onclick="startCleaning('${escapeHtml(a.id)}')" style="background:var(--primary); color:#fff;">▶️ Iniciar</button>
             <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Hola! Anggie está en camino/comenzando tu limpieza de hoy 🧹✨')}" target="_blank" class="btn-action-pill" style="background:#25d366; color:#fff; text-decoration:none;">💬 Voy en camino</a>
           ` : a.status === 'en_progreso' ? `
-            <button class="btn-action-pill" onclick="pauseCleaning('${a.id}')" style="background:#f57c00; color:#fff;">⏸️ Pausar</button>
-            <button class="btn-action-pill" onclick="finishCleaning('${a.id}')" style="background:#4caf50; color:#fff;">✅ Finalizar</button>
+            <button class="btn-action-pill" onclick="pauseCleaning('${escapeHtml(a.id)}')" style="background:#f57c00; color:#fff;">⏸️ Pausar</button>
+            <button class="btn-action-pill" onclick="finishCleaning('${escapeHtml(a.id)}')" style="background:#4caf50; color:#fff;">✅ Finalizar</button>
           ` : a.status === 'pausada' ? `
-            <button class="btn-action-pill" onclick="resumeCleaning('${a.id}')" style="background:var(--primary); color:#fff;">▶️ Reanudar</button>
-            <button class="btn-action-pill" onclick="finishCleaning('${a.id}')" style="background:#4caf50; color:#fff;">✅ Finalizar</button>
+            <button class="btn-action-pill" onclick="resumeCleaning('${escapeHtml(a.id)}')" style="background:var(--primary); color:#fff;">▶️ Reanudar</button>
+            <button class="btn-action-pill" onclick="finishCleaning('${escapeHtml(a.id)}')" style="background:#4caf50; color:#fff;">✅ Finalizar</button>
           ` : a.status === 'completada' ? `
             <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Listo! Tu hogar quedó reluciente ✨ Nos vemos en tu próxima visita.')}" target="_blank" class="btn-action-pill" style="background:#25d366; color:#fff; text-decoration:none;">💬 Confirmar WA</a>
           ` : ''}
-          <button class="btn-action-pill" onclick="editAppt('${a.id}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border);">✏️</button>
-          <button class="btn-action-pill" onclick="deleteAppt('${a.id}')" style="background:#ffebee; color:#c62828;">🗑️</button>
+          <button class="btn-action-pill" onclick="editAppt('${escapeHtml(a.id)}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border);">✏️</button>
+          <button class="btn-action-pill" onclick="deleteAppt('${escapeHtml(a.id)}')" style="background:#ffebee; color:#c62828;">🗑️</button>
         </div>
       </div>
     </div>
@@ -2575,14 +2534,14 @@ function renderAppointmentsTable(appts) {
     <div class="dash-item dash-item--card">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:8px;">
         <div>
-          <strong style="font-size:16px; color:var(--primary); display:block;">${a.clients?.name || 'Cliente'}</strong>
+          <strong style="font-size:16px; color:var(--primary); display:block;">${escapeHtml(a.clients?.name || 'Cliente')}</strong>
           <div style="font-size:13px; color:var(--text-sec); margin-top:2px;">
-            📅 ${formatDate(a.date)} ${a.time ? '· ⏰ ' + a.time : ''}
+            📅 ${formatDate(a.date)} ${a.time ? '· ⏰ ' + escapeHtml(a.time) : ''}
           </div>
         </div>
         <div style="text-align:right;">
-          <div style="font-size:18px; font-weight:800; color:var(--primary);">$${a.price}</div>
-          <select class="status-select status-${a.status}" onchange="changeApptStatus('${a.id}', this.value)" style="margin-top:4px;">
+          <div style="font-size:18px; font-weight:800; color:var(--primary);">$${parseFloat(a.price || 0)}</div>
+          <select class="status-select status-${escapeHtml(a.status)}" onchange="changeApptStatus('${escapeHtml(a.id)}', this.value)" style="margin-top:4px;">
             <option value="pendiente" ${a.status === 'pendiente' ? 'selected' : ''}>Pendiente</option>
             <option value="en_progreso" ${a.status === 'en_progreso' ? 'selected' : ''}>En progreso</option>
             <option value="pausada" ${a.status === 'pausada' ? 'selected' : ''}>Pausada</option>
@@ -2594,11 +2553,11 @@ function renderAppointmentsTable(appts) {
 
       <div style="font-size:13px; color:var(--text-sec); margin-bottom:12px; background:#fff; border:1px solid var(--border); padding:10px 14px; border-radius:8px;">
         <div style="display:flex; align-items:center; justify-content:space-between;">
-          <span>📍 <strong>Dirección:</strong> ${a.clients?.address || 'Sin dirección'}</span>
+          <span>📍 <strong>Dirección:</strong> ${escapeHtml(a.clients?.address || 'Sin dirección')}</span>
           ${a.clients?.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.clients.address)}" target="_blank" style="text-decoration:none; font-size:12px; font-weight:700; color:var(--primary);" title="Ver en Google Maps">🗺️ Mapa</a>` : ''}
         </div>
-        ${a.addons && a.addons.length ? `<div style="margin-top:4px;">✨ <strong>Extras:</strong> ${Array.isArray(a.addons) ? a.addons.join(', ') : a.addons}</div>` : ''}
-        ${a.notes ? `<div style="margin-top:4px;">📝 <strong>Notas:</strong> ${a.notes}</div>` : ''}
+        ${a.addons && a.addons.length ? `<div style="margin-top:4px;">✨ <strong>Extras:</strong> ${Array.isArray(a.addons) ? a.addons.map(escapeHtml).join(', ') : escapeHtml(a.addons)}</div>` : ''}
+        ${a.notes ? `<div style="margin-top:4px;">📝 <strong>Notas:</strong> ${escapeHtml(a.notes)}</div>` : ''}
         ${a.status === 'en_progreso' && a.started_at ? `<div style="margin-top:4px; color:#f57c00; font-weight:600;">🧹 En progreso desde: ${new Date(a.started_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>` : ''}
         ${a.status === 'pausada' ? `<div style="margin-top:4px; color:#f57c00; font-weight:600;">⏸️ Pausada (${formatDuration(a.accumulated_minutes || 0)})</div>` : ''}
         ${a.status === 'completada' && a.duration_minutes ? `<div style="margin-top:4px; color:var(--success); font-weight:600;">✓ Tiempo total: ${formatDuration(a.duration_minutes)}</div>` : ''}
@@ -2606,19 +2565,19 @@ function renderAppointmentsTable(appts) {
 
       <div class="card-actions-row" style="flex-wrap:wrap; justify-content:flex-end;">
         ${a.status === 'pendiente' ? `
-          <button class="btn-action-pill" onclick="startCleaning('${a.id}')" style="background:var(--primary); color:#fff;">▶️ Iniciar</button>
+          <button class="btn-action-pill" onclick="startCleaning('${escapeHtml(a.id)}')" style="background:var(--primary); color:#fff;">▶️ Iniciar</button>
           <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Hola! Anggie está en camino/comenzando tu limpieza de hoy 🧹✨')}" target="_blank" class="btn-action-pill" style="background:#25d366; color:#fff; text-decoration:none;">💬 Voy en camino</a>
         ` : a.status === 'en_progreso' ? `
-          <button class="btn-action-pill" onclick="pauseCleaning('${a.id}')" style="background:#f57c00; color:#fff;">⏸️ Pausar</button>
-          <button class="btn-action-pill" onclick="finishCleaning('${a.id}')" style="background:#4caf50; color:#fff;">✅ Finalizar</button>
+          <button class="btn-action-pill" onclick="pauseCleaning('${escapeHtml(a.id)}')" style="background:#f57c00; color:#fff;">⏸️ Pausar</button>
+          <button class="btn-action-pill" onclick="finishCleaning('${escapeHtml(a.id)}')" style="background:#4caf50; color:#fff;">✅ Finalizar</button>
         ` : a.status === 'pausada' ? `
-          <button class="btn-action-pill" onclick="resumeCleaning('${a.id}')" style="background:var(--primary); color:#fff;">▶️ Reanudar</button>
-          <button class="btn-action-pill" onclick="finishCleaning('${a.id}')" style="background:#4caf50; color:#fff;">✅ Finalizar</button>
+          <button class="btn-action-pill" onclick="resumeCleaning('${escapeHtml(a.id)}')" style="background:var(--primary); color:#fff;">▶️ Reanudar</button>
+          <button class="btn-action-pill" onclick="finishCleaning('${escapeHtml(a.id)}')" style="background:#4caf50; color:#fff;">✅ Finalizar</button>
         ` : a.status === 'completada' ? `
           <a href="https://wa.me/${cleanPhone(a.clients?.phone || '')}?text=${encodeURIComponent('¡Listo! Tu hogar quedó reluciente ✨ Nos vemos en tu próxima visita.')}" target="_blank" class="btn-action-pill" style="background:#25d366; color:#fff; text-decoration:none;">💬 Confirmar WA</a>
         ` : ''}
-        <button class="btn-action-pill" onclick="editAppt('${a.id}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border);">✏️ Editar</button>
-        <button class="btn-action-pill" onclick="deleteAppt('${a.id}')" style="background:#ffebee; color:#c62828;">🗑️ Eliminar</button>
+        <button class="btn-action-pill" onclick="editAppt('${escapeHtml(a.id)}')" style="background:var(--bg-alt); color:var(--primary); border:1px solid var(--border);">✏️ Editar</button>
+        <button class="btn-action-pill" onclick="deleteAppt('${escapeHtml(a.id)}')" style="background:#ffebee; color:#c62828;">🗑️ Eliminar</button>
       </div>
     </div>
   `).join('');
@@ -2638,7 +2597,7 @@ function loadTeamForSelect() {
   if (!select) return;
 
   select.innerHTML = '<option value="">Sin asignar a equipo</option>' + 
-    team.map(t => `<option value="${t.id}">${t.name} (${t.role})</option>`).join('');
+    team.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)} (${escapeHtml(t.role)})</option>`).join('');
 }
 
 function loadClientsForSelect() {
@@ -2647,7 +2606,7 @@ function loadClientsForSelect() {
   if (!select) return;
 
   select.innerHTML = '<option value="">Seleccionar cliente...</option>' + 
-    clients.map(c => `<option value="${c.id}" data-price="${c.base_price || 0}" data-sqft="${c.size_sqft || 0}" data-freq="${c.frequency || ''}">${c.name} (${c.address ? truncate(c.address, 25) : 'Sin dir'})</option>`).join('');
+    clients.map(c => `<option value="${escapeHtml(c.id)}" data-price="${c.base_price || 0}" data-sqft="${c.size_sqft || 0}" data-freq="${c.frequency || ''}">${escapeHtml(c.name)} (${c.address ? escapeHtml(truncate(c.address, 25)) : 'Sin dir'})</option>`).join('');
 }
 
 function onClientSelectChange() {
@@ -2658,19 +2617,14 @@ function onClientSelectChange() {
   // First try: use client's stored base_price
   const basePrice = parseInt(selected.dataset.price) || 0;
 
-  // Second try: look up from PRICING table using sqft + freq
+  // Second try: look up from unified pricing table using sqft + freq
   const sqft = parseInt(selected.dataset.sqft) || 0;
   const freq = selected.dataset.freq || '';
 
   let suggestedPrice = basePrice;
   if (sqft > 0 && freq) {
-    // Find the nearest sqft bracket
-    const brackets = [1200, 1700, 2200, 2800, 3500, 4500];
-    const bracket = brackets.find(b => sqft <= b) || 4500;
-    const lookupFreq = (freq === 'once' || freq === 'deep') ? 'deep' : String(freq);
-    if (PRICING[bracket] && PRICING[bracket][lookupFreq]) {
-      suggestedPrice = PRICING[bracket][lookupFreq];
-    }
+    const sug = getSuggestedPrice(sqft, freq);
+    if (sug) suggestedPrice = sug;
   }
 
   if (suggestedPrice > 0) {
@@ -2699,28 +2653,32 @@ function suggestApptPrice() {
     return;
   }
 
-  const brackets = [1200, 1700, 2200, 2800, 3500, 4500];
-  const bracket = brackets.find(b => sqft <= b) || 4500;
-  const lookupFreq = (freq === 'once' || freq === 'deep') ? 'deep' : String(freq);
-  const baseFromTable = (PRICING[bracket] && PRICING[bracket][lookupFreq]) ? PRICING[bracket][lookupFreq] : 0;
+  const cfg = getPricingConfig();
+  const baseFromTable = getSuggestedPrice(sqft, freq) || 0;
 
   // Add-ons from the aAddons text field
   const addonsText = (document.getElementById('aAddons').value || '').toLowerCase();
   let extrasTotal = 0;
-  if (addonsText.includes('horno')) extrasTotal += PRICING_ADDONS.oven;
-  if (addonsText.includes('nevera') || addonsText.includes('fridge')) extrasTotal += PRICING_ADDONS.fridge;
-  if (addonsText.includes('gabinete') || addonsText.includes('cabinet')) extrasTotal += PRICING_ADDONS.cabinets;
+  if (addonsText.includes('horno')) extrasTotal += (cfg.extras ? cfg.extras.oven : 40);
+  if (addonsText.includes('nevera') || addonsText.includes('fridge')) extrasTotal += (cfg.extras ? cfg.extras.fridge : 40);
+  if (addonsText.includes('persiana') || addonsText.includes('blind')) extrasTotal += (cfg.extras ? cfg.extras.blindsPerUnit : 10);
 
-  const suggestedTotal = baseFromTable + extrasTotal;
+  const suggestedTotal = baseFromTable > 0 ? (baseFromTable + extrasTotal) : 0;
 
   const freqLabels = { '10': 'c/10 días', '15': 'quincenal', '30': 'mensual', 'deep': 'profunda/mudanza', 'once': 'única vez' };
 
-  hintEl.innerHTML = `
-    <span style="font-size:11px; color:var(--text-sec);">💡 Precio sugerido según tabla:</span>
-    <strong style="color:var(--primary); font-size:13px;"> $${suggestedTotal}</strong>
-    <span style="font-size:11px; color:var(--text-muted);">(${sqft} sqft · ${freqLabels[lookupFreq] || lookupFreq}${extrasTotal > 0 ? ' · +$' + extrasTotal + ' extras' : ''})</span>
-    <span style="font-size:11px; color:var(--text-muted); margin-left:4px;">— Anggie tiene la última palabra</span>
-  `;
+  if (suggestedTotal > 0) {
+    hintEl.innerHTML = `
+      <span style="font-size:11px; color:var(--text-sec);">💡 Precio sugerido según tabla:</span>
+      <strong style="color:var(--primary); font-size:13px;"> $${suggestedTotal}</strong>
+      <span style="font-size:11px; color:var(--text-muted);">(${sqft} sqft · ${freqLabels[freq] || freq}${extrasTotal > 0 ? ' · +$' + extrasTotal + ' extras' : ''})</span>
+      <span style="font-size:11px; color:var(--text-muted); margin-left:4px;">— Anggie tiene la última palabra</span>
+    `;
+  } else {
+    hintEl.innerHTML = `
+      <span style="font-size:11px; color:#b7791f; font-weight:700;">⚠️ ${sqft} sqft: Más de 3,800 sqft sin precio automático → Cotizar manualmente</span>
+    `;
+  }
   hintEl.style.display = 'flex';
 }
 
@@ -3224,25 +3182,22 @@ function saveAllPricingSettings() {
   showToast('¡Todas las reglas y precios guardados con éxito! ✅');
 }
 
-function qcCalculate() {
+function qcCalculate(resetTouched = false) {
   const sizeSelect = document.getElementById('qcSize');
   const freqSelect = document.getElementById('qcFreq');
   if (!sizeSelect || !freqSelect) return 0;
+
+  const finalInput = document.getElementById('qcFinalPriceInput');
+  if (resetTouched && finalInput) {
+    finalInput.dataset.touched = 'false';
+  }
 
   const sqft = parseInt(sizeSelect.value, 10) || 1800;
   const freq = freqSelect.value || '15';
   const cfg = getPricingConfig();
 
   const priceRes = getSuggestedPrice(sqft, freq);
-  let base = 0;
-  if (priceRes && priceRes.manual) {
-    base = 0;
-  } else if (typeof priceRes === 'number') {
-    base = priceRes;
-  } else if (priceRes && priceRes.biweekly) {
-    base = priceRes.biweekly;
-  }
-
+  let base = priceRes || 0;
   let total = base;
 
   // Extras rápidos
@@ -3252,12 +3207,19 @@ function qcCalculate() {
 
   const totalEl = document.getElementById('qcTotal');
   if (totalEl) {
-    if (priceRes && priceRes.manual) {
+    if (!priceRes) {
       totalEl.textContent = 'Cotizar manual';
       totalEl.style.fontSize = '20px';
+      if (finalInput && (!finalInput.dataset.touched || finalInput.dataset.touched !== 'true')) {
+        finalInput.placeholder = 'Manual';
+        finalInput.value = '';
+      }
     } else {
       totalEl.textContent = '$' + total;
       totalEl.style.fontSize = '';
+      if (finalInput && (!finalInput.dataset.touched || finalInput.dataset.touched !== 'true')) {
+        finalInput.value = total;
+      }
     }
   }
 
@@ -3271,7 +3233,9 @@ function qcCalculate() {
 }
 
 function qcSendWhatsApp() {
-  const total = qcCalculate();
+  const finalInput = document.getElementById('qcFinalPriceInput');
+  const finalVal = finalInput && finalInput.value ? parseInt(finalInput.value, 10) : null;
+  const total = finalVal !== null && !isNaN(finalVal) ? finalVal : qcCalculate();
   const sizeSelect = document.getElementById('qcSize');
   const freqSelect = document.getElementById('qcFreq');
   const size = parseInt(sizeSelect.value, 10) || 1800;
@@ -3297,7 +3261,9 @@ function qcSendWhatsApp() {
 }
 
 function qcCopyText() {
-  const total = qcCalculate();
+  const finalInput = document.getElementById('qcFinalPriceInput');
+  const finalVal = finalInput && finalInput.value ? parseInt(finalInput.value, 10) : null;
+  const total = finalVal !== null && !isNaN(finalVal) ? finalVal : qcCalculate();
   const sizeSelect = document.getElementById('qcSize');
   const freqSelect = document.getElementById('qcFreq');
   const size = parseInt(sizeSelect.value, 10) || 1800;
@@ -3323,7 +3289,9 @@ function qcCopyText() {
 }
 
 function qcSaveAsLead() {
-  const total = qcCalculate();
+  const finalInput = document.getElementById('qcFinalPriceInput');
+  const finalVal = finalInput && finalInput.value ? parseInt(finalInput.value, 10) : null;
+  const total = finalVal !== null && !isNaN(finalVal) ? finalVal : qcCalculate();
   const size = parseInt(document.getElementById('qcSize').value, 10) || 1800;
   const freq = document.getElementById('qcFreq').value;
 
@@ -3346,7 +3314,9 @@ function qcSaveAsLead() {
 }
 
 function qcCreateClient() {
-  const total = qcCalculate();
+  const finalInput = document.getElementById('qcFinalPriceInput');
+  const finalVal = finalInput && finalInput.value ? parseInt(finalInput.value, 10) : null;
+  const total = finalVal !== null && !isNaN(finalVal) ? finalVal : qcCalculate();
   const size = parseInt(document.getElementById('qcSize').value, 10) || 1800;
   const freq = document.getElementById('qcFreq').value;
 
@@ -3380,30 +3350,30 @@ function loadAdminReviews() {
     <div class="dash-item" style="display:flex; flex-direction:column; gap:12px; padding:18px; border-left: 4px solid ${r.status === 'publicada' ? 'var(--success)' : (r.status === 'archivada' ? 'var(--text-muted)' : 'var(--accent)')}; margin-bottom:12px; background:#fff; border-radius:8px; box-shadow:var(--shadow-sm);">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
         <div>
-          <strong style="font-size:16px; color:var(--primary);">${r.client_name || 'Cliente'}</strong>
-          <span style="font-size:12px; color:var(--text-muted); margin-left:8px;">(${r.client_phone || 'Sin teléfono'})</span>
-          <div style="margin-top:2px; font-size:14px; color:#e8a87c;">${'⭐'.repeat(r.rating || 5)} (${r.rating || 5}/5)</div>
+          <strong style="font-size:16px; color:var(--primary);">${escapeHtml(r.client_name || 'Cliente')}</strong>
+          <span style="font-size:12px; color:var(--text-muted); margin-left:8px;">(${escapeHtml(r.client_phone || 'Sin teléfono')})</span>
+          <div style="margin-top:2px; font-size:14px; color:#e8a87c;">${'⭐'.repeat(Math.min(5, Math.max(1, parseInt(r.rating, 10) || 5)))} (${parseInt(r.rating, 10) || 5}/5)</div>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
-          <span class="badge badge-${r.status}">${r.status}</span>
+          <span class="badge badge-${escapeHtml(r.status)}">${escapeHtml(r.status)}</span>
           <span style="font-size:12px; color:var(--text-muted);">${formatDate(r.created_at)}</span>
         </div>
       </div>
 
       <p style="font-size:14px; color:var(--text); line-height:1.5; background:var(--bg-alt); padding:12px 14px; border-radius:8px; margin:0;">
-        "${r.comment || 'Sin comentario'}"
+        "${escapeHtml(r.comment || 'Sin comentario')}"
       </p>
 
       ${(r.photo_url || (r.photos && r.photos.length > 0)) ? `
         <div style="display:flex; align-items:center; gap:12px;">
-          <img src="${r.photo_url || r.photos[0]}" alt="Foto reseña" style="width:75px; height:75px; object-fit:cover; border-radius:8px; border:1px solid var(--border);">
+          <img src="${escapeHtml(r.photo_url || r.photos[0])}" alt="Foto reseña" style="width:75px; height:75px; object-fit:cover; border-radius:8px; border:1px solid var(--border);">
           <span style="font-size:12px; color:var(--text-muted);">Foto adjuntada por el cliente</span>
         </div>
       ` : ''}
 
       <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:6px; flex-wrap:wrap;">
         ${(!r.status || r.status === 'pendiente' || r.status === 'archivada') ? `
-          <button class="btn-table-action" style="background:#e8f8f0; color:#2d8a5e; font-weight:700; padding:6px 14px;" onclick="publishReview('${r.id}')" title="Publicar en la web">
+          <button class="btn-table-action" style="background:#e8f8f0; color:#2d8a5e; font-weight:700; padding:6px 14px;" onclick="publishReview('${escapeHtml(r.id)}')" title="Publicar en la web">
             ✓ Publicar en la Web
           </button>
         ` : `
@@ -3412,11 +3382,11 @@ function loadAdminReviews() {
           </button>
         `}
         ${r.status === 'publicada' ? `
-          <button class="btn-table-action" style="background:#f0eef3; color:var(--text-sec); padding:6px 14px;" onclick="archiveReview('${r.id}')" title="Ocultar de la web">
+          <button class="btn-table-action" style="background:#f0eef3; color:var(--text-sec); padding:6px 14px;" onclick="archiveReview('${escapeHtml(r.id)}')" title="Ocultar de la web">
             📦 Archivar
           </button>
         ` : ''}
-        <button class="btn-table-action btn-del-table" onclick="deleteReview('${r.id}')" title="Eliminar reseña">
+        <button class="btn-table-action btn-del-table" onclick="deleteReview('${escapeHtml(r.id)}')" title="Eliminar reseña">
           🗑 Eliminar
         </button>
       </div>
@@ -3850,12 +3820,23 @@ document.addEventListener('DOMContentLoaded', async function() {
   if (aDate) aDate.value = today;
 
   // Listeners del cotizador rápido
+  const qcFinalInput = document.getElementById('qcFinalPriceInput');
+  const onQcParamChange = () => {
+    if (qcFinalInput) qcFinalInput.dataset.touched = 'false';
+    qcCalculate();
+  };
+
   const qcSize = document.getElementById('qcSize');
-  if (qcSize) qcSize.addEventListener('change', qcCalculate);
+  if (qcSize) qcSize.addEventListener('change', onQcParamChange);
   const qcFreq = document.getElementById('qcFreq');
-  if (qcFreq) qcFreq.addEventListener('change', qcCalculate);
+  if (qcFreq) qcFreq.addEventListener('change', onQcParamChange);
+  if (qcFinalInput) {
+    qcFinalInput.addEventListener('input', () => {
+      qcFinalInput.dataset.touched = 'true';
+    });
+  }
   document.querySelectorAll('.qc-check input').forEach(el => {
-    el.addEventListener('change', qcCalculate);
+    el.addEventListener('change', onQcParamChange);
   });
 
   // Selector de cliente en citas

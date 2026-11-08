@@ -26,9 +26,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Montserrat:wght@200;300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/admin.css">
-  
-  <!-- Supabase JS CDN (Opcional) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script>
     function togglePasswordVisibility(inputId) {
       const input = document.getElementById(inputId);
@@ -648,6 +645,37 @@
             <button class="btn-add" onclick="resetTeamForm(); toggleForm('teamForm');">+ Añadir Miembro</button>
           </div>
 
+          <!-- TARIFAS POR HORA Y COSTOS DE EQUIPO (VISIBLES) -->
+          <div style="background:#f5eaff; border:1px solid #d8b4f8; border-radius:12px; padding:16px 20px; margin-bottom:20px; box-shadow:var(--shadow-sm);">
+            <div style="font-size:14px; font-weight:800; color:var(--primary); margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+              <span>💼</span> Tarifas Oficiales por Persona / Hora & Ayudantes
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; font-size:13px; color:var(--text);">
+              <div style="background:#fff; border:1px solid #e9d5ff; border-radius:8px; padding:10px 14px;">
+                <div style="font-size:11px; text-transform:uppercase; font-weight:700; color:var(--text-sec);">🏗️ Post-Construcción</div>
+                <div style="font-size:18px; font-weight:800; color:var(--primary); margin:2px 0;">$60 / h</div>
+                <div style="font-size:11px; color:var(--text-muted);">Por persona por hora (cuando va con equipo)</div>
+              </div>
+              <div style="background:#fff; border:1px solid #e9d5ff; border-radius:8px; padding:10px 14px;">
+                <div style="font-size:11px; text-transform:uppercase; font-weight:700; color:var(--text-sec);">📦 Venta / Mudanza Vacía</div>
+                <div style="font-size:18px; font-weight:800; color:var(--primary); margin:2px 0;">$50 / h</div>
+                <div style="font-size:11px; color:var(--text-muted);">Por persona por hora (desde $420)</div>
+              </div>
+              <div style="background:#fff; border:1px solid #e9d5ff; border-radius:8px; padding:10px 14px;">
+                <div style="font-size:11px; text-transform:uppercase; font-weight:700; color:var(--text-sec);">🧺 Hora Extra / Organización</div>
+                <div style="font-size:18px; font-weight:800; color:var(--primary); margin:2px 0;">$30 / h</div>
+                <div style="font-size:11px; color:var(--text-muted);">Laundry o tareas extras por hora</div>
+              </div>
+              <div style="background:#fff; border:1px solid #fed7aa; border-radius:8px; padding:10px 14px;">
+                <div style="font-size:11px; text-transform:uppercase; font-weight:700; color:#c2410c;">👥 Pago a Ayudante</div>
+                <div style="font-size:18px; font-weight:800; color:#c2410c; margin:2px 0;">
+                  $18 / h <span style="font-size:11px; font-weight:700; background:#ffedd5; color:#9a3412; padding:2px 6px; border-radius:4px; vertical-align:middle;">(por confirmar)</span>
+                </div>
+                <div style="font-size:11px; color:var(--text-muted);">Tarifa estimada para auxiliares de apoyo</div>
+              </div>
+            </div>
+          </div>
+
           <div id="teamForm" class="form-panel" style="display:none;">
             <h3 id="tFormTitle">Añadir Miembro del Equipo</h3>
             <input type="hidden" id="tId">
@@ -715,11 +743,15 @@
                   <label>Tamaño de la propiedad (sqft / m²)</label>
                   <select id="qcSize" onchange="qcCalculate()">
                     <option value="1200">1,200 sqft (~111 m²) · Hasta 1,800</option>
-                    <option value="1770">1,770 sqft (~164 m²) · Hasta 1,800</option>
-                    <option value="2000">2,000 sqft (~186 m²) · 1,801 - 2,200</option>
-                    <option value="2500" selected>2,500 sqft (~232 m²) · 2,201 - 2,800</option>
-                    <option value="3100">3,100 sqft (~288 m²) · 2,801 - 3,400</option>
-                    <option value="3600">3,600 sqft (~334 m²) · 3,401 - 3,800</option>
+                    <option value="1800">1,800 sqft (~167 m²) · Hasta 1,800</option>
+                    <option value="2000">2,000 sqft (~186 m²) · 1,801 - 2,300</option>
+                    <option value="2300">2,300 sqft (~214 m²) · 1,801 - 2,300</option>
+                    <option value="2500" selected>2,500 sqft (~232 m²) · 2,301 - 2,800</option>
+                    <option value="2800">2,800 sqft (~260 m²) · 2,301 - 2,800</option>
+                    <option value="3000">3,000 sqft (~279 m²) · 2,801 - 3,300</option>
+                    <option value="3300">3,300 sqft (~307 m²) · 2,801 - 3,300</option>
+                    <option value="3500">3,500 sqft (~325 m²) · 3,301 - 3,800</option>
+                    <option value="3800">3,800 sqft (~353 m²) · 3,301 - 3,800</option>
                     <option value="4500">4,500 sqft (~418 m²) · Más de 3,800 (Manual)</option>
                   </select>
                 </div>
@@ -744,11 +776,25 @@
 
               <div class="qc-total">
                 <div>
-                  <span style="font-weight:700;">Total Estimado:</span>
+                  <span style="font-weight:700;">Total Sugerido:</span>
                   <div id="qcRateIndicator" style="font-size:12px; color:var(--text-sec); margin-top:2px;">≈ Tarifa calculada según tramo oficial</div>
                   <p style="font-size:11px; color:var(--text-muted); margin-top:2px;">Insumos profesionales y equipos 100% incluidos</p>
                 </div>
-                <span id="qcTotal" class="total-amount">$190</span>
+                <span id="qcTotal" class="total-amount">$195</span>
+              </div>
+
+              <!-- PRECIO FINAL EDITABLE -->
+              <div style="background:#fff8ed; border:2px solid #f0c070; border-radius:10px; padding:12px 14px; margin-top:14px; margin-bottom:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                  <div>
+                    <div style="font-size:11px; font-weight:800; color:#7a5200; text-transform:uppercase; letter-spacing:0.5px;">👑 Precio Final Decidido (Editable)</div>
+                    <div style="font-size:11px; color:#92400e; margin-top:2px;">Anggie tiene la última palabra y puede ajustar el precio final según su criterio</div>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:14px; font-weight:800; color:#7a5200;">$</span>
+                    <input type="number" id="qcFinalPriceInput" style="width:100px; padding:6px 8px; border:2px solid #b45309; border-radius:6px; font-size:18px; font-weight:900; color:#7a5200; text-align:center;" placeholder="195">
+                  </div>
+                </div>
               </div>
 
               <div class="qc-actions">
@@ -1292,7 +1338,8 @@
   <!-- TOAST CONTAINER -->
   <div id="toastContainer" class="toast-container"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Chart.js para métricas financieras -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymous"></script>
   <script src="assets/js/i18n.js"></script>
   <script src="assets/js/swipe-cards.js"></script>
   <script src="assets/js/admin.js"></script>

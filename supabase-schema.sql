@@ -150,3 +150,27 @@ CREATE TABLE reviews (
   status TEXT DEFAULT 'pendiente',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ============================================
+-- ROW LEVEL SECURITY (RLS) — DEFENSIVE HARMONIZATION
+-- Protege todas las tablas contra accesos no autorizados directos con anon_key
+-- Los endpoints serverless en /api/* usan SUPABASE_SERVICE_ROLE_KEY (bypass autorizado)
+-- ============================================
+
+ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE appointment_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+
+-- Política de lectura pública: Solo reseñas con estatus 'publicada' son visibles para el sitio web
+DROP POLICY IF EXISTS "Public reviews visible to anyone" ON reviews;
+CREATE POLICY "Public reviews visible to anyone"
+  ON reviews FOR SELECT
+  USING (status = 'publicada');
+
