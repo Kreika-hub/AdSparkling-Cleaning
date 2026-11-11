@@ -342,6 +342,7 @@ const translations = {
     "opt_once": "Just once",
     "lbl_extras_form": "Add-on services of interest",
     "lbl_notes_form": "Anything else we should know?",
+    "lbl_source_form": "How did you hear about us?",
     "ph_name": "Your name",
     "ph_address": "123 Main St, Miami, FL 33101",
     "ph_size": "e.g. 1800",
@@ -420,7 +421,71 @@ const translations = {
     "portal_submit_review": "Send Rating to Anggie ✨",
     "portal_thanks_title": "Thank you so much for your review!",
     "portal_thanks_desc": "Anggie has received your feedback with great appreciation. We love caring for your home.",
-    "portal_footer_copy": "© 2026 Ad Sparkling Cleaning LLC • Miami-Dade & Broward, FL"
+    "portal_footer_copy": "© 2026 Ad Sparkling Cleaning LLC • Miami-Dade & Broward, FL",
+
+    // Plans Section
+    "nav_plans": "Plans",
+    "plans_eyebrow": "TRANSPARENT PRICING",
+    "plans_headline": "Choose the plan that fits your lifestyle.",
+    "plans_tagline": "Consistent, high-standard cleaning with premium supplies and equipment included.",
+    "plans_note_sqft": "Final price depends on home square footage",
+    "plans_btn_quote": "Request a Quote",
+
+    "plan_biweekly_title": "Biweekly Cleaning",
+    "plan_biweekly_price": "from $150",
+    "plan_biweekly_f1": "Supplies and professional equipment included",
+    "plan_biweekly_f2": "Complete cleaning of kitchen, bathrooms, bedrooms, and common areas",
+    "plan_biweekly_f3": "Surface disinfection, dusting, vacuuming, and floor mopping",
+    "plan_biweekly_f4": "Ideal cadence to keep your home continuously fresh and welcoming",
+
+    "plan_monthly_title": "Monthly Cleaning",
+    "plan_monthly_price": "from $180",
+    "plan_monthly_f1": "Supplies and professional equipment included",
+    "plan_monthly_f2": "Comprehensive, detailed cleaning across all living spaces",
+    "plan_monthly_f3": "Deep bathroom sanitization and kitchen degreasing",
+    "plan_monthly_f4": "Reliable monthly maintenance tailored to busy schedules",
+
+    "plan_deep_title": "First Visit / Deep Cleaning",
+    "plan_deep_price": "from $265",
+    "plan_deep_f1": "High-grade supplies and professional equipment included",
+    "plan_deep_f2": "Hand-wiping of baseboards, door frames, mouldings, and fixtures",
+    "plan_deep_f3": "Intensive bathroom sanitization and full kitchen degreasing",
+    "plan_deep_f4": "Essential starting point before ongoing recurring maintenance",
+
+    "plan_move_title": "Move-In/Out & Post-Construction",
+    "plan_move_price": "from $420",
+    "plan_move_f1": "Specialized supplies and high-filtration equipment included",
+    "plan_move_f2": "Fine construction dust extraction, drywall residue, and marks removal",
+    "plan_move_f3": "Interior and exterior wipe-down of all empty cabinets, closets, and drawers",
+    "plan_move_f4": "Leaves the property pristine and ready for move-in or final handover",
+
+    // App Section
+    "app_eyebrow": "AD SPARKLING CLIENT PORTAL",
+    "app_headline": "Your cleaning app, right on your phone.",
+    "app_tagline": "View upcoming appointments, request adjustments, check cleaning history, and rate our work in seconds.",
+    "app_only_clients": "Only for clients registered by Anggie. Not a client yet? Explore our plans and request your quote.",
+    "app_explore_plans_link": "View plans and pricing →",
+    "app_inapp_warning": "⚠️ Open this page in Safari or Chrome to install the app on your home screen.",
+    "app_ios_title": "How to install on iPhone & iPad",
+    "app_ios_step1": "Open this page in <strong>Safari</strong>",
+    "app_ios_step2": "Tap the <strong>Share</strong> button (box with upward arrow ⎋)",
+    "app_ios_step3": "Scroll down and select <strong>Add to Home Screen</strong>",
+    "app_ios_btn": "Open Client App",
+    "app_android_title": "How to install on Android",
+    "app_android_step1": "Open this page in <strong>Google Chrome</strong>",
+    "app_android_step2": "Tap the <strong>three dots ⋮</strong> menu in the upper corner",
+    "app_android_step3": "Tap <strong>Install app</strong> or <strong>Add to Home screen</strong>",
+    "app_android_btn": "Open & Install App",
+    "app_desktop_title": "Open on your mobile phone",
+    "app_desktop_desc": "The client app is designed for your mobile device. Open this link on your phone to install it on your home screen:",
+    "app_copy_link_btn": "📋 Copy Link",
+    "app_open_portal_btn": "Open Portal on Desktop",
+    "app_copied_toast": "Link copied to clipboard! 📋",
+
+    // Banner Promo
+    "banner_text": "📲 Your Ad Sparkling app: appointments, history & more",
+    "banner_btn": "Get the App!",
+    "banner_close_aria": "Close promotional banner"
   },
   es: {
     // Navigation
@@ -764,6 +829,7 @@ const translations = {
     "opt_once": "Solo una vez",
     "lbl_extras_form": "Servicios adicionales de interés",
     "lbl_notes_form": "¿Algo más que debamos saber?",
+    "lbl_source_form": "¿Cómo te enteraste de nosotros?",
     "ph_name": "Tu nombre",
     "ph_address": "123 Calle Principal, Miami, FL 33101",
     "ph_size": "ej. 1800",
@@ -842,7 +908,71 @@ const translations = {
     "portal_submit_review": "Enviar Calificación a Anggie ✨",
     "portal_thanks_title": "¡Muchas gracias por tu reseña!",
     "portal_thanks_desc": "Anggie ha recibido tus comentarios con mucho aprecio. Nos encanta cuidar de tu hogar.",
-    "portal_footer_copy": "© 2026 Ad Sparkling Cleaning LLC • Miami-Dade & Broward, FL"
+    "portal_footer_copy": "© 2026 Ad Sparkling Cleaning LLC • Miami-Dade & Broward, FL",
+
+    // Plans Section
+    "nav_plans": "Planes",
+    "plans_eyebrow": "PRECIOS CLAROS",
+    "plans_headline": "Elige el plan que mejor se adapte a tu hogar.",
+    "plans_tagline": "Cuidado constante y profesional con insumos de primera calidad incluidos.",
+    "plans_note_sqft": "Precio final según el tamaño de tu casa",
+    "plans_btn_quote": "Solicitar presupuesto",
+
+    "plan_biweekly_title": "Limpieza Quincenal",
+    "plan_biweekly_price": "desde $150",
+    "plan_biweekly_f1": "Insumos y equipo profesional incluidos",
+    "plan_biweekly_f2": "Limpieza integral de cocina, baños, habitaciones y áreas sociales",
+    "plan_biweekly_f3": "Desinfección de superficies, desempolvado, aspirado y trapeado",
+    "plan_biweekly_f4": "Frecuencia recomendada para un hogar siempre impecable y fresco",
+
+    "plan_monthly_title": "Limpieza Mensual",
+    "plan_monthly_price": "desde $180",
+    "plan_monthly_f1": "Insumos y equipo profesional incluidos",
+    "plan_monthly_f2": "Limpieza exhaustiva y detallada de todas las áreas habitables",
+    "plan_monthly_f3": "Desinfección profunda en baños y desengrase riguroso en cocina",
+    "plan_monthly_f4": "Mantenimiento periódico adaptado a tu ritmo de vida",
+
+    "plan_deep_title": "Primera Limpieza / Profunda",
+    "plan_deep_price": "desde $265",
+    "plan_deep_f1": "Insumos y equipo profesional de alta exigencia incluidos",
+    "plan_deep_f2": "Limpieza minuciosa a mano de zócalos, marcos, puertas y lámparas",
+    "plan_deep_f3": "Desinfección intensiva en baños y remoción de grasa en cocina",
+    "plan_deep_f4": "Punto de partida indispensable antes de iniciar un mantenimiento regular",
+
+    "plan_move_title": "Mudanza / Post-construcción",
+    "plan_move_price": "desde $420",
+    "plan_move_f1": "Insumos especializados y equipo de alta potencia incluidos",
+    "plan_move_f2": "Extracción de polvo ultrafino de obra, yeso, marcas y pintura",
+    "plan_move_f3": "Limpieza interior y exterior de gabinetes, alacenas y closets vacíos",
+    "plan_move_f4": "Inmueble completamente limpio y listo para habitar o entregar",
+
+    // App Section
+    "app_eyebrow": "PORTAL DE CLIENTES AD SPARKLING",
+    "app_headline": "Tu app de limpieza, siempre a mano en tu celular.",
+    "app_tagline": "Consulta tus próximas citas, solicita cambios, revisa tu historial y califica tu servicio en segundos.",
+    "app_only_clients": "Solo para clientes registrados por Anggie. ¿Aún no eres cliente? Mira los planes y solicita tu presupuesto.",
+    "app_explore_plans_link": "Ver planes y precios →",
+    "app_inapp_warning": "⚠️ Ábrelo en Safari o Chrome para poder instalar la app en tu pantalla de inicio.",
+    "app_ios_title": "Cómo instalar en iPhone y iPad",
+    "app_ios_step1": "Abre este enlace en <strong>Safari</strong>",
+    "app_ios_step2": "Toca el botón <strong>Compartir</strong> (icono de cuadrado con flecha ⎋)",
+    "app_ios_step3": "Baja en el menú y selecciona <strong>Añadir a pantalla de inicio</strong>",
+    "app_ios_btn": "Abrir App de Clientes",
+    "app_android_title": "Cómo instalar en Android",
+    "app_android_step1": "Abre este enlace en <strong>Google Chrome</strong>",
+    "app_android_step2": "Toca el menú de los <strong>tres puntos ⋮</strong> arriba a la derecha",
+    "app_android_step3": "Toca <strong>Instalar app</strong> o <strong>Añadir a pantalla principal</strong>",
+    "app_android_btn": "Abrir e Instalar App",
+    "app_desktop_title": "Ábrela desde tu celular",
+    "app_desktop_desc": "La app de clientes está optimizada para tu teléfono. Ábrela en tu celular para instalarla en tu pantalla de inicio:",
+    "app_copy_link_btn": "📋 Copiar enlace",
+    "app_open_portal_btn": "Abrir Portal en PC",
+    "app_copied_toast": "¡Enlace copiado al portapapeles! 📋",
+
+    // Banner Promo
+    "banner_text": "📲 Tu app de Ad Sparkling: citas, historial y más",
+    "banner_btn": "¡Descarga ya!",
+    "banner_close_aria": "Cerrar banner promocional"
   }
 };
 
