@@ -1,0 +1,607 @@
+/* ============================================
+   AD SPARKLING CLEANING — Landing Extra Enhancements
+   Plans Section, App Promo Portal & Smart Banner
+   ============================================ */
+
+/* ── PREVENT HORIZONTAL OVERFLOW ──
+   Root cause: hero-cards-area, services carousel and nav-open menu can exceed 100vw
+   at narrow viewports. Fix each at the source; no overflow-x:hidden on html/body
+   (which breaks position:sticky/fixed positioning).
+   body uses overflow-x:clip which does not create a scroll-container for fixed elements. */
+body {
+  overflow-x: clip;
+}
+
+/* Contain the scrollable hero cards track so it cannot widen the page */
+.hero-cards-area {
+  overflow: hidden;
+  max-width: 100%;
+}
+
+/* Contain horizontal service-card scroll strip */
+.srv-track,
+.srv-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Ensure images are never wider than their container */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── ACCESSIBILITY & TOUCH TARGETS (44px min) ── */
+.btn-primary,
+.btn-secondary,
+.btn-accent,
+.btn-nav-cta,
+.btn-submit,
+.btn-plan-quote,
+.btn-app-portal,
+.btn-app-copy,
+.app-banner-btn,
+.app-banner-close,
+.nav-links a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── FORM INPUTS (16px font-size to prevent iOS auto-zoom) ── */
+.request-card input,
+.request-card select,
+.request-card textarea,
+.form-field input,
+.form-field select,
+.form-field textarea {
+  font-size: 16px !important;
+}
+
+/* ============================================
+   1. SECCIÓN DE PLANES (#planes)
+   ============================================ */
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.plan-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.plan-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent);
+}
+
+.plan-card.plan-featured {
+  border-color: var(--primary);
+  box-shadow: 0 8px 24px rgba(49, 1, 63, 0.12);
+  background: linear-gradient(180deg, #ffffff 0%, #fcf9fe 100%);
+}
+
+.plan-card.plan-featured::before {
+  content: '★ RECOMENDADO';
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--primary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 4px 14px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+
+.plan-header {
+  margin-bottom: 20px;
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 20px;
+}
+
+.plan-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 12px;
+  line-height: 1.3;
+  min-height: 48px;
+}
+
+.plan-price-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.plan-price-text {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--primary);
+  letter-spacing: -0.5px;
+}
+
+.plan-price-note {
+  font-size: 12px;
+  color: var(--text-sec);
+  line-height: 1.4;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 28px 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plan-features li {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.45;
+  position: relative;
+  padding-left: 24px;
+}
+
+.plan-features li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--success);
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.btn-plan-quote {
+  width: 100%;
+  background: var(--primary);
+  color: #ffffff !important;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(49, 1, 63, 0.15);
+}
+
+.btn-plan-quote:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(49, 1, 63, 0.25);
+}
+
+/* ============================================
+   2. SECCIÓN DESCARGA TU APP (#app)
+   ============================================ */
+.app-section-wrap {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.app-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 44px 40px;
+  box-shadow: var(--shadow-md);
+  margin-top: 36px;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+}
+
+.app-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(49, 1, 63, 0.08);
+  color: var(--primary);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.app-inapp-alert {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  background: #fff8ed;
+  border: 1px solid #ffd89b;
+  color: #8c5700;
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  line-height: 1.45;
+}
+
+.app-steps-container {
+  margin: 24px 0 28px;
+}
+
+.app-steps-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-step-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.app-step-item {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.app-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.app-step-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.app-step-text strong {
+  color: var(--primary);
+}
+
+.app-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.btn-app-portal {
+  background: var(--primary);
+  color: #fff !important;
+  padding: 13px 26px;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none !important;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(49, 1, 63, 0.2);
+}
+
+.btn-app-portal:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(49, 1, 63, 0.3);
+}
+
+.btn-app-copy {
+  background: var(--bg-alt);
+  color: var(--primary);
+  border: 1px solid var(--border);
+  padding: 13px 22px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-app-copy:hover {
+  background: #f4ecf8;
+  border-color: var(--primary);
+}
+
+.app-copy-toast {
+  display: none;
+  font-size: 13px;
+  color: var(--success);
+  font-weight: 700;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-copy-toast.visible {
+  display: inline-flex;
+}
+
+.app-nonclient-banner {
+  margin-top: 28px;
+  padding: 16px 20px;
+  border-radius: var(--radius-sm);
+  background: #faf7fc;
+  border: 1px dashed rgba(49, 1, 63, 0.25);
+  font-size: 13px;
+  color: var(--text-sec);
+  line-height: 1.5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-link-plans {
+  color: var(--primary) !important;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.2s ease;
+}
+
+.app-link-plans:hover {
+  transform: translateX(3px);
+  text-decoration: underline;
+}
+
+/* ============================================
+   3. BANNER PROMOCIONAL INTERACTIVO
+   ============================================ */
+.app-promo-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 998;
+  background: rgba(49, 1, 63, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #ffffff;
+  border-top: 1px solid rgba(232, 168, 124, 0.3);
+  padding: 14px 20px max(14px, env(safe-area-inset-bottom, 14px));
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.28);
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+}
+
+.app-promo-banner.visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.app-banner-content {
+  max-width: 1160px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.app-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.app-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-banner-btn {
+  background: var(--accent);
+  color: var(--primary) !important;
+  border: none;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none !important;
+  cursor: pointer;
+  white-space: nowrap;
+  animation: bannerPulse 2.5s infinite;
+  box-shadow: 0 4px 14px rgba(232, 168, 124, 0.4);
+}
+
+.app-banner-btn:hover {
+  background: #f4bb8c;
+  transform: translateY(-1px);
+}
+
+.app-banner-close {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 20px;
+  cursor: pointer;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.app-banner-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Elevate floating WhatsApp when banner is visible */
+body.has-app-banner .floating-wa {
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 16px) !important;
+  transition: bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes bannerPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 14px rgba(232, 168, 124, 0.4);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 6px 20px rgba(232, 168, 124, 0.7);
+  }
+}
+
+/* ── PREFERS-REDUCED-MOTION (ACCESSIBILITY) ── */
+@media (prefers-reduced-motion: reduce) {
+  .app-promo-banner,
+  .app-promo-banner.visible,
+  .app-banner-btn,
+  .plan-card,
+  .plan-card:hover,
+  .btn-plan-quote,
+  .btn-plan-quote:hover {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* ============================================
+   4. RESPONSIVE BREAKPOINTS (1280, 768, 390, 360)
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .plans-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-step-list {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .app-card {
+    padding: 32px 20px;
+  }
+  .app-banner-info {
+    font-size: 13px;
+  }
+}
+
+/* Mobile & Narrow Mobile (390px & 360px) */
+@media (max-width: 640px) {
+  .plans-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .plan-card {
+    padding: 24px 18px;
+  }
+  .app-banner-content {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  .app-banner-info {
+    font-size: 12px;
+    line-height: 1.35;
+    flex: 1;
+  }
+  .app-banner-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .app-banner-close {
+    width: 36px;
+    height: 36px;
+  }
+  .app-nonclient-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* 360px - 380px Narrow Screen Overflow Prevention */
+@media (max-width: 380px) {
+  .container {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+  .request-card {
+    padding: 20px 12px !important;
+  }
+  #reqCountryCode {
+    width: 90px !important;
+    padding: 10px 6px !important;
+    font-size: 14px !important;
+  }
+  .plan-price-text {
+    font-size: 22px;
+  }
+  .plan-title {
+    font-size: 16px;
+    min-height: auto;
+  }
+  .app-card {
+    padding: 24px 14px;
+  }
+}

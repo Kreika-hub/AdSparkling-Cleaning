@@ -1,0 +1,25 @@
+{
+  "name": "Ad Sparkling Cleaning LLC",
+  "short_name": "Ad Sparkling",
+  "description": "Professional residential cleaning in Miami-Dade & Broward. Get a quote in under 2 hours.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#31013F",
+  "theme_color": "#31013F",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./assets/images/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./assets/images/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
